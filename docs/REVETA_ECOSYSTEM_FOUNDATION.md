@@ -74,12 +74,12 @@ Hermes refuses to bind a public interface with no auth provider registered (fail
 ### Known limits of the free Render plan
 
 - **No persistent disk.** `/opt/data` (sessions, memories, config, skills, logs) is wiped on every redeploy, restart and idle spin-down. Treat Preview state as disposable.
-- **512 MB RAM.** The idle dashboard measured ~270 MB RSS locally; a live terminal session adds a Node TUI and an agent process and may exceed the limit. Unverified on Render.
+- **512 MB RAM.** Live idle usage 2026-11-06: ~239 MB of 536,870,900 bytes (~45%). A live terminal session adds a Node TUI and an agent process; peak under load is unmeasured.
 - **Idle spin-down** after ~15 minutes; first request afterwards cold-starts.
 
 ### Security hardening carried by this fork
 
-On an all-interfaces bind upstream accepts any Host *and any Origin* on WebSocket upgrades, relying on the single-use ticket alone. When `dashboard.public_url` is declared, the fork now also requires a web Origin to name the declared host (or be exactly the targeted authority). LAN and desktop behaviour without a declared URL is unchanged. Candidate for upstreaming.
+Classification: `SECURITY.md` §2.6(5)/§3.2 — a non-loopback bind is an operator decision and public-exposure hardening is the operator's responsibility, so this is ordinary public hardening, suitable for an upstream PR. On an all-interfaces bind upstream accepts any Host *and any Origin* on WebSocket upgrades, relying on the single-use ticket alone. When `dashboard.public_url` is declared, the fork now also requires a web Origin to name the declared host (or be exactly the targeted authority). LAN and desktop behaviour without a declared URL is unchanged. Candidate for upstreaming.
 
 ### Verification
 
@@ -97,12 +97,15 @@ Every model-initiated tool call passes `model_tools.handle_function_call` → `_
 - [x] Authenticated endpoint denies anonymous requests and returns metadata for an authorised operator (local, Render-proxy emulation, 2026-11-06).
 - [x] Login, invalid-login, HttpOnly/Secure `__Host-` cookies, WS ticket single-use, foreign-Origin refusal (local emulation).
 - [x] Session survives restart with a fixed signing secret; is invalidated without one (local).
-- [ ] Render service Docker Command corrected (manual dashboard step) and deploy reaches a listening port.
-- [ ] Smoke script passes against the live Render URL.
+- [x] Render service Docker Command corrected (founder, 21:35) and deploy reaches a listening port (dep-dbn4j2p5efls739eda80, commit b4b48f05, `HERMES_DASHBOARD_READY port=10000` at 21:43:11 UTC).
+- [x] Live: s6 supervised runtime as PID 1, stage2 bootstrap and bundled-skills sync ran; no errors, tracebacks or OOM in startup logs.
+- [x] Live: `/api/auth/providers` lists `basic` — the operator username/password-hash are configured and consumed (values never read).
+- [x] Live: root serves the server-rendered sign-in page ("Public bind · Auth required"); anonymous `/api/sessions` and `/api/reveta/overview` refused with client errors.
+- [ ] Live authenticated checks (sign-in, session cookie, `/reveta`, chat, WebSocket): require the operator's own browser session — the build agent holds no credential for this service.
 - [ ] PTY terminal child starts in the Render container (not testable in the build sandbox: Node runtime download blocked).
 - [ ] Python and TypeScript checks pass on exact branch revision in CI.
 - [ ] Responsive keyboard and reduced-motion UX review.
-- [ ] Actual model-backed Hermes turn verified with approved provider (no provider credentials configured).
+- [ ] Actual model-backed Hermes turn verified with approved provider. Decision: Anthropic. `HERMES_INFERENCE_MODEL=claude-haiku-5-5` set on Render; awaiting operator-provided `ANTHROPIC_API_KEY`. Verified locally that with only that key present `provider: auto` resolves to Anthropic and failures are reported, never fabricated. Note: `HERMES_INFERENCE_PROVIDER` is ignored because the seeded config sets `provider: "auto"` and config outranks the env (`resolve_requested_provider`).
 - [ ] Governance policy hook implemented and the mandatory safety scenarios tested.
 - [ ] Durable storage, backup/restore, monitoring and rollback confirmed.
 - [ ] Separate explicit approval for production.
