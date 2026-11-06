@@ -188,6 +188,98 @@ def check_websockets(t: Target, cookies: str, ticket: str | None) -> None:
     record("PTY ticket is single-use (replay refused)", not accepted)
 
 
+def _read_token() -> str:
+    """The deployment session token, read from a 0600 file so it never appears in argv or env dumps."""
+    path = os.environ.get("REVETA_SMOKE_SESSION_TOKEN_FILE", "")
+    if not path:
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        return fh.read().strip()
+
+
+def check_auth_providers(t: Target) -> None:
+    r = t.client.get("/api/auth/providers")
+    names = []
+    if r.status_code == 200:
+        body = r.json()
+        rows = body.get("providers", body) if isinstance(body, dict) else body
+        names = sorted(str(p.get("name")) for p in rows if isinstance(p, dict))
+    record("password login provider registered", "basic" in names, f"interactive providers={names}")
+
+
+def check_token_api(t: Target, token: str) -> None:
+    h = {"Authorization": "Bearer " + token}
+    r = t.client.get("/api/auth/me", headers=h)
+    record("session token accepted on /api/auth/me", r.status_code == 200, f"status={r.status_code}")
+    r = t.client.get("/api/auth/me", headers={"Authorization": "Bearer " + token[:-4] + "xxxx"})
+    record("altered session token refused", r.status_code in (401, 403), f"status={r.status_code}")
+    for attempt in range(3):  # the state DB can answer 503 while it opens on a cold start
+        r = t.client.get("/api/sessions", headers=h)
+        if r.status_code != 503:
+            break
+        time.sleep(3)
+    record("authenticated session list", r.status_code == 200, f"status={r.status_code}")
+
+
+async def _rpc(ws, req_id: int, method: str, params: dict, timeout: float = 60) -> dict:
+    await ws.send(json.dumps({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params}))
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=deadline - time.monotonic()))
+        if msg.get("id") == req_id:
+            return msg
+    raise TimeoutError(method)
+
+
+async def check_agent_session(t: Target, token: str, do_turn: bool) -> None:
+    """Drive the same JSON-RPC gateway the dashboard chat uses: create a session, optionally run
+    one turn whose correct answer (1729 + 2026 = 3755) cannot be produced by echoing the prompt."""
+    headers = {"Host": t.public_host, "X-Forwarded-Proto": urlparse(t.origin).scheme} if t.emulated_proxy else {}
+    try:
+        async with websockets.connect(t.ws_url(f"/api/ws?token={token}"), origin=t.origin,
+                                      additional_headers=headers, open_timeout=20, max_size=None) as ws:
+            record("gateway WebSocket accepts session token", True)
+            created = await _rpc(ws, 1, "session.create", {"title": "reveta-preview-smoke"})
+            result = created.get("result") or {}
+            sid = result.get("session_id")
+            model = (result.get("info") or {}).get("model")
+            record("agent session created", bool(sid), f"model={model}")
+            if not sid:
+                return
+            if not do_turn:
+                record("live model turn", None, "not requested (pass --agent-turn)")
+                return
+            submitted = await _rpc(ws, 2, "prompt.submit", {
+                "session_id": sid, "text": "Reply with the word REVETA followed by the sum of 1729 and 2026."})
+            status = (submitted.get("result") or {}).get("status")
+            record("prompt accepted for streaming", status == "streaming", f"status={status}")
+            provider, deltas, final, error_text = None, 0, "", ""
+            deadline = time.monotonic() + 120
+            while time.monotonic() < deadline:
+                msg = json.loads(await asyncio.wait_for(ws.recv(), timeout=deadline - time.monotonic()))
+                params = msg.get("params") or {}
+                kind, payload = params.get("type"), params.get("payload") or {}
+                if kind == "session.info":
+                    provider = payload.get("provider")
+                elif kind == "message.delta":
+                    deltas += 1
+                elif kind == "status.update" and str(payload.get("text", "")).startswith("❌"):
+                    error_text = str(payload.get("text"))[:160]
+                elif kind == "message.complete":
+                    final = str(payload.get("text", ""))
+                    break
+            record("model streamed output tokens", deltas > 0, f"provider={provider} deltas={deltas}")
+            ok = "3755" in final and not error_text
+            record("live model turn produced a correct answer", ok,
+                   error_text or ("answer contained 3755" if ok else f"final={final[:120]!r}"))
+            # Hermes lists a session once it holds a message, so retrieval is checked after the turn.
+            listed = t.client.get("/api/sessions", headers={"Authorization": "Bearer " + token})
+            found = listed.status_code == 200 and str(result.get("stored_session_id")) in listed.text
+            record("session with a turn is retrievable via REST", found, f"status={listed.status_code}")
+    except Exception as exc:  # report the real failure, never a silent pass
+        record("agent session checks", False, f"{type(exc).__name__}: {str(exc)[:160]}")
+
+
 def check_logout(t: Target, cookies: str) -> None:
     h = {"Cookie": cookies}
     r = t.client.post("/auth/logout", headers=h)
@@ -199,15 +291,19 @@ def main() -> int:
     ap.add_argument("--base-url", required=True)
     ap.add_argument("--public-origin", help="Emulate a proxy: send this Host/Origin to base-url")
     ap.add_argument("--skip-pty", action="store_true")
+    ap.add_argument("--agent-turn", action="store_true",
+                    help="Submit one real prompt through /api/ws (spends a few provider tokens)")
     args = ap.parse_args()
     username = os.environ.get("REVETA_SMOKE_USERNAME", "")
     password = os.environ.get("REVETA_SMOKE_PASSWORD", "")
+    token = _read_token()
     t = Target(args.base_url, args.public_origin)
 
     check_root_and_login_page(t)
+    check_auth_providers(t)
     check_anonymous_api(t)
     if not (username and password):
-        record("credentialed checks", None, "REVETA_SMOKE_USERNAME/PASSWORD not set")
+        record("password-login checks", None, "REVETA_SMOKE_USERNAME/PASSWORD not set")
     else:
         check_bad_login(t, username, password)
         cookies = login(t, username, password)
@@ -216,7 +312,14 @@ def main() -> int:
             if not args.skip_pty:
                 check_websockets(t, cookies, ticket)
             check_logout(t, cookies)
-    record("live model turn", None, "requires provider credentials; not exercised by this script")
+    if not token:
+        record("session-token checks", None, "REVETA_SMOKE_SESSION_TOKEN_FILE not set")
+    else:
+        check_token_api(t, token)
+        if websockets is None:
+            record("agent checks", None, "websockets package not installed")
+        else:
+            asyncio.run(check_agent_session(t, token, args.agent_turn))
 
     failed = [r for r in RESULTS if r[0] == "FAIL"]
     print(json.dumps({"pass": sum(r[0] == "PASS" for r in RESULTS), "fail": len(failed),
