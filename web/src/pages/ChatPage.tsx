@@ -1971,6 +1971,24 @@ export default function ChatPage({ isActive = true }: { isActive?: boolean }) {
                 >
                   Start new session
                 </Button>
+                {endedReason === "start-failed" && (
+                  <>
+                    <Button
+                      outlined
+                      onClick={() => navigate("/models")}
+                      aria-label="Configure an AI model for chat"
+                    >
+                      Configure model
+                    </Button>
+                    <Button
+                      ghost
+                      onClick={() => navigate("/env")}
+                      aria-label="Check provider API key configuration"
+                    >
+                      Check API keys
+                    </Button>
+                  </>
+                )}
                 {endedReason === "exited" && (
                   <Button
                     outlined
