@@ -9,7 +9,7 @@ Reveta OS is the authority for cross-product decisions and architecture; the Rev
 1. The existing Hermes dashboard gains an optional Reveta workspace at /reveta. Sessions, chat, tools, Skills and existing navigation remain unchanged.
 2. The backend exposes authenticated GET /api/reveta/overview. It reads an explicitly configured, metadata-only repository allowlist, queries the fixed GitHub repository-commit API with bounded timeouts, and reports an observed revision or unknown. A commit observation is NOT evidence of a green CI run, live deployment, or policy approval.
 3. The approved Aura mark is copied as a self-contained visual asset into the derivative. Native app/package IDs and update feeds have not been rebranded.
-4. The standalone governance classifier marks action categories as read-only, founder-approval-required, or unclassified-hold. This is advisory: no Hermes tool-execution boundary has been intercepted.
+4. The standalone governance classifier marks action categories as read-only, founder-approval-required, or unclassified-hold. This is advisory: no Hermes tool-execution boundary has been intercepted. The enforcement point is identified (see "Governance enforcement path" below) but not yet wired.
 5. Aura Brain, hosted GBrain, continuous ingestion, learning and automatic writeback are NOT connected. Hermes native memory is separate. Retrieval must later enforce source scope, provenance, corrections and permission checks.
 6. The operator registry is runtime-owned. It must never include secret values, customer text, personal records or private governance documents in the public repository.
 
@@ -45,20 +45,67 @@ Only allowlisted owner/repo identifiers are fetched, from api.github.com. The op
 
 Default operations are L0 read-only. L1/L2 edits require bounded scope. L3 integrations require scoped credentials, audit, limits and approval. No model can bypass a Hold. A missing or stale source is unknown, never green.
 
+## Render Preview runtime (decision 2026-11-06)
+
+Root cause of both failed Render deploys (exit 128, no log output, 15-minute port-scan timeout): a Render "Docker Command" **replaces the image ENTRYPOINT**, not just CMD. The services were configured with `dashboard --host 0.0.0.0 ...`, so Render tried to exec a non-existent binary named `dashboard`; the Hermes entrypoint never ran.
+
+Chosen approach: upstream Hermes' own dispatcher, no fork-specific boot script. The Render service must use exactly:
+
+~~~
+/opt/hermes/docker/entrypoint-dispatch.sh dashboard --host 0.0.0.0 --port 10000 --no-open --skip-build
+~~~
+
+- If the container process is PID 1 the dispatcher starts s6-overlay `/init` (full supervision, stage2 bootstrap).
+- If a platform init wraps it, the dispatcher runs the same `stage2-hook.sh` bootstrap and execs the dashboard directly (upstream's documented wrapped-runtime path).
+- The earlier `render-preview-boot.sh` was removed: it skipped stage2 (config-schema migration, bundled-skills sync, install-tree protection, gateway API key), silently dropping Hermes capabilities. The earlier dispatcher edit also broke the PID-1 test (`"$"` instead of `"$$"`), which disabled s6 for every Docker user of the fork; the file is now byte-identical to the preserved base and a behavioural test guards it.
+- `REVETA_RENDER_PREVIEW_BOOT` is now inert and can be deleted from the service.
+
+Required service environment (secrets set in Render only, never in Git):
+
+| Variable | Purpose |
+|---|---|
+| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` | Operator login |
+| `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH` | `scrypt$...` from `python -c "from plugins.dashboard_auth.basic import hash_password; print(hash_password('...'))"` |
+| `HERMES_DASHBOARD_BASIC_AUTH_SECRET` | 32+ random bytes; without it every restart signs everyone out |
+| `HERMES_DASHBOARD_PUBLIC_URL` | `https://reveta-hermes-ecosystem-preview.onrender.com` — trusted Host/Origin and engages the WebSocket Origin hardening |
+
+Hermes refuses to bind a public interface with no auth provider registered (fail closed); there is no insecure override.
+
+### Known limits of the free Render plan
+
+- **No persistent disk.** `/opt/data` (sessions, memories, config, skills, logs) is wiped on every redeploy, restart and idle spin-down. Treat Preview state as disposable.
+- **512 MB RAM.** The idle dashboard measured ~270 MB RSS locally; a live terminal session adds a Node TUI and an agent process and may exceed the limit. Unverified on Render.
+- **Idle spin-down** after ~15 minutes; first request afterwards cold-starts.
+
+### Security hardening carried by this fork
+
+On an all-interfaces bind upstream accepts any Host *and any Origin* on WebSocket upgrades, relying on the single-use ticket alone. When `dashboard.public_url` is declared, the fork now also requires a web Origin to name the declared host (or be exactly the targeted authority). LAN and desktop behaviour without a declared URL is unchanged. Candidate for upstreaming.
+
+### Verification
+
+`scripts/reveta/preview_smoke.py` runs the Phase 1 checks (anonymous refusal, login/invalid login, cookie flags, ticket mint, PTY ticket/forged/foreign-Origin/replay, logout) against a local instance or the live URL. It never prints credentials.
+
+## Governance enforcement path (proposal, not implemented)
+
+Every model-initiated tool call passes `model_tools.handle_function_call` → `_pre_dispatch_guards` → `pre_tool_call` plugin hooks, which can veto with `{"action": "block", "message": ...}`. Verified 2026-11-06: a callback that raises **fails closed** (the call is blocked) and timed-out callbacks fail closed. A Reveta policy plugin on this hook is the proposed enforcement point. Open questions before implementation: (1) safe-worker mode skips all plugin hooks — confirm which tools safe workers can reach; (2) dashboard REST endpoints and the human-driven terminal do not pass through this hook by design; (3) where approval records live (Reveta OS is the authority; the hook needs a signed, expiring, environment-scoped record it can verify offline). Until wired and tested against the mandatory safety scenarios, governance remains **advisory**.
+
 ## Release gates
 
 - [x] Isolated feature branch; source no longer tied to Hermes main.
 - [x] Original Hermes chat, streaming and native agent runtime untouched.
 - [x] No private Reveta OS document bodies or secrets committed.
-- [ ] Python and TypeScript checks pass on exact branch revision.
+- [x] Authenticated endpoint denies anonymous requests and returns metadata for an authorised operator (local, Render-proxy emulation, 2026-11-06).
+- [x] Login, invalid-login, HttpOnly/Secure `__Host-` cookies, WS ticket single-use, foreign-Origin refusal (local emulation).
+- [x] Session survives restart with a fixed signing secret; is invalidated without one (local).
+- [ ] Render service Docker Command corrected (manual dashboard step) and deploy reaches a listening port.
+- [ ] Smoke script passes against the live Render URL.
+- [ ] PTY terminal child starts in the Render container (not testable in the build sandbox: Node runtime download blocked).
+- [ ] Python and TypeScript checks pass on exact branch revision in CI.
 - [ ] Responsive keyboard and reduced-motion UX review.
-- [ ] Authenticated endpoint denies anonymous requests and returns metadata for an authorised operator.
-- [ ] Render Docker startup, protected login and authenticated PTY WebSocket pass.
-- [ ] Actual model-backed Hermes turn verified with approved provider.
+- [ ] Actual model-backed Hermes turn verified with approved provider (no provider credentials configured).
+- [ ] Governance policy hook implemented and the mandatory safety scenarios tested.
 - [ ] Durable storage, backup/restore, monitoring and rollback confirmed.
 - [ ] Separate explicit approval for production.
-
-Known Preview blocker, 6 November 2026: the Render image built but the service exited with status 128 and no HTTP listener. The frontend's Vercel READY state does not prove backend success; backend validation remains a hold.
 
 ## Rollback
 

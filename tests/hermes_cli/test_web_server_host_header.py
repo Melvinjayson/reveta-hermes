@@ -566,3 +566,41 @@ def test_a_loopback_public_url_behind_a_host_rewriting_proxy(
             with client.websocket_connect(url, headers=headers):
                 pass
         assert exc.value.code == 4403
+
+
+@pytest.mark.parametrize("bound_host", ["0.0.0.0", "::"])
+@pytest.mark.parametrize("host, origin, allowed", [
+    # The declared public page itself (Render edge forwards Host = public host).
+    ("preview.example.test", "https://preview.example.test", True),
+    ("preview.example.test:443", "https://preview.example.test", True),
+    # A cross-site page holding a leaked ticket: refused even though 0.0.0.0 accepts any Host.
+    ("preview.example.test", "https://attacker.invalid", False),
+    ("preview.example.test", "https://preview.example.test.attacker.invalid", False),
+    # Same-origin by definition (Origin names the very authority targeted) stays allowed.
+    ("10.0.0.5:10000", "http://10.0.0.5:10000", True),
+    # Non-web origins (packaged desktop) keep upstream's credential-only rule.
+    ("preview.example.test", "app://hermes", True),
+])
+def test_all_interfaces_bind_with_declared_public_url_enforces_origin(bound_host, host, origin, allowed):
+    """Reveta hardening: a PaaS bind on 0.0.0.0 behind a declared public URL must not accept a
+    WebSocket upgrade from a cross-site Origin. Without a declared public host nothing changes."""
+    import types
+
+    from hermes_cli.web_server_boundary import ws_host_origin_reason
+
+    state = types.SimpleNamespace(bound_host=bound_host, bound_port=10000, auth_required=True,
+                                  trusted_public_hosts=frozenset({"preview.example.test"}))
+    sock = types.SimpleNamespace(headers={"host": host, "origin": origin})
+    assert (ws_host_origin_reason(sock, state) is None) is allowed
+
+
+@pytest.mark.parametrize("origin", ["https://attacker.invalid", "http://192.168.1.9:9119"])
+def test_all_interfaces_bind_without_public_url_is_unchanged(origin):
+    """No declared public host: upstream's all-interfaces behaviour is preserved exactly."""
+    import types
+
+    from hermes_cli.web_server_boundary import ws_host_origin_reason
+
+    state = types.SimpleNamespace(bound_host="0.0.0.0", bound_port=9119, auth_required=True)
+    sock = types.SimpleNamespace(headers={"host": "192.168.1.5:9119", "origin": origin})
+    assert ws_host_origin_reason(sock, state) is None
