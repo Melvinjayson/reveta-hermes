@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\\/+/, '')}`
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`
 
 // Reveta derivative: use the authorised Aura mark. Leave shell sizing, actions,
 // navigation and all Hermes runtime behaviour unchanged.
