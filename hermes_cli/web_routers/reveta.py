@@ -14,4 +14,5 @@ _require_token = late("_require_token")
 async def reveta_overview(request: Request):
     # Explicit guard in addition to dashboard's gated middleware.
     _require_token(request)
-    return await asyncio.to_thread(overview)
+    # An explicit operator refresh bypasses the short metadata cache.
+    return await asyncio.to_thread(overview, refresh=request.query_params.get("refresh") == "1")
