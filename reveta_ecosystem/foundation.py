@@ -64,13 +64,21 @@ def _registry_path() -> Path:
 
 def read_registry() -> tuple[list[dict[str, str]], str]:
     """Load an operator-curated metadata allowlist; fail closed on bad input."""
-    path = _registry_path()
+    raw_env = os.environ.get("REVETA_REGISTRY_JSON", "")
     try:
-        if path.is_symlink() or not path.is_file() or path.stat().st_size > MAX_REGISTRY_BYTES:
-            return [], "not_configured"
-        data = json.loads(path.read_text(encoding="utf-8"))
+        if raw_env:
+            if len(raw_env.encode("utf-8")) > MAX_REGISTRY_BYTES:
+                return [], "invalid_registry"
+            data = json.loads(raw_env)
+        else:
+            path = _registry_path()
+            if path.is_symlink() or not path.is_file():
+                return [], "not_configured"
+            if path.stat().st_size > MAX_REGISTRY_BYTES:
+                return [], "invalid_registry"
+            data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError, UnicodeError):
-        return [], "not_configured"
+        return [], "invalid_registry" if raw_env else "not_configured"
     if not isinstance(data, dict) or data.get("schema_version") != 1:
         return [], "invalid_registry"
     raw = data.get("systems")
