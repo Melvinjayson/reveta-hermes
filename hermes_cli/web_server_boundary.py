@@ -274,6 +274,15 @@ def ws_host_origin_reason(ws, state) -> Optional[str]:
         return None
     if parsed is None or not parsed.netloc or not _is_accepted_host(parsed.netloc, bound_host, trusted_public_hosts):
         return f"origin_mismatch origin={origin} bound={bound_host}"
+    # Reveta hardening: on an all-interfaces bind _is_accepted_host accepts ANY host, so the check
+    # above cannot refuse a cross-site Origin. Once the operator has declared the public URL (a
+    # PaaS such as Render binds 0.0.0.0 behind its edge), a web Origin must name that declared
+    # host, or be exactly the authority this upgrade targets (same-origin by definition). With no
+    # declared public host (LAN / docker -p use) behaviour is unchanged.
+    if (bound_host in {"0.0.0.0", "::"} and trusted_public_hosts
+            and _host_header_hostname(parsed.netloc) not in trusted_public_hosts
+            and parsed.netloc.lower() != host_header.strip().lower()):
+        return f"origin_mismatch origin={origin} bound={bound_host}"
     # _is_accepted_host drops the port: a page on ANOTHER loopback port is a different origin, the
     # same one CORS refuses — without this it opens /api/pty with a token it read off index.html.
     # An Origin naming the very authority the upgrade targets is this server's own page reached

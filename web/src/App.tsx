@@ -97,6 +97,7 @@ const ChannelsPage = lazy(() => import("@/pages/ChannelsPage"));
 const WebhooksPage = lazy(() => import("@/pages/WebhooksPage"));
 const SystemPage = lazy(() => import("@/pages/SystemPage"));
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const RevetaPage = lazy(() => import("@/pages/RevetaPage"));
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { useI18n } from "@/i18n";
@@ -158,6 +159,7 @@ const CHAT_NAV_ITEM: NavItem = {
 const BUILTIN_ROUTES_CORE: Record<string, ComponentType> = {
   "/": RootRedirect,
   "/sessions": SessionsPage,
+  "/reveta": RevetaPage,
   "/files": FilesPage,
   "/analytics": AnalyticsPage,
   "/models": ModelsPage,
@@ -186,6 +188,7 @@ function ChatRouteSink() {
 }
 
 const BUILTIN_NAV_REST: NavItem[] = [
+  { path: "/reveta", label: "Reveta OS", icon: Globe },
   {
     path: "/sessions",
     labelKey: "sessions",
@@ -552,8 +555,9 @@ export default function App() {
           <Menu />
         </Button>
 
+        <img src="/brand/aura-mark.svg" alt="" className="size-7 shrink-0 object-contain" />
         <Typography className="font-bold text-[0.95rem] leading-[0.95] tracking-[0.05em] text-midground">
-          {t.app.brand}
+          Reveta Hermes
         </Typography>
       </header>
 
@@ -617,10 +621,11 @@ export default function App() {
               >
                 <PluginSlot name="header-left" />
 
+                <img src="/brand/aura-mark.svg" alt="" className="h-10 w-9 shrink-0 object-contain motion-safe:transition-transform motion-safe:duration-200 hover:scale-105" />
                 <Typography className="font-bold text-[1.125rem] leading-[0.95] tracking-[0.0525rem] text-midground uppercase">
-                  Hermes
+                  Reveta
                   <br />
-                  Agent
+                  Hermes
                 </Typography>
               </div>
 
