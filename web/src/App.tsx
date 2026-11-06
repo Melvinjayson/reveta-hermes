@@ -662,18 +662,54 @@ export default function App() {
               className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden border-t border-current/10 py-2"
               aria-label={t.app.navigation}
             >
-              <ul className="flex flex-col">
-                {sidebarNav.coreItems.map((item) => (
-                  <SidebarNavLink
-                    closeMobile={closeMobile}
-                    collapsed={isDesktopCollapsed}
-                    item={item}
-                    key={item.path}
-                    t={t}
-                    tooltipWarmRef={tooltipWarmRef}
-                  />
-                ))}
-              </ul>
+              {[
+                { label: "Conversations", paths: ["/chat", "/sessions"] },
+                { label: "Workspace", paths: ["/files", "/reveta", "/analytics"] },
+                { label: "Agents & automation", paths: ["/models", "/skills", "/cron", "/plugins", "/mcp", "/channels", "/webhooks"] },
+                { label: "Administration", paths: ["/profiles", "/pairing", "/config", "/env", "/system", "/logs", "/docs"] },
+              ].map((group) => {
+                const items = sidebarNav.coreItems.filter((item) => group.paths.includes(item.path));
+                if (!items.length) return null;
+                return (
+                  <div key={group.label} role="group" aria-label={group.label} className="border-b border-current/10 pb-2 last:border-b-0">
+                    {!isDesktopCollapsed && (
+                      <div className="px-5 pt-3 pb-1 text-[11px] font-semibold tracking-[0.08em] text-text-tertiary">
+                        {group.label}
+                      </div>
+                    )}
+                    <ul className="flex flex-col">
+                      {items.map((item) => (
+                        <SidebarNavLink
+                          closeMobile={closeMobile}
+                          collapsed={isDesktopCollapsed}
+                          item={item}
+                          key={item.path}
+                          t={t}
+                          tooltipWarmRef={tooltipWarmRef}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+              {sidebarNav.coreItems.some((item) => ![
+                "/chat", "/sessions", "/files", "/reveta", "/analytics",
+                "/models", "/skills", "/cron", "/plugins", "/mcp", "/channels", "/webhooks",
+                "/profiles", "/pairing", "/config", "/env", "/system", "/logs", "/docs",
+              ].includes(item.path)) && (
+                <div role="group" aria-label="Additional navigation" className="border-b border-current/10 pb-2">
+                  {!isDesktopCollapsed && <div className="px-5 pt-3 pb-1 text-[11px] font-semibold tracking-[0.08em] text-text-tertiary">More</div>}
+                  <ul className="flex flex-col">
+                    {sidebarNav.coreItems.filter((item) => ![
+                      "/chat", "/sessions", "/files", "/reveta", "/analytics",
+                      "/models", "/skills", "/cron", "/plugins", "/mcp", "/channels", "/webhooks",
+                      "/profiles", "/pairing", "/config", "/env", "/system", "/logs", "/docs",
+                    ].includes(item.path)).map((item) => (
+                      <SidebarNavLink closeMobile={closeMobile} collapsed={isDesktopCollapsed} item={item} key={item.path} t={t} tooltipWarmRef={tooltipWarmRef} />
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {sidebarNav.pluginItems.length > 0 && (
                 <div
