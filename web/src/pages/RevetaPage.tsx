@@ -72,7 +72,8 @@ export default function RevetaPage() {
     setRefreshing(true);
     setError(null);
     try {
-      const response = await fetchJSON<Overview>("/api/reveta/overview", { signal });
+      const url = signal ? "/api/reveta/overview" : "/api/reveta/overview?refresh=1";
+      const response = await fetchJSON<Overview>(url, { signal });
       if (!signal?.aborted) {
         setData(response);
       }
