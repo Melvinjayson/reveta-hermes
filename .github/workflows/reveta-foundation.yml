@@ -6,6 +6,9 @@ on:
       - "reveta_ecosystem/**"
       - "hermes_cli/web_routers/reveta.py"
       - "tests/test_reveta_foundation.py"
+      - "tests/test_reveta_render_preview_boot.py"
+      - "docker/render-preview-boot.sh"
+      - "docker/entrypoint-dispatch.sh"
       - "tests/skills/test_reveta_ecosystem_skill.py"
       - "skills/productivity/reveta-ecosystem/**"
       - ".github/workflows/reveta-foundation.yml"
@@ -30,4 +33,4 @@ jobs:
       - name: Compile Reveta modules
         run: python -m compileall -q reveta_ecosystem hermes_cli/web_routers/reveta.py
       - name: Validate governance and registry boundaries
-        run: python -m pytest --noconftest -q tests/test_reveta_foundation.py tests/skills/test_reveta_ecosystem_skill.py
+        run: python -m pytest --noconftest -q tests/test_reveta_foundation.py tests/test_reveta_render_preview_boot.py tests/skills/test_reveta_ecosystem_skill.py
