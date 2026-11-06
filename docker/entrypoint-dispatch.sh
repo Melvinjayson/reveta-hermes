@@ -14,7 +14,14 @@
 
 set -e
 
-if [ "$$" -eq 1 ]; then
+# A Preview-only adapter for Render's single-process runtime. Only enabled
+# by the explicitly scoped backend service; all normal Hermes images retain
+# the s6-overlay startup and existing gateway supervision unchanged.
+if [ "${REVETA_RENDER_PREVIEW_BOOT:-}" = "1" ]; then
+    exec sh /opt/hermes/docker/render-preview-boot.sh "$@"
+fi
+
+if [ "$" -eq 1 ]; then
     # The interactive CMD owns the terminal. Supervised gateways and dashboard
     # output must go to s6's logger instead of overwriting the TUI or shell.
     # Resolve this before /init wires the service descriptors, leaving headless
