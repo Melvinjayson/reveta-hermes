@@ -31,7 +31,7 @@ const REJECTION_BANNERS: Record<number, PtyBanner> = {
     action: null
   },
   4404: {
-    text: 'This Hermes server does not offer the terminal chat. Update Hermes (`hermes update`) and reload the page.',
+    text: 'This server does not offer the terminal chat. Update Aura (`hermes update`) and reload the page.',
     action: 'reload'
   },
   4408: {

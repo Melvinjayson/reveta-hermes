@@ -114,7 +114,7 @@ export default function RevetaPage() {
           />
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Reveta ecosystem</p>
-            <h1 className="text-2xl font-semibold leading-tight text-midground">Aura × Hermes</h1>
+            <h1 className="text-2xl font-semibold leading-tight text-midground">Aura</h1>
             <p className="mt-1 max-w-xl text-sm text-text-secondary">
               One conversational work surface, with evidence and decisions governed at their sources.
             </p>
@@ -252,8 +252,8 @@ export default function RevetaPage() {
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 border-t border-current/25 pt-4">
-              <h3 className="font-semibold text-midground">Hermes native memory</h3>
-              <p className="text-sm text-text-secondary">Managed by Hermes. Inspect its actual status in the existing memory and settings surfaces.</p>
+              <h3 className="font-semibold text-midground">Built-in memory</h3>
+              <p className="text-sm text-text-secondary">Managed by the Aura engine. Inspect its actual status in the existing memory and settings surfaces.</p>
               <Link to="/config" className="inline-flex items-center gap-1 text-sm text-midground underline-offset-4 hover:underline">
                 Open configuration <ExternalLink className="size-3.5" aria-hidden="true" />
               </Link>
@@ -299,7 +299,7 @@ export default function RevetaPage() {
       )}
 
       <footer className="border-t border-current/20 pt-4 text-xs text-text-secondary">
-        <p>Reveta OS governs. Hermes executes. Aura advises. No status is marked healthy without current evidence.</p>
+        <p>Reveta OS governs. The engine executes. Aura advises. No status is marked healthy without current evidence.</p>
         <p className="mt-1">Feature foundation · no automatic cross-product writes · no production changes.</p>
       </footer>
     </main>

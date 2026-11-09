@@ -22,46 +22,51 @@ _LOGIN_HTML_TEMPLATE = """\
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F8FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A0A0B" media="(prefers-color-scheme: dark)">
 <title>Sign in — Aura</title>
 <style>
-  /* Brand fonts shipped by @nous-research/ui — same files the SPA loads. */
-  @font-face {{
-    font-family: 'Collapse';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('/fonts/Collapse-Regular.woff2') format('woff2');
-  }}
-  @font-face {{
-    font-family: 'Collapse';
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-    src: url('/fonts/Collapse-Bold.woff2') format('woff2');
-  }}
-  @font-face {{
-    font-family: 'Rules Compressed';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('/fonts/RulesCompressed-Regular.woff2') format('woff2');
-  }}
-  @font-face {{
-    font-family: 'Rules Compressed';
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-    src: url('/fonts/RulesCompressed-Medium.woff2') format('woff2');
-  }}
-
+  /* Aura sign-in. Colours, radii and type follow the Reveta brand tokens
+     v2.0.0 (navy, blue, sky, slate, mist; 10px radius). System fonts only:
+     no font files or font CDN are loaded before sign-in. */
   :root {{
-    --background-base: #170d02;
-    --background: #170d02;
-    --midground: #ffac02;
-    --foreground: #ffffff;
-    --hairline: color-mix(in srgb, #ffac02 18%, transparent);
-    --hairline-strong: color-mix(in srgb, #ffac02 35%, transparent);
+    color-scheme: light dark;
+    --page: #F4F8FB;          /* mist */
+    --card: #FFFFFF;
+    --text: #101C49;          /* navy, 16.4:1 on white */
+    --muted: #5B6788;         /* slate, 5.6:1 on white */
+    --accent: #479EDB;        /* blue: glow and focus only, never body text */
+    --link: #247AB7;          /* blue text, 4.6:1 on white */
+    --btn-bg: #101C49;
+    --btn-text: #FFFFFF;
+    --field-bg: #FFFFFF;
+    --hairline: rgba(16, 28, 73, 0.14);
+    --hairline-strong: rgba(16, 28, 73, 0.28);
+    --error: #C2364B;
+    --glow-a: rgba(71, 158, 219, 0.28);
+    --glow-b: rgba(127, 211, 243, 0.30);
+    --shadow: 0 1px 2px rgba(16, 28, 73, 0.06), 0 18px 48px -18px rgba(16, 28, 73, 0.22);
+    --radius-md: 10px;
+    --radius-lg: 16px;
+  }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{
+      --page: #0A0A0B;
+      --card: #111113;
+      --text: #EDEDEF;
+      --muted: #A1A1AA;
+      --link: #7FD3F3;        /* sky */
+      --btn-bg: #479EDB;
+      --btn-text: #0A0A0B;
+      --field-bg: #18181B;
+      --hairline: rgba(255, 255, 255, 0.12);
+      --hairline-strong: rgba(255, 255, 255, 0.24);
+      --error: #F28B9B;       /* brand red is too dark to read on near-black */
+      --glow-a: rgba(71, 158, 219, 0.22);
+      --glow-b: rgba(127, 211, 243, 0.12);
+      --shadow: 0 18px 48px -18px rgba(0, 0, 0, 0.7);
+    }}
   }}
 
   *, *::before, *::after {{ box-sizing: border-box; }}
@@ -70,234 +75,188 @@ _LOGIN_HTML_TEMPLATE = """\
     margin: 0;
     padding: 0;
     min-height: 100%;
-    background: var(--background-base);
-    color: var(--foreground);
-    font-family: 'Collapse', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--page);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     font-size: 16px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }}
 
-  /* Subtle dot-grid backdrop — DS idiom (see `.dither` in globals.css). */
-  body {{
-    background-image:
-      radial-gradient(
-        ellipse at top,
-        color-mix(in srgb, var(--midground) 6%, transparent) 0%,
-        transparent 55%
-      ),
-      repeating-conic-gradient(
-        color-mix(in srgb, var(--midground) 4%, transparent) 0% 25%,
-        transparent 0% 50%
-      );
-    background-size: auto, 3px 3px;
-    background-attachment: fixed;
-  }}
-
-  /* Layout: vertically center on tall screens, top-anchor on short. */
   body {{
     display: grid;
     place-items: center;
-    padding: clamp(1.5rem, 6vh, 6rem) 1.25rem;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: max(1.25rem, env(safe-area-inset-top)) 1.25rem max(1.25rem, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }}
+
+  /* The aura: two soft, slow-breathing light fields behind the card. */
+  body::before, body::after {{
+    content: "";
+    position: fixed;
+    z-index: 0;
+    width: 34rem;
+    height: 34rem;
+    border-radius: 50%;
+    filter: blur(60px);
+    pointer-events: none;
+    animation: breathe 9s ease-in-out infinite alternate;
+  }}
+  body::before {{ top: -14rem; left: -10rem; background: var(--glow-a); }}
+  body::after {{ bottom: -16rem; right: -12rem; background: var(--glow-b); animation-delay: -4.5s; }}
+  @keyframes breathe {{
+    from {{ transform: scale(0.92); opacity: 0.75; }}
+    to   {{ transform: scale(1.06); opacity: 1; }}
   }}
 
   main {{
-    width: 100%;
-    max-width: 26rem;
     position: relative;
-    animation: slide-up 0.6s ease-out both;
+    z-index: 1;
+    width: 100%;
+    max-width: 24rem;
+    animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }}
-
-  @keyframes slide-up {{
-    from {{ opacity: 0; transform: translateY(6px); }}
+  @keyframes rise {{
+    from {{ opacity: 0; transform: translateY(8px); }}
     to   {{ opacity: 1; transform: translateY(0); }}
   }}
-
   @media (prefers-reduced-motion: reduce) {{
-    main {{ animation: none; }}
+    main, body::before, body::after {{ animation: none; }}
   }}
 
-  /* Brand wordmark above the card — same uppercase + wide-tracking
-     idiom DS Buttons use. */
   .brand {{
-    text-align: center;
-    margin-bottom: 1.75rem;
-    font-family: 'Rules Compressed', 'Collapse', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Outfit', system-ui, -apple-system, "Segoe UI", sans-serif;
     font-weight: 600;
-    font-size: 1.05rem;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    color: var(--midground);
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
   }}
-  .brand .dot {{
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    background: var(--midground);
-    margin: 0 0.55em 0.18em;
-    vertical-align: middle;
-    border-radius: 1px;
+  .brand-orb {{
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #7FD3F3, #479EDB 60%, #247AB7);
+    box-shadow: 0 0 0 4px rgba(71, 158, 219, 0.16), 0 0 18px rgba(71, 158, 219, 0.55);
   }}
 
   .card {{
-    position: relative;
-    padding: 2.25rem 2rem 2rem;
-    background: color-mix(in srgb, #ffffff 2%, var(--background-base));
+    padding: 2rem 1.5rem 1.5rem;
+    background: var(--card);
     border: 1px solid var(--hairline);
-    /* Hairline highlight + bevel shadow — matches DS Button SHADOW_DEFAULT
-       (`inset -1px -1px 0 #00000080, inset 1px 1px 0 #ffffff80`) at panel scale. */
-    box-shadow:
-      inset 1px 1px 0 0 color-mix(in srgb, #ffffff 5%, transparent),
-      inset -1px -1px 0 0 rgba(0, 0, 0, 0.4),
-      0 24px 60px -20px rgba(0, 0, 0, 0.6);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }}
+  @media (min-width: 30rem) {{
+    .card {{ padding: 2.25rem 2rem 2rem; }}
   }}
 
   h1 {{
-    margin: 0 0 0.4rem;
-    font-family: 'Rules Compressed', 'Collapse', sans-serif;
+    margin: 0 0 0.35rem;
+    font-family: 'Outfit', system-ui, -apple-system, "Segoe UI", sans-serif;
     font-weight: 600;
-    font-size: 1.85rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--foreground);
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
   }}
-
   .subtitle {{
-    margin: 0 0 1.75rem;
-    color: color-mix(in srgb, var(--foreground) 65%, transparent);
+    margin: 0 0 1.5rem;
+    color: var(--muted);
     font-size: 0.95rem;
   }}
 
-  .provider-list {{
-    display: grid;
-    gap: 0.75rem;
-  }}
+  .provider-list {{ display: grid; gap: 0.75rem; }}
 
-  /* Provider button — mirrors DS Button (default variant):
-     amber surface, dark text, uppercase + wide tracking, inset bevel. */
   .provider-btn {{
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    box-sizing: border-box;
-    padding: 0.95rem 1rem;
-    text-align: center;
-    background: var(--midground);
-    color: var(--background-base);
-    font-family: 'Collapse', sans-serif;
-    font-weight: 700;
-    font-size: 0.78rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+    min-height: 3rem;          /* comfortable thumb target */
+    padding: 0.75rem 1rem;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 1rem;
     text-decoration: none;
     border: 0;
-    border-radius: 0;  /* DS Button is squared — no rounded corners. */
+    border-radius: var(--radius-md);
     cursor: pointer;
-    box-shadow:
-      inset 1px 1px 0 0 rgba(255, 255, 255, 0.5),
-      inset -1px -1px 0 0 rgba(0, 0, 0, 0.5);
-    transition: filter 0.12s ease-out;
+    transition: transform 0.12s ease-out, filter 0.12s ease-out;
+    -webkit-tap-highlight-color: transparent;
   }}
-  .provider-btn:hover {{
-    filter: brightness(1.08);
-  }}
-  .provider-btn:active {{
-    /* DS Button uses `active:invert` on the default surface. */
-    filter: invert(1);
-  }}
-  .provider-btn:focus-visible {{
-    outline: 2px solid var(--midground);
-    outline-offset: 3px;
-  }}
+  .provider-btn:hover {{ filter: brightness(1.12); }}
+  .provider-btn:active {{ transform: scale(0.98); }}
+  .provider-btn:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 3px; }}
+  .provider-btn[disabled] {{ opacity: 0.7; cursor: progress; }}
 
-  /* Password provider form — same visual language as the OAuth buttons:
-     squared inputs, hairline borders, amber focus ring. */
-  .provider-form {{
-    display: grid;
-    gap: 0.75rem;
-    text-align: left;
-  }}
+  .provider-form {{ display: grid; gap: 1rem; text-align: left; }}
+  /* The provider name is for screen readers; sighted users see the card title. */
   .form-title {{
-    font-family: 'Rules Compressed', 'Collapse', sans-serif;
-    font-weight: 600;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--foreground) 70%, transparent);
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }}
-  .field {{
-    display: grid;
-    gap: 0.3rem;
-  }}
+  .field {{ display: grid; gap: 0.4rem; }}
   .field-label {{
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--foreground) 55%, transparent);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text);
   }}
   .field-input {{
     width: 100%;
-    box-sizing: border-box;
-    padding: 0.7rem 0.8rem;
-    background: color-mix(in srgb, #000000 25%, var(--background-base));
-    color: var(--foreground);
+    min-height: 3rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--field-bg);
+    color: var(--text);
     border: 1px solid var(--hairline-strong);
-    border-radius: 0;
-    font-family: 'Collapse', sans-serif;
-    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+    font: inherit;
+    font-size: 1rem;           /* 16px stops iPhone zooming into the field */
+    transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
   }}
   .field-input:focus-visible {{
     outline: none;
-    border-color: var(--midground);
-    box-shadow: 0 0 0 1px var(--midground);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(71, 158, 219, 0.25);
   }}
   .form-error {{
-    color: #ff6b6b;
-    font-size: 0.82rem;
-    letter-spacing: 0.02em;
+    color: var(--error);
+    font-size: 0.9rem;
   }}
-  .provider-form .provider-btn {{
-    margin-top: 0.25rem;
-  }}
+  .provider-form .provider-btn {{ margin-top: 0.25rem; }}
 
   footer {{
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
     text-align: center;
-    color: color-mix(in srgb, var(--foreground) 45%, transparent);
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    line-height: 1.7;
+    color: var(--muted);
+    font-size: 0.85rem;
   }}
-  footer .sep {{
-    display: inline-block;
-    width: 1.5rem;
-    height: 1px;
-    background: var(--hairline-strong);
-    vertical-align: middle;
-    margin: 0 0.6em 0.2em;
-  }}
+  footer a {{ color: var(--link); }}
 
-  /* Selection — DS uses midground bg + background text. */
-  ::selection {{
-    background: var(--midground);
-    color: var(--background-base);
-  }}
+  ::selection {{ background: rgba(71, 158, 219, 0.3); }}
 </style>
 </head>
 <body>
 <main>
-  <div class="brand">Aura</div>
+  <div class="brand"><span class="brand-orb" aria-hidden="true"></span>Aura</div>
   <div class="card">
-    <h1>Sign in</h1>
-    <p class="subtitle">Choose a sign-in method to continue to Aura.</p>
+    <h1>Welcome back</h1>
+    <p class="subtitle">Sign in to pick up where you left off.</p>
     <div class="provider-list">
 {provider_buttons}
     </div>
   </div>
-  <footer>
-    <span class="sep"></span>Public bind &middot; Auth required<span class="sep"></span>
-  </footer>
+  <footer>Aura by Reveta</footer>
 </main>
 {password_script}
 </body>
@@ -310,7 +269,7 @@ _EMPTY_HTML = """\
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign-in unavailable — Hermes Agent</title>
+<title>Sign-in unavailable — Aura</title>
 <style>
   @font-face {
     font-family: 'Collapse';
@@ -397,7 +356,7 @@ _TOKEN_MODE_HTML = """\
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Token-gated dashboard — Hermes Agent</title>
+<title>Sign in — Aura</title>
 <style>
   :root {
     --background-base: #170d02;
@@ -545,8 +504,8 @@ def render_login_html(*, next_path: str = "", prefix: str = "") -> str:
                 .replace("{note}",
                          "Clients authenticate with the deployment&rsquo;s provisioned "
                          "credential (<code>Authorization: Bearer</code>, or "
-                         "<code>?token=</code> on the /api/ws upgrade) &mdash; e.g. Hermes "
-                         "Desktop&rsquo;s &ldquo;Session token&rdquo; remote-gateway field. "
+                         "<code>?token=</code> on the /api/ws upgrade) &mdash; e.g. the desktop app"
+                         "&rsquo;s &ldquo;Session token&rdquo; remote-gateway field. "
                          "There is no browser sign-in flow."))
     buttons = [
         _render_password_form(p, next_path, prefix=prefix)
