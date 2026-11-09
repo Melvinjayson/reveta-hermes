@@ -39,14 +39,25 @@ export type InterfaceMode = 'advanced' | 'simple'
 /** Picker order — the quiet option first. */
 export const INTERFACE_MODES: readonly InterfaceMode[] = ['simple', 'advanced']
 
-export const DEFAULT_INTERFACE_MODE: InterfaceMode = 'advanced'
+/** Read a build-time default. Only an exact 'simple' opts in; anything else
+ *  (unset, typo, empty) keeps the historical Advanced default, so stock builds
+ *  are unchanged. A product build (e.g. the Aura webapp) sets
+ *  VITE_HERMES_DEFAULT_INTERFACE_MODE=simple to open chat-first. */
+export function resolveDefaultInterfaceMode(raw: unknown): InterfaceMode {
+  return typeof raw === 'string' && raw.trim().toLowerCase() === 'simple' ? 'simple' : 'advanced'
+}
+
+export const DEFAULT_INTERFACE_MODE: InterfaceMode = resolveDefaultInterfaceMode(
+  import.meta.env?.VITE_HERMES_DEFAULT_INTERFACE_MODE
+)
 
 const INTERFACE_MODE_STORAGE_KEY = 'hermes.desktop.interfaceMode.v1'
 
-// Advanced is the ABSENCE of a mode: encoded as "no key" so a user who never
-// touched the picker never gains a record, and clearing the key means Advanced.
+// The build default is the ABSENCE of a mode: encoded as "no key" so a user who
+// never touched the picker never gains a record, and clearing the key means the
+// default. Only the non-default choice is ever written.
 const modeCodec: Codec<InterfaceMode> = {
-  decode: raw => (raw === 'simple' ? 'simple' : DEFAULT_INTERFACE_MODE),
+  decode: raw => (raw === 'simple' || raw === 'advanced' ? raw : DEFAULT_INTERFACE_MODE),
   encode: mode => (mode === DEFAULT_INTERFACE_MODE ? null : mode)
 }
 

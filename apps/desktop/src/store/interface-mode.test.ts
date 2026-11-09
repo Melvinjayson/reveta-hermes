@@ -6,7 +6,7 @@
  */
 
 import { atom } from 'nanostores'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const MODE_KEY = 'hermes.desktop.interfaceMode.v1'
 
@@ -42,6 +42,52 @@ describe('interface mode persistence', () => {
     window.localStorage.setItem(MODE_KEY, 'intermediate')
     vi.resetModules()
     expect((await loadStore()).$interfaceMode.get()).toBe('advanced')
+  })
+})
+
+describe('build-time default interface mode', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    window.localStorage.clear()
+  })
+
+  beforeEach(() => {
+    window.localStorage.clear()
+    vi.resetModules()
+    vi.unstubAllEnvs()
+  })
+
+  it('only an exact simple opts in; anything else keeps Advanced', async () => {
+    const { resolveDefaultInterfaceMode } = await loadStore()
+
+    expect(resolveDefaultInterfaceMode('simple')).toBe('simple')
+    expect(resolveDefaultInterfaceMode(' Simple ')).toBe('simple')
+    expect(resolveDefaultInterfaceMode(undefined)).toBe('advanced')
+    expect(resolveDefaultInterfaceMode('')).toBe('advanced')
+    expect(resolveDefaultInterfaceMode('simpel')).toBe('advanced')
+    expect(resolveDefaultInterfaceMode(1)).toBe('advanced')
+  })
+
+  it('a Simple-default build opens Simple, remembers an Advanced pick, and writes nothing for Simple', async () => {
+    vi.stubEnv('VITE_HERMES_DEFAULT_INTERFACE_MODE', 'simple')
+    const first = await loadStore()
+
+    expect(first.DEFAULT_INTERFACE_MODE).toBe('simple')
+    expect(first.$interfaceMode.get()).toBe('simple')
+    expect(window.localStorage.getItem(MODE_KEY)).toBeNull()
+
+    first.setInterfaceMode('advanced')
+    expect(window.localStorage.getItem(MODE_KEY)).not.toBeNull()
+    vi.resetModules()
+    expect((await loadStore()).$interfaceMode.get()).toBe('advanced')
+
+    ;(await loadStore()).setInterfaceMode('simple')
+    expect(window.localStorage.getItem(MODE_KEY)).toBeNull()
+
+    // Leave the default build behind for the static-import suites below.
+    vi.unstubAllEnvs()
+    window.localStorage.clear()
+    vi.resetModules()
   })
 })
 

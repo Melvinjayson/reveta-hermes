@@ -355,7 +355,10 @@ COPY scripts/build/*.mjs scripts/build/
 # change reuses this layer and the build below reuses its install.
 RUN node apps/desktop/scripts/build-webapp.mjs --deps-only
 COPY apps/ apps/
-RUN node apps/desktop/scripts/build-webapp.mjs
+# Product builds (e.g. Aura) pass --build-arg HERMES_DEFAULT_INTERFACE_MODE=simple
+# to open chat-first. Empty keeps the stock Advanced default.
+ARG HERMES_DEFAULT_INTERFACE_MODE=""
+RUN VITE_HERMES_DEFAULT_INTERFACE_MODE="$HERMES_DEFAULT_INTERFACE_MODE" node apps/desktop/scripts/build-webapp.mjs
 
 FROM python_deps AS runtime
 # Standalone TypeScript linting is a runtime feature; Vite/esbuild are not.
