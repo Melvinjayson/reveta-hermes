@@ -7,7 +7,7 @@ const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path}`
 export function BrandMark({ className, ...props }: React.ComponentProps<'span'>) {
   return (
     <span className={cn('inline-flex size-14 shrink-0 items-center justify-center', className)} {...props}>
-      <img alt="" className="size-full object-contain" src={assetPath('brand/aura-mark.svg')} draggable={false} />
+      <img alt="" className="size-full object-contain" draggable={false} src={assetPath('brand/aura-mark.svg')} />
     </span>
   )
 }
