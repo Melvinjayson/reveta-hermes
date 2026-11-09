@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F8FB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0A0A0B" media="(prefers-color-scheme: dark)">
+<title>Aura is waking up</title>
+<style>
+  /* Static Aura front door. Opens instantly; the app server behind it sleeps
+     on a free plan. Colours follow the Reveta brand token values v2.0.0. */
+  :root {
+    color-scheme: light dark;
+    --page: #F4F8FB; --card: #FFFFFF; --text: #101C49; --muted: #5B6788;
+    --link: #247AB7; --btn-bg: #101C49; --btn-text: #FFFFFF;
+    --hairline: rgba(16, 28, 73, 0.14);
+    --glow-a: rgba(71, 158, 219, 0.28); --glow-b: rgba(127, 211, 243, 0.30);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0A0A0B; --card: #111113; --text: #EDEDEF; --muted: #A1A1AA;
+      --link: #7FD3F3; --btn-bg: #479EDB; --btn-text: #0A0A0B;
+      --hairline: rgba(255, 255, 255, 0.12);
+      --glow-a: rgba(71, 158, 219, 0.22); --glow-b: rgba(127, 211, 243, 0.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--page); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  body { display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; padding: 1.25rem; overflow: hidden; }
+  body::before, body::after { content: ""; position: fixed; width: 34rem; height: 34rem; border-radius: 50%;
+    filter: blur(60px); pointer-events: none; animation: breathe 9s ease-in-out infinite alternate; }
+  body::before { top: -14rem; left: -10rem; background: var(--glow-a); }
+  body::after { bottom: -16rem; right: -12rem; background: var(--glow-b); animation-delay: -4.5s; }
+  @keyframes breathe { from { transform: scale(0.92); opacity: 0.75; } to { transform: scale(1.06); opacity: 1; } }
+  main { position: relative; z-index: 1; width: 100%; max-width: 24rem; text-align: center; }
+  .orb { width: 4.5rem; height: 4.5rem; margin: 0 auto 1.5rem; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #7FD3F3, #479EDB 60%, #247AB7);
+    box-shadow: 0 0 0 10px rgba(71, 158, 219, 0.12), 0 0 48px rgba(71, 158, 219, 0.55);
+    animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(0.94); } 50% { transform: scale(1.04); } }
+  h1 { margin: 0 0 0.4rem; font-family: 'Outfit', system-ui, -apple-system, sans-serif; font-weight: 600; font-size: 1.6rem; }
+  p { margin: 0 0 1.25rem; color: var(--muted); }
+  .status { font-size: 0.9rem; min-height: 1.5em; }
+  a.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: 0.75rem 1.25rem;
+    border-radius: 10px; background: var(--btn-bg); color: var(--btn-text); font-weight: 600; text-decoration: none; }
+  a.btn:focus-visible { outline: 2px solid #479EDB; outline-offset: 3px; }
+  footer { margin-top: 2rem; font-size: 0.85rem; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .orb, body::before, body::after { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="orb" aria-hidden="true"></div>
+  <h1>Aura is waking up</h1>
+  <p>This takes up to a minute after a quiet spell. You will be taken to sign in as soon as it is ready.</p>
+  <p class="status" role="status" aria-live="polite" id="status">Starting…</p>
+  <a class="btn" id="go" href="https://reveta-hermes-ecosystem-preview.onrender.com/login">Open sign-in now</a>
+  <footer>Aura by Reveta</footer>
+</main>
+<script>
+  // Readiness check: load the app's public icon as an image. While the free
+  // server sleeps, the host answers with an HTML loading page, which fails as
+  // an image, so onload only fires once the real app is serving. No data is
+  // sent and nothing keeps the server awake after this tab closes.
+  (function () {
+    var APP = 'https://reveta-hermes-ecosystem-preview.onrender.com';
+    var status = document.getElementById('status');
+    var started = Date.now();
+    var done = false;
+    function check() {
+      if (done) return;
+      var img = new Image();
+      var timer = setTimeout(function () { img.src = ''; retry(); }, 8000);
+      img.onload = function () {
+        clearTimeout(timer); done = true;
+        status.textContent = 'Ready. Taking you to sign in…';
+        window.location.replace(APP + '/login');
+      };
+      img.onerror = function () { clearTimeout(timer); retry(); };
+      img.src = APP + '/favicon.ico?wake=' + Date.now();
+    }
+    function retry() {
+      var s = Math.round((Date.now() - started) / 1000);
+      if (s > 180) {
+        status.textContent = 'This is taking longer than usual. Try the button below.';
+        return;
+      }
+      status.textContent = 'Starting… ' + s + 's';
+      setTimeout(check, 3000);
+    }
+    check();
+  })();
+</script>
+</body>
+</html>
