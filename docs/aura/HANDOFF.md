@@ -1,73 +1,150 @@
-# Aura verification foundation
+# Aura interface handoff
 
-Repository: `Melvinjayson/reveta-hermes`. Branch: `feat/aura-chat-slice-20261109`.
-Baseline: `be04ce9bfab76466bf4e1bbad82c37be6efe7ca2`.
-Surface A: existing browser Webapp; Simple mode is the next product target.
-The draft PR records the exact checkpoint SHA and post-commit JSON summary.
-Obtain the containing checkpoint with `git log -1 --format=%H -- docs/aura/HANDOFF.md`.
+Branch: `feat/aura-chat-slice-20261109`, draft PR #3 into
+`fix/chat-session-ux-navigation-20261106`. The PR records the exact verified SHA,
+command output, JSON gate result and screenshot links. Starting remote checkpoint:
+`6eab4ad16a452d0435f2c326ca80fba25256e998`.
 
-## Reproduce
+## App boundary and branding
 
-Use Node 26.12.1, pnpm 12.15.0, Python 3.14 and Ruff 0.15.22.
-Install into isolated tool directories and activate the project environment:
+`apps/desktop` is the chat-first browser Webapp, served by the gateway when
+`webapp.enabled` is true. It uses the existing session, streaming, attachment and
+approval APIs. `web` is the administration dashboard: its Chat page embeds a
+terminal. This change does not restyle that terminal into Aura.
+
+PR #5's branding at `af620af2a7da39d932c2e3d60db7d0b7d5c9b55b` is incorporated
+with a feature-branch merge. Previously uncommitted Aura work was reviewed and
+continued with founder authorization. No protected branch was merged or changed.
+The existing sign-in page and public crystal mark are retained.
+
+The Webapp opens its existing chat route inside an Aura shell, with no mode picker.
+It adds a phone menu sheet / collapsible desktop rail, grouped conversation history
+and search, appearance settings, a warm empty state, source chips, goal editing,
+progress and resume cards, and a keyboard-aware composer. The existing approval
+card answers the real pending request with Approve once / Change (deny); there is
+no skip-all control in this interface. Runtime/session behavior is retained.
+
+Palette, font, spacing-unit and radius **values** were reviewed against the approved
+Reveta v2 tokens. No private token files, design-library source or illustrations
+were copied. Inter and Outfit come from public Google Fonts sources with OFL
+notices and SHA-256 records under `apps/desktop/public/fonts/aura`.
+
+## Reproduce and evidence
+
+Use Node 26.12.1, pnpm 12.15.0, Python 3.14, Ruff 0.15.22 and just 1.59.0:
 
 ```sh
 uv sync --frozen --group dev
 pnpm install --frozen-lockfile --ignore-scripts
 . .venv/bin/activate
-just aura-check > aura-check.json
+just aura-check > /tmp/aura-check.json
+pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=2 --reporter=dot
 ```
 
-Keep the result outside the checkout for a clean-tree run. `just` 1.59.0 was
-installed as an isolated development tool. For pnpm installed with lifecycle
-scripts disabled, inspect and explicitly run its own `install.js` to expose the
-native executable: its placeholder can fall through to another pnpm when
-launched without a shell. The gate checks exact tool versions.
+The gate pins a 4 GiB Node heap. JSON goes to stdout and check output to stderr.
+A failing required check exits nonzero. The browser check runs the real local
+Webapp and FakeLLMServer with fresh temporary homes, synthetic credentials and
+manual approvals. Private sign-in links are passed over stdin, not printed.
+Cleanup deliberately interrupts only that temporary test gateway with
+`gateway stop --yes`, including when an assertion fails mid-turn.
 
-The runner builds the Webapp, typechecks, lints, runs 60 selected UI contracts,
-the existing isolated foundation/container/skill tests, runner failure tests,
-14 dashboard public-Origin contracts, and fake-provider streaming/fault HTTP
-integration. Command output goes to stderr; JSON goes to stdout. Any required
-failure exits nonzero. A temporary Hermes home and a credential allowlist isolate
-checks from operator model configuration. Node receives a 4 GiB heap: the initial
-typecheck exhausted its default 2 GiB heap; the 4 GiB rerun passed.
+The browser flow checks sign-in into chat, fake streaming, no upstream branding
+in the tested signed-in states, source chips, editable goal, grouped/searchable
+history, reopening with a resume card, theme controls, header touch targets,
+reduced motion and overflow at 320/375/390 px. A disposable directory must exist
+while an approval is pending and is removed only after Approve. No external
+recipient or customer data is involved. Image and URL attachment and the no-model
+screen are separate assertions. Screenshots use synthetic data only.
 
-Before this commit, all selected checks passed. Desktop lint reported 378 existing
-warnings and zero errors after the prop-order correction. The original targeted
-lint reproduced one `perfectionist/sort-jsx-props` error; the corrected file passed.
-The PR supplies the post-commit result; this document does not self-certify an
-unexecuted future run.
+The PR records actual exit codes and every unavailable check; this document is
+not a claim that an unexecuted future run passed. `aura-check-live` remains a
+refusal-only placeholder and was not run. Fake responses are not real-model proof.
 
-An additional local probe launched and stopped a temporary gateway with the existing
-FakeLLMServer and manual approvals, and rendered the Webapp root in headless system
-Chromium at 390 × 844 using the installed Playwright package. This proves initial
-rendering only, not chat acceptance. No sign-in links or credentials are retained.
+## Model configuration without provider calls
 
-## Remaining acceptance
+`scripts/reveta/aura_config.py` previews a configuration without network calls or
+reading key files. `--write <config.yaml>` explicitly writes it, retaining unrelated
+configuration entries. Key **values** never appear in its output or config file.
+It selects `openrouter/free` when OPENROUTER_API_KEY is present, then Gemini
+`gemini-2.5-flash` when GEMINI_API_KEY is present. With both keys, Gemini is the
+fallback. With neither, a closed loopback custom endpoint makes the missing-model
+state explicit instead of selecting an ambient paid provider.
 
-G1 test 1 has a foundation gate; the complete G1 gate is not implemented.
-Tests 2–10 (browser chat, all mobile/theme/accessibility cases, browser reopening,
-logout/login, local restart history, retry deduplication, interruption and anonymous
-session boundaries) are unverified. Test 11 has selected unit/boundary coverage;
-dashboard browser smoke and the full desktop/Electron suites are unverified.
-Test 12, live-model verification, was not run. `just aura-check-live` refuses with
-exit 2: live implementation and execution require a separately authorized step.
-The fake HTTP probe is not a Hermes turn or real-model evidence.
+Anthropic is disabled even if an Anthropic key exists. There is no verified
+spending-cap integration, so enabling it is deliberately not implemented. Gemini
+free-tier availability depends on the founder's project, region and quota settings;
+no billing or free-tier claim was verified by contacting a provider.
 
-No governance plugin or stretch work was implemented. No branding assets, product
-defaults, runtime, session or authentication behavior were changed. No proprietary
-source documents or tokens were copied. No infrastructure or deployment was changed.
+## Render cutover — documentation only, not executed
 
-Next smallest step: add a browser acceptance test that signs in to a temporary
-Webapp, selects Simple mode, submits synthetic text and observes a streamed reply
-from FakeLLMServer through the real Hermes runtime. Preserve existing approvals.
+The live preview was not changed. A deployment/restart needs separate founder
+approval. The repository Dockerfile already builds the Webapp bundle.
 
-## Existing shortcut markers
+1. Review and deploy the exact tested feature commit only after approval, keeping
+   PR #3 draft until reviewed. Retain the current login configuration. Do not change
+   repository visibility or create a new service.
+2. Retain `HERMES_HOME=/opt/data`, set `PORT=10000`,
+   `HERMES_DASHBOARD_PUBLIC_URL=https://aura-zero.onrender.com`, and
+   `HERMES_YOLO_MODE=0`. Retain the existing
+   `HERMES_DASHBOARD_BASIC_AUTH_USERNAME`; the founder enters/rotates
+   `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD` in Render, never in Git or chat.
+   Optionally set OPENROUTER_API_KEY and/or GEMINI_API_KEY in Render's secret
+   environment. Keep the chosen home free of provider keys in `.env`/auth files:
+   the unchanged Hermes runtime supports those sources too and can prefer them.
+3. Preview the generated config locally before approving the cutover. For a Docker
+   Command override, the exact wrapper is:
 
-`git grep -nE '(#|//|/[*]) ?(shortcut|ponytail):'` returned nine existing markers,
-in `apps/desktop/src/components/assistant-ui/thread/list.tsx:923`,
-`hermes_cli/_launchers.py:846`, `hermes_cli/main_desktop.py:1266`,
-`hermes_cli/process_identity.py:642`, `hermes_cli/venv_sync.py:585`,
-`hermes_state_dbfile.py:337`, and
-`optional-skills/creative/auteur/scripts/slopscan.mjs:62`, `:82`, `:371`.
-This checkpoint introduces none.
+   ```sh
+   /bin/sh -c '/opt/hermes/.venv/bin/python /opt/hermes/scripts/reveta/aura_config.py --write "$HERMES_HOME/config.yaml" && exec /opt/hermes/docker/entrypoint-dispatch.sh gateway run'
+   ```
+
+   This replaces the old **dashboard** command with **gateway run**, preserving the
+   dispatcher and its bootstrap. It does not launch a second frontend or a second
+   listener on port 10000. The interpreter is the image's canonical Python
+   (`HERMES_PYTHON` in Dockerfile). Verify the full command in an approved
+   deployment rehearsal before changing the live service.
+4. The generated Webapp config is:
+
+   ```yaml
+   webapp:
+     enabled: true
+     host: 0.0.0.0
+     port: 10000
+     public_url: https://aura-zero.onrender.com
+   approvals:
+     mode: manual
+     cron_mode: deny
+     unattended_mode: deny
+     single_query_mode: deny
+   ```
+
+   `PORT` alone does not select the Webapp listener port. Do not run dashboard on
+   that same port. Configure `dashboard.trusted_proxies` only with the verified
+   Render proxy address/range if required for secure forwarded HTTPS cookies;
+   do not guess a range or trust all addresses.
+5. Founder acceptance: verify anonymous access is refused, existing login reaches
+   Aura chat, sign out works, a no-key home displays the notice, and the selected
+   model/quotas are correct before any separately authorized live prompt. Roll back
+   to the previous approved image/command/config if this cutover fails. The free
+   service remains ephemeral; this does not establish restart durability.
+
+## Limits and founder decisions
+
+- No deployment, Render configuration, authentication implementation, repository
+  visibility, provider account or infrastructure was changed.
+- No new Reveta policy enforcement was implemented. The approval negative test
+  proves one guarded terminal action, not blanket coverage of every possible tool.
+- Goal edits are UI annotations; they do not rewrite stored messages or system
+  prompts. Source cards expose explicit citations; dates/metadata are not invented.
+- Keyboard screenshots emulate a reduced viewport, not a physical phone keyboard.
+  Real mobile IME behavior and exhaustive WCAG/manual assistive-technology review
+  remain to be checked. The PR identifies actual automated coverage.
+- Restart durability, real voice, automation canvas, knowledge graph and paid asset
+  generation remain out of scope. Live provider behavior is unverified.
+- Founder decisions: public versus private repository; final crystal versus plain
+  Aura mark; model keys/free-tier quotas; enforceable spending cap before Anthropic;
+  Render cutover approval and proxy/cookie validation.
+
+Next smallest step after this handoff: review the screenshots and browser evidence,
+then approve or decline a separate preview cutover rehearsal. Do not infer release
+or production readiness from fake-provider acceptance.

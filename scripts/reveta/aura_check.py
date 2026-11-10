@@ -18,7 +18,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[2]
-SURFACE = "A: Hermes browser Webapp (Simple mode target)"
+SURFACE = "A: Aura chat on Hermes Webapp (Simple mode)"
 
 
 def fake_provider_check() -> None:
@@ -89,7 +89,7 @@ def main() -> int:
     # Do not inherit model credentials or behavior switches from an operator's shell.
     keep = {"PATH", "HOME", "USER", "TMPDIR", "SYSTEMROOT", "VIRTUAL_ENV",
             "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
-            "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS"}
+            "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "NODE_EXTRA_CA_CERTS", "AURA_CHROMIUM", "AURA_SCREENSHOT_DIR"}
     env = {key: value for key, value in os.environ.items() if key in keep}
     env.update(TZ="UTC", LANG="C.UTF-8", PYTHONHASHSEED="0", HERMES_YOLO_MODE="0",
                HERMES_PYTHON=sys.executable, NODE_OPTIONS="--max-old-space-size=4096")
@@ -110,27 +110,31 @@ def main() -> int:
             ("desktop ESLint", pnpm + ["run", "lint"]),
             ("Webapp unit contracts", pnpm + ["exec", "vitest", "run", "--project", "ui",
                 "src/store/interface-mode.test.ts", "src/lib/browser-desktop-bridge.test.ts",
-                "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts"]),
+                "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts",
+                "src/app/aura", "src/store/browser-tab-title.test.ts",
+                "src/components/assistant-ui/tool/approval.test.tsx"]),
             ("Reveta isolated Python tests", ["bash", "scripts/run_tests.sh",
                 "tests/test_reveta_foundation.py", "tests/test_reveta_container_entrypoint.py",
                 "tests/skills/test_reveta_ecosystem_skill.py", "tests/scripts/test_aura_check.py",
+                "tests/scripts/test_aura_config.py",
                 "--noconftest", "-q"]),
             ("dashboard public Origin contracts", ["bash", "scripts/run_tests.sh",
                 "tests/hermes_cli/test_web_server_host_header.py", "--noconftest", "-q", "-k",
                 "declared_public_url or without_public_url"]),
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
-            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__]),
+            ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
+            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs"]),
+            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py"]),
         ]:
             checks.append(execute(name, command, env))
     skipped = [
         {"name": name, "reason": "G1 acceptance suite not implemented in this foundation checkpoint"}
-        for name in ["browser sign-in/send/stream", "mobile light/dark accessibility",
+        for name in ["complete mobile light/dark accessibility",
                      "browser reopening", "logout/login history", "local restart persistence",
                      "provider retry without duplicates", "interrupt streaming",
                      "anonymous session boundary", "dashboard browser smoke"]
     ]
     skipped.extend([
-        {"name": "Hermes turn against fake provider", "reason": "Only provider HTTP/SSE integration is implemented"},
         {"name": "full desktop unit and Electron E2E suites", "reason": "This gate selects relevant Webapp unit contracts"},
         {"name": "live provider verification", "reason": "Unavailable; separate explicit authorization required"},
     ])
