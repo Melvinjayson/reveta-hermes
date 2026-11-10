@@ -1,6 +1,9 @@
 import { isRecord } from '@hermes/shared/i18n'
 import { atom } from 'nanostores'
 
+import { auraCopy } from '@/app/aura/copy'
+import { isBrowserHostedDesktop } from '@/lib/platform'
+
 import { DEFAULT_LOCALE } from './languages'
 import { resolveTranslations } from './registry'
 import type { Locale, Translations } from './types'
@@ -74,9 +77,13 @@ export function getRuntimeI18nLocale(): Locale {
  *  packs) — for module-level code that reads whole copy blocks rather than
  *  one key. React should keep using `useI18n().t`. */
 export function runtimeTranslations(): Translations {
-  return resolveTranslations($runtimeLocale.get())
+  const copy = resolveTranslations($runtimeLocale.get())
+
+  return isBrowserHostedDesktop() ? auraCopy(copy) : copy
 }
 
 export function translateNow(key: string, ...args: unknown[]): string {
-  return translateFrom(resolveTranslations, $runtimeLocale.get(), key, args)
+  const text = translateFrom(resolveTranslations, $runtimeLocale.get(), key, args)
+
+  return isBrowserHostedDesktop() ? auraCopy(text) : text
 }

@@ -1,14 +1,6 @@
 import { ComposerPrimitive } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
-import {
-  type ClipboardEvent,
-  type FormEvent,
-  type KeyboardEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef
-} from 'react'
+import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
@@ -23,6 +15,7 @@ import { chatMessageText } from '@/lib/chat-messages'
 import { sanitizeComposerInput } from '@/lib/composer-input-sanitize'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { $touchPointer } from '@/lib/touch-interaction'
 import { useStoreSelector, useStoresSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
@@ -1180,7 +1173,7 @@ export function ChatBar({
           hudNativeDrag && '[-webkit-app-region:no-drag]'
         )}
         contentEditable={!inputDisabled}
-        data-placeholder={placeholder}
+        data-placeholder={isBrowserHostedDesktop() ? 'Message Aura' : placeholder}
         data-slot={RICH_INPUT_SLOT}
         dir={textDirection}
         onBeforeInput={handleEditorBeforeInput}
@@ -1454,7 +1447,8 @@ export function ChatBar({
                   // track past the surface — and every `w-full` child (the fade,
                   // the input/controls row) laid out against that phantom width
                   // and got clipped by overflow-hidden, send button first.
-                  'group/composer-surface relative z-4 isolate grid grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] overflow-hidden rounded-[inherit]', composerSurfaceRing,
+                  'group/composer-surface relative z-4 isolate grid grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr] overflow-hidden rounded-[inherit]',
+                  composerSurfaceRing,
                   COMPOSER_DROP_FADE_CLASS,
                   dragActive && COMPOSER_DROP_ACTIVE_CLASS
                 )}
@@ -1555,7 +1549,12 @@ export function ChatBarFallback() {
       )}
       data-slot="composer-root"
     >
-      <div className={cn('composer-fallback-surface relative isolate h-(--composer-fallback-height) w-full rounded-[inherit]', composerSurfaceRing)}>
+      <div
+        className={cn(
+          'composer-fallback-surface relative isolate h-(--composer-fallback-height) w-full rounded-[inherit]',
+          composerSurfaceRing
+        )}
+      >
         <div aria-hidden className={composerInputBacking} />
       </div>
     </div>

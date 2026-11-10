@@ -2,7 +2,9 @@ import { applyDocumentLocale, isRecord } from '@hermes/shared/i18n'
 import { useStore } from '@nanostores/react'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
+import { auraCopy } from '@/app/aura/copy'
 import { getHermesConfigRecord, type HermesConfigRecord, retainConfigReadOrigin, saveHermesConfig } from '@/hermes'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 
 import { TRANSLATIONS } from './catalog'
 import {
@@ -288,7 +290,7 @@ export function I18nProvider({
       locale,
       saveError,
       setLocale,
-      t: resolveTranslations(locale)
+      t: isBrowserHostedDesktop() ? auraCopy(resolveTranslations(locale)) : resolveTranslations(locale)
     }),
     // `registryVersion` is the registry's change token: a pack landing after
     // first paint re-resolves `t` without a locale change.

@@ -52,6 +52,7 @@ import {
   Zap
 } from '@/lib/icons'
 import { type KeybindContribution, KEYBINDS_AREA } from '@/lib/keybinds/actions'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { TRANSCRIPT_DIRECTIVE_AREA, type TranscriptDirectiveContribution } from '@/lib/transcript-directives'
 import { setYoloEnabled } from '@/lib/yolo-session'
 import { $connectionsRegistry } from '@/store/connection-registry-state'
@@ -784,6 +785,16 @@ registerPaneCloser('files', () =>
 export function ContribController() {
   const sidebarOpen = useStore($sidebarOpen)
   const statusbarVisible = useStore($statusbarVisible)
+
+  if (isBrowserHostedDesktop()) {
+    return (
+      <SidebarProvider className="contents">
+        <ContribWiring>
+          <WiredPane part="chatRoutes" />
+        </ContribWiring>
+      </SidebarProvider>
+    )
+  }
 
   // HUD mode is the SAME app with its frame removed: the wiring (gateway,
   // sessions, streams, submit) mounts identically, and only the shell around

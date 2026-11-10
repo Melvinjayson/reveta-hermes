@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 import { NEW_SESSION_TITLE, sessionTitle } from '@/lib/chat-runtime'
 import { useIncrementalExternalStoreRuntime } from '@/lib/incremental-external-store-runtime'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { useStoreSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
 import { migrateSessionDraft } from '@/store/composer'
@@ -763,7 +764,7 @@ const ChatViewContent = memo(function ChatViewContent({
       <Backdrop />
       {/* Tiles get their chrome from the layout zone (chip strip); the modal
           prompt overlays stay active-session-scoped in the primary surface. */}
-      {isPrimary && (
+      {isPrimary && !isBrowserHostedDesktop() && (
         <ChatHeader
           activeSessionId={activeSessionId}
           isRoutedSessionView={isRoutedSessionView}
@@ -806,7 +807,7 @@ const ChatViewContent = memo(function ChatViewContent({
             sessionId={activeSessionId}
             sessionKey={threadKey}
           />
-          {isPrimary && isMainWindow() && <IntroCopy />}
+          {isPrimary && !isBrowserHostedDesktop() && isMainWindow() && <IntroCopy />}
           {resumeExhausted && routedSessionId && (
             <ResumeExhaustedOverlay onRetryResume={onRetryResume} sessionId={routedSessionId} />
           )}

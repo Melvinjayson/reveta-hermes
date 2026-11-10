@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { type CSSProperties, lazy, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { AuraShell } from '@/app/aura/shell'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { StartupOverlay } from '@/components/boot-failure-overlay'
 import { ConfirmHost } from '@/components/confirm-host'
@@ -36,6 +37,7 @@ import { UpdateHoldOverlay } from '@/components/update-hold-overlay'
 import { emitGatewayEvent } from '@/contrib/events'
 import { translateNow } from '@/i18n'
 import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { isMessagingSource } from '@/lib/session-source'
 import { activateWakeIndicator } from '@/lib/wake-indicator'
 import { playWakeSound } from '@/lib/wake-sound'
@@ -1261,7 +1263,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
         {/* HUD and the popped-out Browser have no titlebar to hang these off —
             the clusters are `fixed`, so without this they'd float over the
             surface as orphaned buttons. */}
-        {!isHudWindow() && !isBrowserWindow() && (
+        {!isBrowserHostedDesktop() && !isHudWindow() && !isBrowserWindow() && (
           <TitlebarControls
             leftTools={leftTitlebarTools}
             onOpenSettings={() => navigate(SETTINGS_ROUTE)}
@@ -1274,13 +1276,13 @@ export function ContribWiring({ children }: { children: ReactNode }) {
             isMaximized={Boolean(connection?.isMaximized)}
           />
         )}
-        {children}
+        {isBrowserHostedDesktop() ? <AuraShell actions={actions}>{children}</AuraShell> : children}
       </div>
 
       {/* The full real overlay set (mirrors DesktopController's `overlays`). */}
       <RemoteDisplayBanner />
-      {!isAuxiliaryWindow() && <DesktopInstallOverlay />}
-      {!isAuxiliaryWindow() && (
+      {!isBrowserHostedDesktop() && !isAuxiliaryWindow() && <DesktopInstallOverlay />}
+      {!isBrowserHostedDesktop() && !isAuxiliaryWindow() && (
         <DesktopOnboardingOverlay
           enabled={gatewayState === 'open'}
           onCompleted={() => {
@@ -1292,8 +1294,8 @@ export function ContribWiring({ children }: { children: ReactNode }) {
           requestGateway={requestGateway}
         />
       )}
-      {!isAuxiliaryWindow() && <OnboardingEnd />}
-      {!isAuxiliaryWindow() && (
+      {!isBrowserHostedDesktop() && !isAuxiliaryWindow() && <OnboardingEnd />}
+      {!isBrowserHostedDesktop() && !isAuxiliaryWindow() && (
         <SharedMetricsConsentDialog
           enabled={gatewayState === 'open'}
           profile={activeGatewayProfile}
@@ -1331,7 +1333,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
       <RemoteFolderPicker />
       <FindBar />
 
-      {settingsOpen && (
+      {settingsOpen && !isBrowserHostedDesktop() && (
         <Suspense fallback={null}>
           <SettingsView
             gateway={gateway}
@@ -1430,7 +1432,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
 
       {/* Single persistent xterm host chasing the terminal pane's slot rect.
           The HUD has no terminal pane, so it has nothing to chase. */}
-      {!isHudWindow() && !isBrowserWindow() && (
+      {!isBrowserHostedDesktop() && !isHudWindow() && !isBrowserWindow() && (
         <PersistentTerminal onAddSelectionToChat={composer.addTerminalSelectionAttachment} />
       )}
     </ContribWiringContext.Provider>

@@ -2,6 +2,7 @@ import { atom, computed, type ReadableAtom, type WritableAtom } from 'nanostores
 
 import { createLayoutPersistence } from '@/lib/layout-persistence'
 import { type Codec, persistentAtom } from '@/lib/persisted'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import type { SidebarRowMeta } from '@/store/layout'
 import type { ToolViewMode } from '@/store/tool-view'
 import { isBrowserWindow, isHudWindow, isSecondaryWindow } from '@/store/windows'
@@ -39,7 +40,7 @@ export type InterfaceMode = 'advanced' | 'simple'
 /** Picker order — the quiet option first. */
 export const INTERFACE_MODES: readonly InterfaceMode[] = ['simple', 'advanced']
 
-export const DEFAULT_INTERFACE_MODE: InterfaceMode = 'advanced'
+export const DEFAULT_INTERFACE_MODE: InterfaceMode = isBrowserHostedDesktop() ? 'simple' : 'advanced'
 
 const INTERFACE_MODE_STORAGE_KEY = 'hermes.desktop.interfaceMode.v1'
 
@@ -62,6 +63,9 @@ export const modeLayout = createLayoutPersistence(
 )
 
 export function setInterfaceMode(mode: InterfaceMode) {
+  if (isBrowserHostedDesktop()) {
+    return
+  }
   modeLayout.change(mode, () => $interfaceMode.set(mode))
 }
 
