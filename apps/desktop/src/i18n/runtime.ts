@@ -79,11 +79,11 @@ export function getRuntimeI18nLocale(): Locale {
 export function runtimeTranslations(): Translations {
   const copy = resolveTranslations($runtimeLocale.get())
 
-  return isBrowserHostedDesktop() ? auraCopy(copy) : copy
+  return typeof window !== 'undefined' && isBrowserHostedDesktop() ? auraCopy(copy) : copy
 }
 
 export function translateNow(key: string, ...args: unknown[]): string {
   const text = translateFrom(resolveTranslations, $runtimeLocale.get(), key, args)
 
-  return isBrowserHostedDesktop() ? auraCopy(text) : text
+  return typeof window !== 'undefined' && isBrowserHostedDesktop() ? auraCopy(text) : text
 }

@@ -84,6 +84,16 @@ while development continued. Its eventual result and that limitation are recorde
 separately in the PR; it is not substituted for the final gate on the committed
 code. The final gate reruns all new/changed component contracts.
 
+The first complete UI sweep at `fcc1aeab88a7fafae9def41edd0d8d55105de380`
+ran 1,581 files: 1,577 passed; 25 assertions failed across four files. The new
+browser branding exposed old title/default-mode expectations, a native-title
+convention violation, and a renderer-only `window` lookup in runtime translations.
+Corrections preserve the native translation path without `window`, use the house
+Tip component, and retain the profile-door invariant under Aura's Simple default.
+All four affected files then passed together (94 tests). They are now included in
+the default gate. The PR records the clean corrective-commit gate and complete
+suite rerun; the initial failing sweep is not described as passing.
+
 Verified text/accent contrast pairs: light primary on Mist 15.31:1, light secondary
 on Mist 5.26:1, white on link blue 4.62:1; dark primary on base 16.93:1, dark secondary
 on surface 7.36:1, dark base on accent blue 6.77:1. This is not a blanket WCAG audit.

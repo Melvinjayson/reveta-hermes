@@ -144,9 +144,11 @@ export function ComposerControls({
       style={{ flexWrap: browserHost && minimal ? 'wrap' : undefined }}
     >
       {hostHas('webappCopy') ? (
-        <button aria-label="Voice is coming soon" className="aura-mic" title="Voice is coming soon" type="button">
-          <Mic size={20} />
-        </button>
+        <Tip label="Voice is coming soon" placement="control">
+          <button aria-label="Voice is coming soon" className="aura-mic" type="button">
+            <Mic size={20} />
+          </button>
+        </Tip>
       ) : minimal ? null : (
         <>
           {hideModelPill ? null : (
