@@ -1,5 +1,50 @@
 # Aura interface handoff
 
+## Radix focus teardown correction
+
+Base verified clean and remote-matching: `13fead82b6f4d2c976127b579e4487059d599f9e`.
+Only the fleet-rail test lifecycle changes; no application, free-only allowlist,
+provider, deployment, Render, authentication or secrets changes.
+
+The preceding complete UI run passed 13,174 assertions but exited 1 because a
+Radix focus-scope zero-delay unmount timer dispatched a CustomEvent after its
+jsdom environment had changed. Synchronous Testing Library cleanup removed the
+portal but returned before that callback. The affected file now awaits one real
+event-loop turn inside React `act` after cleanup, before resetting mocks/stores
+and letting Vitest dispose the environment. The callback executes normally; no
+exception filter, timer cancellation, skip, suppression or timeout increase is used.
+
+A regression opens the real condensed rail menu, observes Radix's unmount-focus
+event, calls the same teardown helper, and checks one callback using the current
+window's CustomEvent plus absence of the menu and portal. With synchronous cleanup
+it failed (callback count 0, 31 existing tests passed, exit 1); with the fix all
+32 tests passed, exit 0, 7.91s. This proves the lifetime gap without relying on a
+random cross-file race to reproduce the old full-suite error.
+
+Focused command (Node 26.12.1, pnpm 12.15.0, Linux, 4096 MiB heap):
+
+```sh
+NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui src/app/chat/sidebar/profile-rail-fleet.test.tsx
+```
+
+Changed-file ESLint and `git diff --check` are required before commit. The complete
+UI project then runs once on the committed implementation tree with the command
+below. Its exact exit code, counts, tested SHA and gate JSON will be recorded here
+in an evidence-only follow-up; no UI changes follow that run.
+
+```sh
+NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=/workspace/aura-evidence/focus-final-ui.json
+```
+
+Evidence: `/workspace/aura-evidence/focus-timer-red.log`,
+`focus-timer-green.log`, `focus-final-ui.log`, `focus-final-ui.json` and
+`focus-final-gate.json`. The gate records the process exit code separately because
+Vitest's JSON `success` alone did not reflect the preceding unhandled exception.
+The earlier `just aura-check` exit 0 at 13fead82 remains historical evidence;
+this test-only correction reruns the requested focused and complete UI project,
+not providers, backend tests, browser acceptance or deployments. Live-model,
+physical-phone, restart and OS containment limitations below remain unchanged.
+
 ## Free-only routing increment — local fixtures, no live provider authorization
 
 Starting branch/remote SHA verified clean: `3e3845d090a4568f76308546e4545ed016bc2eda`.

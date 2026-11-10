@@ -232,8 +232,17 @@ beforeEach(() => {
   ;(window as { hermesDesktop?: unknown }).hermesDesktop = { getAgentRoster, openWindow, probeLocalBackend }
 })
 
-afterEach(() => {
+async function cleanupFleet() {
   cleanup()
+  // Radix restores focus in a zero-delay unmount timer. Finish it while this
+  // jsdom realm still owns CustomEvent, before Vitest tears the environment down.
+  await act(async () => {
+    await new Promise<void>(resolve => setTimeout(resolve, 0))
+  })
+}
+
+afterEach(async () => {
+  await cleanupFleet()
   $profileOrder.set([])
   vi.clearAllMocks()
   vi.restoreAllMocks()
@@ -609,6 +618,26 @@ describe('ProfileRail fleet mode', () => {
 
     expect(screen.getByRole('button', { name: 'Profiles' })).toBeTruthy()
     expect(container.querySelector('[data-slot="profile-rail-rest-square"]')).toBeNull()
+  })
+
+  it('finishes deferred menu focus restoration before the test environment is torn down', async () => {
+    armFleet()
+    profiles.set([
+      { is_default: true, name: 'default' },
+      ...Array.from({ length: 11 }, (_, index) => ({ is_default: false, name: `p${index + 1}` }))
+    ])
+    await renderFleet()
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Profiles' }), { button: 0, ctrlKey: false })
+    const menu = await screen.findByRole('menu')
+    const restored = vi.fn((event: Event) => expect(event).toBeInstanceOf(window.CustomEvent))
+    menu.addEventListener('focusScope.autoFocusOnUnmount', restored)
+
+    await cleanupFleet()
+
+    expect(restored).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(window.document.querySelector('[data-radix-popper-content-wrapper]')).toBeNull()
   })
 
   it('keeps the device glyph on the This device row once the rail condenses', async () => {
