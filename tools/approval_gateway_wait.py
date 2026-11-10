@@ -168,6 +168,9 @@ def _await_gateway_decision(session_key: str, notify_cb, approval_data: dict, *,
     # Captured before the entry is published: a coalesced follower can find it while the pre-request
     # hooks still run, and must wait this same timeout rather than re-read a since-edited config.
     timeout_s = entry.data["timeout_s"] = _ctx._get_approval_timeout()
+    if entry.data.get("single_use"):
+        timeout_s = entry.data["timeout_s"] = min(timeout_s, max(
+            0, entry.data.get("expires_at_monotonic", 0) - time.monotonic()))
 
     def _enqueue() -> None:
         register_prepared_approval(session_key, entry)

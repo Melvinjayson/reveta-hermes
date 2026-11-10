@@ -9,6 +9,11 @@ from tools.connectors.gateway.merge import assemble_results, fill_remote_failure
 
 
 def dispatch_connector_call(name, arguments, tool_call_id, turn_id=None, task_id=None):
+    from tools.aura_dispatch_policy import guarded_call
+    return guarded_call(name, arguments, lambda args: _dispatch_connector_call(name, args, tool_call_id, turn_id, task_id))
+
+
+def _dispatch_connector_call(name, arguments, tool_call_id, turn_id=None, task_id=None):
     from tools.connectors.data_use import record_data_use
     from tools.connectors.gateway.bridge import run_remote
 

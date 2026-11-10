@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { ChevronDown, Loader2 } from '@/lib/icons'
 import { releaseApprovalKey } from '@/lib/keybinds/approval-keys'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 import { $gateway } from '@/store/gateway'
 import { reconnectAction } from '@/store/gateway-reconnect'
@@ -328,12 +329,20 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
     <article
       aria-hidden={!present || undefined}
       className="min-w-0"
+      data-aura-card={isBrowserHostedDesktop() ? 'approval' : undefined}
       data-request-id={request.requestId}
       data-slot="tool-approval-card"
       inert={!present}
       onPointerDownCapture={rememberFocusOrigin}
       ref={cardRef}
     >
+      {isBrowserHostedDesktop() && (
+        <div className="aura-approval-intro">
+          <h2>Your approval is needed</h2>
+          <p>This action stays paused until you approve it once. Change declines it so you can revise your request.</p>
+          <p>Destination and effect: review the complete command below. No recipient information is inferred.</p>
+        </div>
+      )}
       <div className="flex items-center gap-2 px-2.5 pt-2 text-xs text-(--ui-text-secondary)">
         <Codicon name="terminal" size="0.875rem" />
         <span>{showsDescription ? copy.commandDetails : copy.command}</span>
@@ -350,9 +359,15 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
       )}
       <div className="flex items-center justify-end gap-1.5 px-2 pb-2 pt-1" data-slot="tool-approval-actions">
         <Button data-approval-deny="" disabled={busy} onClick={() => void respond('deny')} size="sm" variant="text">
-          {submitting === 'deny' ? <Loader2 className="size-3 animate-spin" /> : copy.reject}
+          {submitting === 'deny' ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : isBrowserHostedDesktop() ? (
+            'Change'
+          ) : (
+            copy.reject
+          )}
         </Button>
-        {hasMoreOptions && (
+        {hasMoreOptions && !isBrowserHostedDesktop() && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button aria-label={copy.moreOptions} disabled={busy} size="sm" variant="secondary">
@@ -383,7 +398,13 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
           </DropdownMenu>
         )}
         <Button data-approval-run="" disabled={busy} onClick={() => void respond('once')} size="sm">
-          {submitting === 'once' ? <Loader2 className="size-3 animate-spin" /> : copy.run}
+          {submitting === 'once' ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : isBrowserHostedDesktop() ? (
+            'Approve'
+          ) : (
+            copy.run
+          )}
           <span className="opacity-60">↵</span>
         </Button>
       </div>

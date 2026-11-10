@@ -308,7 +308,8 @@ _RAW_INLINE_TOOL_EXECUTORS: dict[str, InlineToolExecutor] = {
 
 def _coerced(name: str, executor: InlineToolExecutor) -> InlineToolExecutor:
     def _exec(agent, args: dict, ctx: InlineToolContext) -> Any:
-        return executor(agent, coerce_tool_args(name, args), ctx)
+        from tools.aura_dispatch_policy import guarded_call
+        return guarded_call(name, coerce_tool_args(name, args), lambda approved: executor(agent, approved, ctx))
     return _exec
 
 
@@ -332,10 +333,8 @@ def resolve_invoke_tool_executor(agent, function_name: str) -> Optional[InlineTo
         return INLINE_TOOL_EXECUTORS[function_name]
     memory_manager = agent._memory_manager
     if memory_manager and memory_manager.has_tool(function_name):
-        return lambda agent, args, ctx: agent._memory_manager.handle_tool_call(
-            function_name, args,
-            caller_gsk=(getattr(agent, "_gateway_session_key", "") or ""),
-        )
+        return _coerced(function_name, lambda agent, args, ctx: agent._memory_manager.handle_tool_call(
+            function_name, args, caller_gsk=(getattr(agent, "_gateway_session_key", "") or "")))
     if function_name == "message_agent":
         return None
     return INLINE_TOOL_EXECUTORS.get(function_name)

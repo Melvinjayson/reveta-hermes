@@ -1,11 +1,11 @@
+import { useContributions } from '@/contrib/react/use-contributions'
 /**
  * Command-palette contribution surface — `palette` data contributions become
  * rows in the ⌘K root list, same schema as every other area. Contributions
  * with an `action` id render that action's live keybind as their hotkey hint.
  */
-
-import { useContributions } from '@/contrib/react/use-contributions'
 import type { IconComponent } from '@/lib/icons'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 
 export const PALETTE_AREA = 'palette'
 
@@ -34,7 +34,7 @@ export interface PaletteContribution {
 export function usePaletteContributions(): Array<PaletteContribution & { key: string }> {
   return useContributions(PALETTE_AREA)
     .map(c => ({ key: `${c.source ?? 'core'}:${c.id}`, ...(c.data as PaletteContribution) }))
-    .filter(item => Boolean(item.label && item.run))
+    .filter(item => Boolean(item.label && item.run) && (!isBrowserHostedDesktop() || item.id !== 'view.simpleMode'))
 }
 
 /**

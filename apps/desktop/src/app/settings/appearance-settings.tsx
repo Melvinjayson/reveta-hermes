@@ -12,6 +12,7 @@ import { saveHermesConfig } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { Check, Download, Loader2, Palette, Trash2 } from '@/lib/icons'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { selectableCardClass } from '@/lib/selectable-card'
 import { normalize } from '@/lib/text'
 import { cn } from '@/lib/utils'
@@ -712,7 +713,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             </>
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ListRow
               action={
                 <SegmentedControl
@@ -730,7 +731,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ListRow
               action={
                 <SegmentedControl
@@ -748,7 +749,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ListRow
               action={
                 <SegmentedControl
@@ -766,7 +767,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ListRow
               action={
                 <SegmentedControl
@@ -784,7 +785,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <div id={settingElementId(ids.minimizeToTray)}>
               <MinimizeToTraySetting />
             </div>
@@ -912,7 +913,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ToggleRow
               checked={backdrop}
               description={a.backdropDesc}
@@ -955,7 +956,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
           {/* The same state as the titlebar toggle / ⌘J, which persists across
               launches — so this is the file browser's standing default. Simple
               mode shadows it; a flip there only lasts the session, so say so. */}
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ToggleRow
               checked={fileBrowserOpen}
               description={withModeNote(a.fileBrowserDesc, fileBrowserShadowed)}
@@ -965,7 +966,7 @@ export function AppearanceSettings({ subpage }: AppearanceSettingsProps = {}) {
             />
           )}
 
-          {show('window-layout') && (
+          {show('window-layout') && !isBrowserHostedDesktop() && (
             <ToggleRow
               checked={composerPopoutGesturesEnabled}
               description={a.composerPopoutDesc}

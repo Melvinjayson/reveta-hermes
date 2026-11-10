@@ -657,8 +657,10 @@ class TestLoginPageWholeClassPrefix:
         r = gated_app_proxied.get(
             "/login", headers={"X-Forwarded-Prefix": "/hermes"})
         assert r.status_code == 200
+        # The Aura sign-in page uses system fonts and loads no font files;
+        # whatever url() it does emit must stay inside the proxy mount.
         assert "url('/fonts/" not in r.text
-        assert "url('/hermes/fonts/" in r.text
+        assert "url('/" not in r.text.replace("url('/hermes/", "")
 
     def test_login_page_byte_identical_without_prefix(self, gated_app_direct):
         # No X-Forwarded-Prefix: no data-prefix, no rewritten fonts,
@@ -666,7 +668,7 @@ class TestLoginPageWholeClassPrefix:
         r = gated_app_direct.get("/login")
         assert r.status_code == 200
         assert "data-prefix" not in r.text
-        assert "url('/fonts/" in r.text
+        assert "url('/hermes/" not in r.text  # Aura sign-in loads no font files
         assert 'href="/auth/login?provider=' in r.text
 
     def test_password_form_script_reads_data_prefix(self, gated_app_proxied):
@@ -712,7 +714,7 @@ class TestLoginPageWholeClassPrefix:
             prefix="/hermes",
         )
         assert "url('/fonts/" not in html
-        assert "url('/hermes/fonts/" in html
+        assert "url('/" not in html.replace("url('/hermes/", "")
         # The chooser buttons re-enter the mount, not the origin root.
         assert 'href="/hermes/auth/native/authorize?' in html
 
@@ -734,4 +736,4 @@ class TestLoginPageWholeClassPrefix:
             state="cli-state",
         )
         assert "data-prefix" not in html
-        assert "url('/fonts/" in html
+        assert "url('/hermes/" not in html  # Aura sign-in loads no font files

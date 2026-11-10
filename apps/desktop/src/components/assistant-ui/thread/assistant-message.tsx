@@ -13,6 +13,8 @@ import { useStore } from '@nanostores/react'
 import { type FC, type ReactNode, useCallback, useContext, useEffect, useId, useMemo, useState } from 'react'
 import { useInRouterContext, useNavigate } from 'react-router'
 
+import { AuraMessageSources } from '@/app/aura/message-sources'
+import { AuraContinueLater } from '@/app/aura/readiness'
 import {
   type ComposerTarget,
   requestComposerInsert,
@@ -77,6 +79,7 @@ import {
   VolumeXIcon,
   XIcon
 } from '@/lib/icons'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { extractPreviewTargets } from '@/lib/preview-targets'
 import { markAssistantIdSpoken } from '@/lib/spoken-reply'
 import { $touchPointer } from '@/lib/touch-interaction'
@@ -236,6 +239,7 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
   const threadRuntime = useThreadRuntime()
   const responseIds = useContext(ResponseMessageIds)
   const responseTail = responseIds.length === 0 || responseIds.at(-1) === messageId
+  const [actionsOpen, setActionsOpen] = useState(false)
   const { t } = useI18n()
 
   // PERF: this component must NOT subscribe to the streaming text, and no
@@ -305,13 +309,24 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
 
   return (
     <MessagePrimitive.Root
+      aria-live="polite"
+      aria-relevant="additions text"
       className={cn(
         'group flex w-full min-w-0 max-w-full flex-col gap-0 self-start overflow-hidden',
         collapsedNotice && 'pb-(--conversation-turn-gap)'
       )}
       data-approval-activity-only={approval && activityOnly ? '' : undefined}
+      data-aura-actions-open={actionsOpen || undefined}
       data-role="assistant"
       data-slot="aui_assistant-message-root"
+      onContextMenu={
+        isBrowserHostedDesktop()
+          ? event => {
+              event.preventDefault()
+              setActionsOpen(open => !open)
+            }
+          : undefined
+      }
       // Collapsed inter-agent rows never carried the tapback listener; keeping
       // that exact truth table means gating it on the notice rather than on
       // whether the hook returned a handler.
@@ -333,6 +348,7 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
               <ErrorCard onDismiss={onDismissError ? () => onDismissError(messageId) : undefined} />
             </MessagePrimitive.Error>
           </div>
+          {isBrowserHostedDesktop() && <AuraMessageSources />}
           <MessageTimelineTimestamp className="px-(--message-text-indent) pt-0.5" suppressIfDuplicatePart />
           {/* Sealed interims skip the footer so a tool-heavy turn doesn't grow a
               copy bar per paragraph (72dd01c553) — EXCEPT when the interim is the
@@ -1337,6 +1353,7 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
   getMessageText,
   onBranchInNewChat
 }) => {
+  const continueLater = useContext(AuraContinueLater)
   const { t } = useI18n()
   const copy = t.assistant.thread
   const { reload: reloadMessage, disabled: reloadDisabled } = useActionBarReload()
@@ -1419,10 +1436,15 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
             </TooltipIconButton>
           )}
           {copyButton}
+          {continueLater && (
+            <button onClick={continueLater} type="button">
+              Continue later
+            </button>
+          )}
           {fullResponseAvailable && (
             <CopyButton appearance="icon" buttonSize="icon" label={copy.copyFullResponse} text={getFullResponseText} />
           )}
-          <ReadAloudButton action={readAloud} />
+          {!isBrowserHostedDesktop() && <ReadAloudButton action={readAloud} />}
           <TooltipIconButton disabled={reloadDisabled} onClick={reload} tooltip={copy.refresh}>
             <RefreshCwIcon className="size-3.5" />
           </TooltipIconButton>
@@ -1432,6 +1454,11 @@ const AssistantActionBar: FC<MessageActionProps & { durationS?: number }> = ({
         {touch && (
           <div className="aui-message-actions-touch items-center justify-end gap-1">
             {copyButton}
+            {continueLater && (
+              <button onClick={continueLater} type="button">
+                Continue later
+              </button>
+            )}
             <ActionsMenu
               ariaLabel={copy.moreActions}
               items={kit => (

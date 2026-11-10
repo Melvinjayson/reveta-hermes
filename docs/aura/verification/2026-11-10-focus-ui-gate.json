@@ -1,0 +1,44 @@
+{
+  "commit_sha": "34075f54d69507cefdb29ae25e75703222a4187d",
+  "desktop_tree_sha": "74e9916630628d4b7e967d3e55e7e05286d73998",
+  "working_tree_dirty": false,
+  "environment": {
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "node": "v26.12.1",
+    "pnpm": "12.15.0",
+    "node_heap_mb": 4096
+  },
+  "command": [
+    "pnpm",
+    "--dir",
+    "apps/desktop",
+    "exec",
+    "vitest",
+    "run",
+    "--project",
+    "ui",
+    "--maxWorkers=3",
+    "--reporter=dot",
+    "--reporter=json",
+    "--outputFile.json=/workspace/aura-evidence/focus-final-ui.json"
+  ],
+  "exit_code": 0,
+  "status": "passed",
+  "test_files": 1582,
+  "passed_tests": 13175,
+  "failed_tests": 0,
+  "skipped_tests": 0,
+  "unhandled_errors": 0,
+  "duration_seconds": 2040.041,
+  "real_model_calls": false,
+  "model_call_statement": "UI unit project only; no real-provider verification or real-model calls.",
+  "skipped_checks": [
+    "aura-check (passed at base 13fead82; not rerun for test-only teardown)",
+    "Python backend suite",
+    "browser harness",
+    "live providers",
+    "deployment",
+    "physical phone",
+    "restart durability"
+  ]
+}

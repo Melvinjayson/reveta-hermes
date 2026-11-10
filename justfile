@@ -1,5 +1,13 @@
 set default-list := true
 
+# Run with the frozen Python environment activated; never uses a live model.
+aura-check:
+    @python scripts/reveta/aura_check.py
+
+# Reserved opt-in entrypoint; live checks are not implemented in this checkpoint.
+aura-check-live:
+    @python scripts/reveta/aura_check.py --live
+
 lint-all: lint-python lint-all-js    
 
 [group('lint python')]

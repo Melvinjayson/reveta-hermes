@@ -981,11 +981,13 @@ class ToolRegistry:
             # parent_agent, ...) are signature-inspected like hook payloads, so a narrow ``handle(args)``
             # plugin handler is not broken by every field the dispatcher injects (#68318).
             kwargs = _kwargs_accepted_by(entry.handler, kwargs)
-            if entry.is_async:
-                from model_tools import _run_async
-                result = _run_async(entry.handler(args, **kwargs))
-            else:
-                result = entry.handler(args, **kwargs)
+            from tools.aura_dispatch_policy import guarded_call
+            def execute(approved_args):
+                if entry.is_async:
+                    from model_tools import _run_async
+                    return _run_async(entry.handler(approved_args, **kwargs))
+                return entry.handler(approved_args, **kwargs)
+            result = guarded_call(name, args, execute)
             return self._normalize_handler_result(name, result)
         except Exception as e:
             # exc_info already renders the exception, so keep the message copy bounded.

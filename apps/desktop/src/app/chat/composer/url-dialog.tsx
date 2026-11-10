@@ -51,6 +51,7 @@ export function UrlDialog({
         >
           <div className="grid gap-1.5">
             <Input
+              aria-label={c.attachUrlTitle}
               autoComplete="off"
               autoCorrect="off"
               inputMode="url"

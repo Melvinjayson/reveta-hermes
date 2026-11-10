@@ -6,7 +6,7 @@ import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { hostHas } from '@/lib/host-capabilities'
-import { Ear, EarOff, iconSize, Layers3, Loader2, Square } from '@/lib/icons'
+import { Ear, EarOff, iconSize, Layers3, Loader2, Mic, Square } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
@@ -94,7 +94,7 @@ export function ComposerControls({
     return <ConversationPill {...conversation} disabled={disabled} />
   }
 
-  const showVoicePrimary = !busy && !hasComposerPayload
+  const showVoicePrimary = !hostHas('webappCopy') && !busy && !hasComposerPayload
   // Steer is just send: a payload keeps the Send affordance mid-turn (it answers
   // a waiting card). Stop only when the composer is empty and a turn is running.
   const showStop = busy && !hasComposerPayload
@@ -143,7 +143,13 @@ export function ComposerControls({
       className={cn('flex min-w-0 shrink items-center gap-(--composer-control-gap)', browserHost && 'justify-end')}
       style={{ flexWrap: browserHost && minimal ? 'wrap' : undefined }}
     >
-      {minimal ? null : (
+      {hostHas('webappCopy') ? (
+        <Tip label="Voice is coming soon" placement="control">
+          <button aria-label="Voice is coming soon" className="aura-mic" type="button">
+            <Mic size={20} />
+          </button>
+        </Tip>
+      ) : minimal ? null : (
         <>
           {hideModelPill ? null : (
             <>
@@ -190,6 +196,7 @@ export function ComposerControls({
             disabled={disabled || !canSubmit}
             onClick={() => recordAction(showStop ? 'composer.cancel' : 'composer.send', 'click')}
             onMouseDown={keepEditorFocus}
+            style={hostHas('webappCopy') && !busy && !hasComposerPayload ? { visibility: 'hidden' } : undefined}
             type="submit"
           >
             {showStop ? (

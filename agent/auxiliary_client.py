@@ -9,6 +9,7 @@ in neither chain (undocumented, shifting allow-list): main provider or explicit
 """
 
 import contextlib
+from tools.aura_free_only import guarded_aux_callback, enabled as aura_free_only
 import contextvars
 import functools
 import hashlib
@@ -2623,7 +2624,7 @@ def _relay_sync_completion(
     relay_context = _RELAY_AUX_CALL_CONTEXT.get() or {}
     task = relay_context.get("task")
     relay_context["stream_provider"] = provider or relay_context.get("provider")
-    callback = create or (lambda request: _create_with_progress(client, request, task))
+    callback = guarded_aux_callback(client, create or (lambda request: _create_with_progress(client, request, task)), provider, api_mode)
     route = _relay_auxiliary_metadata(provider=provider, api_mode=api_mode)
     # Isolate only the provider callback so the owning thread can unwind its lease/DB
     # transaction on hard cancel without touching the shared client.
@@ -2656,7 +2657,7 @@ async def _relay_async_completion(
 
     kwargs = prepare_chat_messages(client, kwargs)
     # Async twin of the seam default above (#98466).
-    callback = create or (lambda request: _acreate_with_progress(client, request))
+    callback = guarded_aux_callback(client, create or (lambda request: _acreate_with_progress(client, request)), provider, api_mode)
     route = _relay_auxiliary_metadata(provider=provider, api_mode=api_mode)
     if route is None:
         return await callback(kwargs)
@@ -2684,9 +2685,8 @@ def _relay_sync_stream(
     from agent.auxiliary_wire import prepare_chat_messages, relay_chat_metadata
 
     kwargs = prepare_chat_messages(client, kwargs)
-    # The bypass runs inside the provider callback, AFTER Relay has seen (and possibly
-    # rewritten) the real conversation; applying it to `kwargs` would hand Relay an empty one.
-    create = lambda request: client.chat.completions.create(**bypass_chat_sdk_request_transform(request, client))
+    # Validate the route and apply SDK bypass inside the callback, after Relay rewrites.
+    create = guarded_aux_callback(client, lambda request: client.chat.completions.create(**bypass_chat_sdk_request_transform(request, client)), provider, api_mode)
     route = _relay_auxiliary_metadata(provider=provider, api_mode=api_mode)
     if route is None:
         return create(kwargs)
@@ -7818,10 +7818,9 @@ def _aux_recovery_ladder(
     resolved_api_mode: Optional[str], final_model: Optional[str], max_tokens: Optional[int],
     main_runtime: Optional[dict[str, Any]], route_info: Optional[dict[str, str]],
 ):
-    """Ordered recovery rungs after the primary request failed (generator): parameter
-    strips → Nous heal/refresh → credential refresh/pool rotation → provider fallback.
-    Each rung returns a response, narrows ``first_err`` and falls through, or re-raises.
-    Raises the narrowed ``first_err`` when exhausted (after evicting a connection-poisoned client)."""
+    """Recovery ladder; free-only stops before refresh or provider fallback."""
+    if aura_free_only():
+        raise first_err
     tag = " (async)" if async_mode else ""
     route = _LadderRoute(
         client, task, tag, async_mode, base_info, resolved_provider, resolved_model,
@@ -8067,7 +8066,7 @@ def _call_llm_impl(
         if task == "moa_aggregator" and isinstance(client, CodexAuxiliaryClient):
             # Responses-shim clients consume the stream internally and return a completed
             # object Relay's managed stream would iterate; the MoA facade wraps it as one chunk.
-            return client.chat.completions.create(**kwargs)
+            return guarded_aux_callback(client, lambda request: client.chat.completions.create(**request), request_provider, req.resolved_api_mode)(kwargs)
         return _relay_sync_stream(client, kwargs, provider=request_provider, api_mode=req.resolved_api_mode)
 
     def _primary(**validate_kw: Any) -> Any:

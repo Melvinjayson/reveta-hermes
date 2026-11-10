@@ -79,6 +79,14 @@ def handle_api_error(
     if agent.thinking_callback:
         agent.thinking_callback("")
 
+    from tools.aura_free_only import FreeOnlyRefused, REFUSAL
+    if isinstance(api_error, FreeOnlyRefused):
+        return _verdict("return", {
+            "final_response": REFUSAL, "messages": messages, "api_calls": api_call_count,
+            "completed": False, "failed": True, "error": REFUSAL,
+            "failure_reason": "aura_free_only_refused", "failure_retryable": False,
+        })
+
     _recovered, active_system_prompt = recover_before_classification(
         agent, api_error, messages=messages, api_messages=api_messages, api_kwargs=api_kwargs,
         active_system_prompt=active_system_prompt,

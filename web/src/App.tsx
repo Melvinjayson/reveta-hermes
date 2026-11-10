@@ -557,7 +557,7 @@ export default function App() {
 
         <img src="/brand/aura-mark.svg" alt="" className="size-7 shrink-0 object-contain" />
         <Typography className="font-bold text-[0.95rem] leading-[0.95] tracking-[0.05em] text-midground">
-          Reveta Hermes
+          Aura
         </Typography>
       </header>
 
@@ -623,9 +623,7 @@ export default function App() {
 
                 <img src="/brand/aura-mark.svg" alt="" className="h-10 w-9 shrink-0 object-contain motion-safe:transition-transform motion-safe:duration-200 hover:scale-105" />
                 <Typography className="font-bold text-[1.125rem] leading-[0.95] tracking-[0.0525rem] text-midground uppercase">
-                  Reveta
-                  <br />
-                  Hermes
+                  Aura
                 </Typography>
               </div>
 

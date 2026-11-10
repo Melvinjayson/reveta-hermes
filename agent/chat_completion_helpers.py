@@ -758,13 +758,12 @@ def _bedrock_converse_call(api_kwargs: dict, *, stream: bool, on_stream_denied=N
 
 
 def _dispatch_nonstreaming_api_request(agent, api_kwargs: dict, *, make_client):
-    """Run one non-streaming LLM request for the active api_mode and return it.
+    """Validate price and dispatch a direct/interruptible request.
 
-    Shared by ``interruptible_api_call`` and ``direct_api_call``. ``make_client(reason,
-    kind=...)`` builds the per-request client (``"openai"`` / ``"anthropic_messages"``)
-    so callers can register it with their abort/close machinery; bedrock / MoA
-    manage their own clients. Interrupt/abort/close semantics stay in callers.
+    Callers own watchdogs and request-client lifetimes; adapters retain recovery.
     """
+    from tools.aura_free_only import require_agent_model, require_model, seal_client
+    api_kwargs = require_agent_model(agent, api_kwargs)
     if agent.api_mode == "codex_responses":
         return agent._run_codex_stream(api_kwargs, client=make_client("codex_stream_request"),
             on_first_delta=getattr(agent, "_codex_on_first_delta", None))
@@ -776,19 +775,15 @@ def _dispatch_nonstreaming_api_request(agent, api_kwargs: dict, *, make_client):
     if agent.api_mode == "bedrock_converse":
         return _bedrock_converse_call(api_kwargs, stream=False)
     if agent.provider == "moa":
-        # MoA is a virtual provider backed by the in-process MoAClient facade — never
-        # rebuild a request-local client from the virtual metadata. After a client
-        # replacement agent.client may be a native OpenAI client while provider stays
-        # "moa": pop the MoA-internal key ONLY then (the facade consumes it; stripping
-        # it there forces a duplicate fan-out). Only the facade exposes ``prepare()`` (#78382).
+        # MoA owns its client; drop the cached request only if its facade was replaced.
         _completions = getattr(getattr(agent.client, "chat", None), "completions", None)
         if not callable(getattr(_completions, "prepare", None)):
             api_kwargs.pop("_moa_prepared_request", None)
         return agent.client.chat.completions.create(**api_kwargs)
     request_client = make_client("chat_completion_request")
-    # #93650: keep the bulk wire-format payload out of the SDK's GIL-holding
-    # request transform. No-op unless this really is the OpenAI SDK, so the
-    # MoA facade above and the suite's stand-in clients are unaffected.
+    api_kwargs = require_model(agent.provider, getattr(request_client, "base_url", ""), api_kwargs, api_mode=agent.api_mode)
+    seal_client(request_client)
+    # Keep bulk payloads out of the SDK transform (#93650).
     api_kwargs = bypass_chat_sdk_request_transform(api_kwargs, request_client)
     return _chat_completion_capturing_headers(agent, request_client, api_kwargs)
 
@@ -2051,9 +2046,10 @@ def _buffer_fallback_notice(agent, notice: str) -> None:
 
 
 def try_activate_fallback(agent, reason: FailoverReason | None = None, reset_at=None) -> bool:
-    """Switch to the next fallback model/provider in the chain; False when exhausted. Swaps client,
-    model slug and provider in place so the retry loop continues on the new backend; client
-    construction goes through resolve_provider_client (no duplicated provider→key mappings)."""
+    """Activate a configured fallback only when free-only is disabled."""
+    from tools.aura_free_only import enabled
+    if enabled():
+        return False
     from agent.fallback_cooldown import _arm_rate_limit_cooldown, switch_deferred_by_reset
     if switch_deferred_by_reset(agent, reason, reset_at):
         return False
@@ -2941,16 +2937,19 @@ class _StreamingCall(StreamingWaitMonitor):
         return usage, finish_reason
 
     def _open_chat_stream(self, stream_kwargs: dict[str, Any]):
+        from tools.aura_free_only import require_agent_model, require_model, seal_client
+        stream_kwargs = require_agent_model(self.agent, stream_kwargs)
         # Native Gemini rejects OpenAI's usage-streaming extension; so do strict endpoints that
         # already 4xx'd on it this session (``_stream_options_unsupported``, see #9705).
         if not is_native_gemini_base_url(self.agent.base_url) and not getattr(self.agent, "_stream_options_unsupported", False):
             stream_kwargs["stream_options"] = {"include_usage": True}
         request_client = self._attempt_request_client = self.clients.set_client(
             self.agent._create_request_openai_client(reason="chat_completion_stream_request", api_kwargs=stream_kwargs))
+        stream_kwargs = require_model(self.agent.provider, getattr(request_client, "base_url", ""), stream_kwargs, api_mode=self.agent.api_mode)
+        seal_client(request_client)
         self.last_chunk_time["t"] = time.time()
         self.agent._touch_activity("waiting for provider response (streaming)")
-        # #93650: as above — the streaming path carries the same bulk
-        # messages/tools payload and pays the same client-side walk.
+        # Apply SDK bypass after final-route validation (#93650).
         stream_kwargs = bypass_chat_sdk_request_transform(stream_kwargs, request_client)
         return request_client.chat.completions.create(**stream_kwargs)
 
@@ -3975,10 +3974,9 @@ class _StreamingCall(StreamingWaitMonitor):
 
 
 def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=None):
-    """Streaming variant of _interruptible_api_call: fires the delta callbacks per
-    text token (tool-call turns suppress them) and returns a SimpleNamespace in
-    the non-streaming response shape. codex_responses delegates to the already-
-    streaming codex runner; cron turns and delegated children run inline."""
+    """Validate price, then stream with existing interrupt and worker routing."""
+    from tools.aura_free_only import require_agent_model
+    api_kwargs = require_agent_model(agent, api_kwargs)
     if agent._interrupt_requested:
         raise InterruptedError("Agent interrupted before streaming API call")
     if agent.api_mode == "codex_responses":

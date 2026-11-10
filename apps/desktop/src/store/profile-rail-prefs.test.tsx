@@ -16,8 +16,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 // Switching profiles has exactly one door at a time: the rail at the sidebar
 // foot, or the statusbar picker beside the gateway switcher when the user hides
 // the rail. The Webapp (browser-hosted Desktop) always draws the rail as its
-// dropdown, never the squares; native Desktop keeps the squares until the
-// dropdown threshold. The host is fixed per page load, so each case loads a
+// dropdown when the rail is available; Aura Simple mode shadows that rail
+// preference. Native Desktop keeps the squares until the dropdown threshold.
+// The host is fixed per page load, so each case loads a
 // fresh module graph after declaring its host.
 
 type SurfaceWindow = Window & { __HERMES_UI_SURFACE__?: string }
@@ -109,9 +110,9 @@ function renderDoors({ $layoutTree, ChatSidebar, group, SidebarProvider, useStat
 }
 
 describe.each([
-  { host: 'Webapp', webapp: true, dropdown: true },
-  { host: 'native Desktop', webapp: false, dropdown: false }
-])('$host', ({ dropdown, webapp }) => {
+  { host: 'Webapp', webapp: true },
+  { host: 'native Desktop', webapp: false }
+])('$host', ({ webapp }) => {
   let host: HostModules
 
   beforeAll(async () => {
@@ -123,14 +124,16 @@ describe.each([
     vi.resetModules()
   })
 
-  it('keeps exactly one profile door, the Webapp as a dropdown', () => {
+  it('keeps one profile door with Simple as the Webapp default', () => {
     const doors = renderDoors(host)
 
-    // The rail stays at the sidebar foot whether or not the statusbar is shown.
-    expect(doors()).toEqual({ dropdown, picker: false, rail: true })
+    // Aura starts in Simple, which shadows the rail preference. Native Desktop
+    // retains its Advanced default and the rail at the sidebar foot.
+    expect(doors()).toEqual({ dropdown: false, picker: webapp, rail: !webapp })
 
-    // Hiding the rail hands the door to the statusbar picker on either host.
+    // An explicit toggle reverses the default: Aura reveals its dropdown;
+    // native Desktop hides its rail and hands the door to the picker.
     act(() => host.prefs.toggleProfileRailVisible())
-    expect(doors()).toEqual({ dropdown: false, picker: true, rail: false })
+    expect(doors()).toEqual({ dropdown: webapp, picker: !webapp, rail: webapp })
   })
 })
