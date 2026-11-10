@@ -18,7 +18,7 @@ A regression opens the real condensed rail menu, observes Radix's unmount-focus
 event, calls the same teardown helper, and checks one callback using the current
 window's CustomEvent plus absence of the menu and portal. With synchronous cleanup
 it failed (callback count 0, 31 existing tests passed, exit 1); with the fix all
-32 tests passed, exit 0, 7.91s. This proves the lifetime gap without relying on a
+32 tests passed, exit 0; the final focused run took 8.29s. This proves the lifetime gap without relying on a
 random cross-file race to reproduce the old full-suite error.
 
 Focused command (Node 26.12.1, pnpm 12.15.0, Linux, 4096 MiB heap):
@@ -27,10 +27,24 @@ Focused command (Node 26.12.1, pnpm 12.15.0, Linux, 4096 MiB heap):
 NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui src/app/chat/sidebar/profile-rail-fleet.test.tsx
 ```
 
-Changed-file ESLint and `git diff --check` are required before commit. The complete
-UI project then runs once on the committed implementation tree with the command
-below. Its exact exit code, counts, tested SHA and gate JSON will be recorded here
-in an evidence-only follow-up; no UI changes follow that run.
+**Final complete UI project: PASSED, exit 0.** It ran once on clean implementation
+commit `34075f54d69507cefdb29ae25e75703222a4187d`: 1,582 files and 13,175 tests passed,
+zero failed/skipped tests and zero unhandled errors. Vitest duration: 2,038.98s;
+gate wall duration: 2,040.041s. Node 26.12.1, pnpm 12.15.0, Linux, 4096 MiB heap.
+
+| Check | Exit | Result |
+|---|---:|---|
+| Regression with old synchronous cleanup | 1 | Expected failure: deferred focus event count 0; 31 existing tests passed |
+| Final focused file (command above) | 0 | 32 passed; 8.29s; no unhandled errors |
+| Changed-file ESLint | 0 | No errors; three existing `document` warnings, no added warnings |
+| `git diff --check` | 0 | Passed |
+| Complete UI project (command below) | 0 | 1,582 files, 13,175 tests; no failures, skips or unhandled errors |
+
+[Machine-readable UI gate JSON](verification/2026-11-10-focus-ui-gate.json) records
+the exact command, tested commit, environment, status and unavailable checks.
+The final follow-up contains only this handoff and JSON evidence. The desktop
+Git tree is unchanged from tested tree `74e9916630628d4b7e967d3e55e7e05286d73998`;
+no UI edit or second complete run follows the successful verification.
 
 ```sh
 NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=/workspace/aura-evidence/focus-final-ui.json
