@@ -139,6 +139,9 @@ def _trust_gate_check(server_name: str, tool_name: str, booked: Optional[list] =
         charge = _costs.pending_charge(key, server_name, tool_name, get_current_session_key())
     if charge is None:
         return _ask_for_call(server_name, tool_name, None, booked, args=args) if gated else None
+    from tools.aura_free_only import enabled, REFUSAL
+    if enabled() and charge.cost.high > 0:
+        return json.dumps({"error": REFUSAL, "status": "refused", "aura_policy": True})
     if not gated and charge.reserve_within_limit()[0]:
         if booked is not None:
             booked.append(charge)

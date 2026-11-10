@@ -19,7 +19,12 @@ sys.path.insert(0, str(ROOT))
 
 
 def browser_session(
-    home: Path, base_url: str, target: Path, *, no_model: bool = False
+    home: Path,
+    base_url: str,
+    target: Path,
+    *,
+    no_model: bool = False,
+    cost_blocked: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -31,6 +36,19 @@ def browser_session(
         base_url,
         extra_config=f"webapp:\n  enabled: true\n  port: {port}\napprovals:\n  mode: manual\n",
     )
+    from tests.fakes.aura_price_policy import attest_tool
+
+    # The test owns this exact loopback action and its zero-cost attestation.
+    command = json.loads((home.parent / "command.json").read_text())
+    attest_tool(home, "terminal", {"command": command})
+    if cost_blocked:
+        from ruamel.yaml import YAML
+
+        yaml = YAML()
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config["aura"]["free_models"] = []
+        with (home / "config.yaml").open("w", encoding="utf-8") as output:
+            yaml.dump(config, output)
     if no_model:
         from ruamel.yaml import YAML
         from scripts.reveta.aura_config import aura_settings
@@ -83,7 +101,12 @@ def browser_session(
             cwd=ROOT,
             env=env,
             input=json.dumps(
-                {"url": links[-1], "target": str(target), "noModel": no_model}
+                {
+                    "url": links[-1],
+                    "target": str(target),
+                    "noModel": no_model,
+                    "costBlocked": cost_blocked,
+                }
             ),
             text=True,
             timeout=240,
@@ -135,6 +158,9 @@ def main() -> int:
         action_thread = Thread(target=action_server.serve_forever, daemon=True)
         action_thread.start()
         command = f"curl -sS --data synthetic-approval http://127.0.0.1:{action_server.server_port}/approval"
+        (Path(directory) / "command.json").write_text(
+            json.dumps(command), encoding="utf-8"
+        )
         try:
             return run_scenarios(directory, target, command)
         finally:
@@ -167,6 +193,14 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
                 "Browser did not complete the scripted provider flow.", file=sys.stderr
             )
             return 1
+        before = len(fake.main_requests())
+        result = browser_session(
+            Path(directory) / "cost-blocked", fake.base_url, target, cost_blocked=True
+        )
+        if result:
+            return result
+        if len(fake.main_requests()) != before:
+            raise RuntimeError("A cost-blocked model reached the fake provider")
         return browser_session(
             Path(directory) / "no-model", fake.base_url, target, no_model=True
         )

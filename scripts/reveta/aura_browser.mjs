@@ -22,7 +22,17 @@ try {
   await page.goto(launch.url)
   await expect(page.locator('.aura-empty')).toBeVisible({ timeout: 60000 })
   await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible()
-  if (launch.noModel) {
+  if (launch.costBlocked) {
+    const blockedEditor = page.locator('[contenteditable="true"]:visible').first()
+    await blockedEditor.fill('Synthetic blocked price check')
+    await page.locator('form').getByRole('button', { name: 'Send', exact: true }).click()
+    await expect(page.locator('[data-role=user]')).toContainText('Synthetic blocked price check', { timeout: 60000 })
+    const refused = page.locator('[data-aura-step=Refused]')
+    await expect(refused).toHaveCount(1, { timeout: 60000 })
+    await page.locator('.aura-steps > summary').click()
+    await expect(refused.getByText("This would cost money, so I didn't run it.", { exact: true })).toBeVisible()
+    console.log('PASS: non-allowlisted model refused as a step; no provider request.')
+  } else if (launch.noModel) {
     await expect(page.locator('.aura-empty [role=status]')).toContainText(
       'Aura can’t reply yet. A model still needs to be connected.',
       { timeout: 60000 }

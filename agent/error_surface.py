@@ -35,6 +35,7 @@ LAYER_DISK = "disk"
 # (cut-off output, empty or broken reply) stay on the provider layer, where the
 # clients' per-code copy names the real fix (`continue`, smaller steps, /retry).
 _REASON_TO_LAYER = {
+    "aura_free_only_refused": LAYER_GATEWAY,
     "auth": LAYER_AUTH, "auth_permanent": LAYER_AUTH, "billing": LAYER_BILLING, "billing_unverified": LAYER_BILLING,
     "loop_error": LAYER_GATEWAY, "interpreter_shutdown": LAYER_GATEWAY, "session_busy": LAYER_GATEWAY,
     "gateway_connection": LAYER_GATEWAY, "host_error": LAYER_GATEWAY, "workspace_unavailable": LAYER_GATEWAY,
@@ -224,6 +225,9 @@ def build_error_surface_from_exception(
     as the retry loop); anything else is a gateway-layer failure.
     """
     try:
+        from tools.aura_free_only import FreeOnlyRefused
+        if isinstance(exc, FreeOnlyRefused):
+            return _surface(LAYER_GATEWAY, "aura_free_only_refused", False, provider, model)
         message = str(exc) or type(exc).__name__
         if _disk_full(exc):
             return _surface(LAYER_DISK, "disk_full", False, provider, model)

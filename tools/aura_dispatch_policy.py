@@ -1,8 +1,8 @@
 """Aura dispatch approval policy. This is not OS-level containment.
 
 Every dispatch uses this gate, including profiles and helper processes. There is
-no mode, YOLO or missing-configuration bypass. No provider routing or price
-classification is implemented here.
+no mode, YOLO or missing-configuration bypass. Exact zero-price attestations
+are checked before approval and rechecked immediately before execution.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def _canonical(args):
     )
 
 
-def _approve(name, snapshot, digest):
+def _approve(name, snapshot, digest, confirmed_zero=False):
     from agent.redact import redact_sensitive_text
     from tools import approval, approval_context
     from tools.approval_gateway_wait import _await_gateway_decision
@@ -89,7 +89,8 @@ def _approve(name, snapshot, digest):
             "command": redact_sensitive_text(
                 f"{name} {_canonical(snapshot)}", force=True
             ),
-            "description": "One exact action. Cost is not verified. Change refuses execution.",
+            "description": ("One exact action. Cost: Free (confirmed zero-price action). Change refuses execution."
+                            if confirmed_zero else "One exact action. Cost is not verified. Change refuses execution."),
             "pattern_key": f"aura:{digest}:{nonce}",
             "pattern_keys": [f"aura:{digest}:{nonce}"],
             "allow_permanent": False,
@@ -114,6 +115,11 @@ def guarded_call(name, args, execute):
     """
     try:
         config = _config()
+        from tools.aura_free_only import FreeOnlyRefused, REFUSAL, require_tool
+        try:
+            confirmed_zero = require_tool(name, args)
+        except FreeOnlyRefused:
+            return _refused(REFUSAL)
         home = str(get_hermes_home().resolve())
         canonical = _canonical(args)
         if len(canonical.encode("utf-8")) > 16384:
@@ -126,7 +132,7 @@ def guarded_call(name, args, execute):
             digest = hashlib.sha256(
                 (home + "\0" + name + "\0" + canonical).encode()
             ).hexdigest()
-            if not _approve(name, snapshot, digest):
+            if not _approve(name, snapshot, digest, confirmed_zero):
                 return _refused(
                     "This action did not receive a valid single-use approval, so it did not run."
                 )
@@ -141,7 +147,12 @@ def guarded_call(name, args, execute):
         return _refused(
             "The safety check could not complete, so the action did not run."
         )
-    return execute(snapshot)
+    try:
+        if require_tool(name, snapshot) != confirmed_zero:
+            return _refused(REFUSAL)
+        return execute(snapshot)
+    except FreeOnlyRefused:
+        return _refused(REFUSAL)
 
 
 def guard_executor(name, execute):

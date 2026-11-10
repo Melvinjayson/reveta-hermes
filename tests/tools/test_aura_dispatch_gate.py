@@ -48,7 +48,15 @@ def lab(tmp_path, monkeypatch):
     server = HTTPServer(("127.0.0.1", 0), Handler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    registry = ToolRegistry()
+    # These approval-focused fixtures are known synthetic zero-cost actions.
+    # Cost refusal is tested separately against an unmodified ToolRegistry.
+    class FixtureRegistry(ToolRegistry):
+        def dispatch(self, name, args, **kwargs):
+            from tests.fakes.aura_price_policy import attest_tool
+            from hermes_constants import get_hermes_home
+            attest_tool(get_hermes_home(), name, args)
+            return super().dispatch(name, args, **kwargs)
+    registry = FixtureRegistry()
 
     def command(args):
         result = subprocess.run(
@@ -365,7 +373,9 @@ def test_connected_app_real_dispatch_entry_does_not_reach_transport(lab, monkeyp
     from tools.connectors.dispatch import dispatch_connector_call
     from tools.connectors.gateway import bridge
 
-    _, _, hits, *_ = lab
+    _, _, hits, _, home, _ = lab
+    from tests.fakes.aura_price_policy import attest_tool
+    attest_tool(home, "connectors__fixture__send", {"body": "synthetic"})
     monkeypatch.setattr(bridge, "run_remote", lambda *a, **k: hits.append("transport"))
     assert (
         json.loads(
@@ -382,7 +392,9 @@ def test_inline_setting_change_does_not_reach_callback(lab):
     from types import SimpleNamespace
     from agent.inline_tool_executors import INLINE_TOOL_EXECUTORS, InlineToolContext
 
-    _, _, hits, *_ = lab
+    _, _, hits, _, home, _ = lab
+    from tests.fakes.aura_price_policy import attest_tool
+    attest_tool(home, "set_theme", {"mode": "dark"})
     agent = SimpleNamespace(theme_callback=lambda **kw: hits.append("theme"))
     result = INLINE_TOOL_EXECUTORS["set_theme"](
         agent, {"mode": "dark"}, InlineToolContext("task")

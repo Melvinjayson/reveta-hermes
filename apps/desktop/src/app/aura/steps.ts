@@ -80,8 +80,16 @@ function statusOf(part: { result?: unknown; isError?: boolean; interrupted?: boo
 /** A conservative projection: arbitrary payloads, commands and URLs may contain
  * credentials. Details exposes only allowlisted outcome facts, never raw text. */
 export function auraSteps(messages: ChatMessage[]): AuraStep[] {
-  return messages.filter(message => message.role === 'assistant' && !message.hidden).flatMap(message =>
-    message.parts.flatMap((part, index) => {
+  return messages.filter(message => !message.hidden).flatMap(message => {
+    if (message.errorSurface?.code === 'aura_free_only_refused') {
+      return [{ id: `${message.id}:cost-refusal`, label: 'Reply request', status: 'Refused' as const,
+        timestamp: message.timestamp, completedAt: message.completedAt,
+        facts: ["This would cost money, so I didn't run it."] }]
+    }
+
+    if (message.role !== 'assistant') {return []}
+
+    return message.parts.flatMap((part, index) => {
       if (part.type !== 'tool-call') {
         return []
       }
@@ -94,6 +102,10 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
 
       const status = statusOf(part)
       const facts = [part.result === undefined ? 'No result received.' : 'A result was received.']
+
+      if (result.status === 'refused' && result.error === "This would cost money, so I didn't run it.") {
+        facts.push(result.error)
+      }
 
       if (typeof result.exit_code === 'number' && Number.isFinite(result.exit_code)) {
         facts.push(`Exit code: ${result.exit_code}`)
@@ -108,7 +120,7 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
         label, status, timestamp: part.timestamp, completedAt: part.completedAt, facts
       }]
     })
-  )
+  })
 }
 
 export function stepDuration(step: AuraStep, now: number): string {

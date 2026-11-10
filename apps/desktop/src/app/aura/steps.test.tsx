@@ -6,6 +6,14 @@ import type { ChatMessage } from '@/lib/chat-messages'
 import { AuraSteps } from './step-history'
 import { auraSteps, stepDuration } from './steps'
 
+it('shows a backend-stamped cost refusal without trusting assistant prose', () => {
+  const errorSurface = { layer: 'gateway' as const, code: 'aura_free_only_refused', retryable: false }
+  const rows = auraSteps([{ id: 'blocked', role: 'assistant', parts: [], errorSurface }])
+  expect(rows[0].status).toBe('Refused')
+  render(<AuraSteps steps={rows} />)
+  expect(screen.getByText("This would cost money, so I didn't run it.")).toBeTruthy()
+})
+
 function messages(result?: unknown, extra = {}): ChatMessage[] {
   return [{ id: 'reply', role: 'assistant', parts: [{
     type: 'tool-call', toolCallId: 'call', toolName: 'terminal', args: { command: 'SECRET' },

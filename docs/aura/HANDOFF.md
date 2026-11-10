@@ -1,5 +1,126 @@
 # Aura interface handoff
 
+## Free-only routing increment — local fixtures, no live provider authorization
+
+Starting branch/remote SHA verified clean: `3e3845d090a4568f76308546e4545ed016bc2eda`.
+This section supersedes the missing-free-only statements in the historical
+checkpoint below. Final implementation SHA, gate JSON and exit codes are recorded
+in draft PR 3 after the committed-tree checks finish. No live loop is claimed.
+
+### Server enforcement
+
+`tools/aura_free_only.py` checks the final provider, exact model ID, endpoint and
+request payload before main and auxiliary chat-completion requests. There are no
+real model IDs or price attestations shipped. Missing lists deny all generation
+and all tool execution, including otherwise read-only tools. A key or provider
+name does not authorize a call. The server-owned configuration is:
+
+```yaml
+aura:
+  free_only: true
+  free_models: []
+  free_tools: []
+```
+
+A model entry requires exact `provider`, `model`, `base_url`, `confirmed_free: true`
+and numeric `cost_usd: 0`. A tool entry requires exact `name`, `arguments_sha256`
+(SHA-256 of canonical sorted compact UTF-8 JSON arguments), the same confirmed
+zero price, and exactly one match. There is no wildcard command attestation.
+Positive, unknown, malformed, duplicate or unconfirmed prices refuse. Only the
+true setting is supported: false or malformed settings refuse instead of enabling
+paid mode. Spending-cap/paid operation needs a separately authorized increment.
+These are owner attestations, not independent billing/pricing verification.
+
+The tool gate checks price before approval and again after waiting for approval;
+revocation cannot release the pending action. Known positive connected-tool
+charges override an erroneous zero attestation, including the legacy connector
+handler. Approval binding and all existing tool guards remain in force. All file
+mutations still ask, even workspace drafts; they also need exact zero-price
+attestations. Unknown tools are both unknown-price and consequential.
+
+Main fallback activation and auxiliary recovery routes stop under free-only;
+quota, error and rate-limit recovery cannot construct a paid fallback. Normal
+same-route transient retries may remain. Model-routing aliases, payload model
+substitution and priority tiers refuse. Provider fallback is disabled in outgoing
+requests; OpenRouter also receives zero maximum input/output prices. Standard
+HTTPX-backed chat-completion clients have redirects disabled. Unsupported modes,
+composite routes and unrecognized client transports refuse even if listed.
+No real provider was called to test these controls.
+
+The existing key-driven `aura_config.py` generator is not a price authority. Its
+OpenRouter automatic alias / Gemini fallback defaults are not authorized by this
+policy. A future live route requires founder-confirmed exact pricing, an explicit
+model/endpoint, and review of generated configuration before any live cutover.
+No Render command or deployment was changed by this increment.
+
+### UI and fixture boundaries
+
+Structured backend cost refusals produce a Refused step showing:
+"This would cost money, so I didn't run it." Assistant prose alone cannot create
+that status. Approval cards say Free only after an exact zero-price attestation.
+No other screens, file viewer or live loop were added.
+
+`tests/fakes/aura_price_policy.py` attests exact synthetic actions in temporary
+fixture homes. Existing permission tests now supply those fixture attestations;
+the cost guard is never switched off. FakeLLMServer's temporary configuration
+attests only its owned loopback fixture model. None is a founder-confirmed real
+provider/tool entry. Browser and connected-app writes use synthetic executable
+handlers, not real accounts or browser submits.
+
+### Coverage
+
+| Action type | Classification | Guarded on server? | Test | Focused result |
+|---|---|---|---|---|
+| Non-allowlisted main model | Unknown price → Refused | Before client creation | `test_non_allowlisted_model_never_constructs_or_calls_transport` | Passed |
+| Paid/unconfirmed/unknown model or endpoint | Refused | Final request identity | `test_paid_unknown_or_unconfirmed_price_is_refused` | Passed (4 cases) |
+| Confirmed zero-price fixture model | Allowed | Main dispatch | `test_allowlisted_fixture_model_runs_through_main_route` | Passed; fixture only |
+| Free quota → paid fallback | Refused fallback | Main and auxiliary routes | `test_free_quota_error_does_not_activate_paid_fallback`, `test_auxiliary_quota_stops_before_any_recovery_route` | Passed; simulated quota |
+| Model/payload override, priority tier, redirect | Refused / redirect not followed | Request and HTTP client | `test_wire_overrides_cannot_escape_allowlist`, `test_redirect_cannot_escape_confirmed_endpoint` | Passed; local SDK transport |
+| Unknown/paid tool or add-on | Refused before prompt/handler | Shared dispatch | `test_unknown_tool_price_refuses_before_approval_and_side_effect`, `test_positive_tool_price_cannot_be_marked_confirmed_free` | Passed |
+| Positive declared connected-tool cost | Refused despite zero attestation | Shared gate and connector handler | `test_declared_mcp_charge_overrides_zero_attestation_before_approval` | Passed; fixture only |
+| Price revoked during approval | Refused | Recheck before execution | `test_revoked_zero_price_while_approval_pending_prevents_execution` | Passed |
+| Auxiliary sync/async/stream unknown model | Refused | Final provider callback | `test_auxiliary_sync_async_and_stream_routes_cannot_call_unknown_model` | Passed |
+| False/malformed free-only setting | Refused | Config validation | `test_disabling_or_malformed_mode_cannot_enable_paid_calls` | Passed (4 cases) |
+| Browser submit / connected-app write | Consequential after price check | Same registry approval gate | `test_browser_and_connected_app_fixture_use_same_single_use_gate` | Passed (2 fixture cases): Change=0, Approve once=1, replay=0 |
+| Shell variants, helpers, unattended, binding/replay/expiry | Existing permission policy | Shared server gate | `tests/tools/test_aura_dispatch_gate.py` | 29 passed with explicit synthetic zero-price attestations |
+| Non-allowlisted model in Webapp | Refused step, no generation request | Real local Webapp route | `scripts/reveta/aura_browser.py` | Passed with zero additional FakeLLMServer generation requests |
+
+Focused evidence, all exit 0:
+
+- `HERMES_PYTHON=$PWD/.venv/bin/python bash scripts/run_tests.sh tests/tools/test_aura_free_only.py tests/tools/test_aura_dispatch_gate.py --noconftest -q`: **54 passed** (25 cost cases + 29 approval tests).
+- Same runner with the two existing `test_approval_gateway_wait_*` files: 13 legacy approval tests passed (earlier 66-test run, before final auxiliary quota test).
+- `pnpm --dir apps/desktop exec vitest run --project ui src/app/aura`: focused Aura contracts **12 passed across 4 files**.
+- `pnpm --dir apps/desktop run build:webapp`: passed.
+- `python scripts/reveta/aura_browser.py`: passed normal chat/approval, cost-refused and no-model scenarios after redirect protection; existing fake provider only.
+
+Final gates run once on the committed tree with Node heap 4096 MiB: `just
+aura-check` (includes these pricing/approval Python tests, selected UI contracts,
+build/typecheck/lint, fake HTTP integration and browser harness), plus the full UI
+project. Their exact exit codes/counts and machine-readable output belong in PR 3;
+this paragraph is the verification plan, not a claim that pending gates passed.
+Screenshots from the final harness use the existing screenshot index; additional
+cost-refusal behavior is asserted in the browser, not represented as a new screen.
+
+### Remaining risks and unverified boundaries
+
+- No live provider/model, billing-account/quota validation, external price lookup,
+  actual provider fallback or paid-tool account was exercised. Allowlist pricing
+  is a trusted owner's assertion and can be wrong or become stale; no real route
+  is approved by this work. An arbitrary command's price cannot be inferred safely.
+- Browser submits and connected-app writes are fixture-only approval evidence;
+  not proof that every live action/adapter reaches dispatch. Raw SDK use by trusted
+  installed code or approved commands is not universally contained.
+- No OS-level egress containment is verified. An approved arbitrary command is
+  capable of network access; a false zero-price attestation can misdescribe it.
+- Real phone, full Python repository suite, Electron end-to-end, deployment smoke,
+  server-restart durability and live conversation/tool/file loop remain unrun.
+- Free-only rejects unsupported provider adapters and all unclassified operations;
+  read/internal regressions require explicit synthetic zero-price fixtures. This
+  is deliberately restrictive, not evidence that all prior runtime paths work.
+- No spend, real model calls, deploys, Render, AWS, authentication, secrets or
+  repository-visibility changes. Live work waits for review and a founder-confirmed
+  exact free route; no general claim that Aura is safe follows from these tests.
+
 ## Dispatch approval increment — safety slice remains incomplete
 
 Base verified clean and remote-matching: `1995763097c489e2394fc3e45d0fea94de66a586`.

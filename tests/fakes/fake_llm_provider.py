@@ -437,6 +437,8 @@ def write_hermes_home(
         f"  base_url: {base_url}\n"
         f"  default: {MODEL_ID}\n"
         "  context_length: 128000\n"
+        "aura:\n  free_only: true\n  free_models:\n"
+        f"    - {{provider: custom, model: {MODEL_ID}, base_url: '{base_url}', confirmed_free: true, cost_usd: 0}}\n"
         "agent:\n"
         "  api_max_retries: 1\n"
         # Answered at the current offer version, so an interactive chat never stops on the
