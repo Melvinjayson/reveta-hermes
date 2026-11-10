@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import time
 import uuid
 
@@ -47,40 +46,12 @@ def _config():
 
 
 def _classification(name, args, config):
-    if name == "patch" and (
-        args.get("mode", "replace") != "replace" or args.get("patch")
-    ):
-        return "consequential"
     if name in _READ:
         return "read"
     if name in _INTERNAL:
         return "internal"
-    if (
-        name in {"write_file", "patch"}
-        and config.get("terminal", {}).get("env_type", "local") == "local"
-    ):
-        root = config.get("aura", {}).get("workspace_root")
-        path = args.get("path")
-        if isinstance(root, str) and isinstance(path, str) and Path(path).is_absolute():
-            target = Path(path).resolve()
-            workspace = Path(root).resolve()
-            if (
-                not Path(root).is_absolute()
-                or Path(root) != workspace
-                or Path(path) != target
-            ):
-                return "consequential"
-            protected = (
-                get_hermes_home().resolve(),
-                Path.home().resolve(),
-                Path(__file__).resolve().parents[1],
-            )
-            if any(directory.is_relative_to(workspace) for directory in protected):
-                return "consequential"  # a broad root cannot turn runtime/settings writes into drafts
-            if target.is_relative_to(workspace) and not any(
-                target.is_relative_to(directory) for directory in protected
-            ):
-                return "internal"
+    # File mutations also ask: profile-level local settings do not attest a
+    # session's actual backend, nor all targets within a multi-file patch.
     # No shell allowlist: aliases, startup files and interpreters make even
     # apparently read-only shell text unprovable without OS isolation.
     return "consequential"

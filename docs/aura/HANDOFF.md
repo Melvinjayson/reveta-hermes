@@ -18,17 +18,15 @@ permanent/session approval or helper callback disables it. This is intentionally
 stricter than legacy native/programmatic behavior. Without a registered user
 approval bridge, consequential actions are refused rather than auto-approved.
 
-Only reviewed named reads and internal todo state bypass prompts. Local typed
-workspace edits require an explicit absolute `aura.workspace_root`; relative,
-outside, symlink-outside, remote-backend or runtime/settings writes do not qualify.
-Multi-file patch mode always asks: a decoy top-level path cannot authorize the
-other paths inside a patch body. The regression failed on the first candidate
-(the fixture write ran), and was corrected before restarting the final gates.
-Broad roots containing the runtime, settings or user home do not qualify. No
-terminal command or interpreter is considered provably read-only: **all command
-strings ask**, including apparently harmless ones. This avoids a shell parser or
-curl-only heuristic. Unknown/new tool names ask too. Existing handler-level guards
-remain in place and can require another approval or block an approved action.
+Only reviewed named reads and internal todo state bypass prompts. **All file
+mutations require approval in this increment**, even inside the workspace. Profile
+settings alone do not attest a session's actual backend, so automatic internal file
+edits are deferred rather than allowing an uncertain classification. Multi-file
+patch bodies cannot launder outside targets through a decoy top-level path. That
+regression failed on the first candidate and passed after correction. No shell
+command/interpreter is considered provably read-only: all command strings ask.
+Unknown/new tool names ask too. Existing handler guards remain in place and can
+require another approval or block an action already approved at dispatch.
 
 Approvals bind the current profile/home, tool name and canonical exact arguments
 with SHA-256. The handler receives a JSON snapshot; mutation of the original
@@ -67,7 +65,8 @@ run against the old checkout and are not claimed as baseline-red evidence.
 | Browser submit | Consequential | Registry gate | `test_unknown_browser_and_app_writes_require_approval` | Fixture-only; no live browser submission |
 | Connected-app write | Consequential | Registry + connector dispatch | previous test + `test_connected_app_real_dispatch_entry_does_not_reach_transport` | Fixture-only; no app account |
 | Skills, routine creation, connect, deletion | Consequential | Registry / inline gate | unknown-action test; `test_inline_setting_change_does_not_reach_callback` | Fixtures; full backend action lifecycles unrun |
-| Reads / internal local workspace edits | Read / Internal | Yes, classified before execution | `test_read_and_internal_write_regression` | Passed with actual filesystem fixture handlers |
+| Reads / internal todo-state edits | Read / Internal | Yes | `test_reads_and_internal_state_run_but_file_mutations_wait` | Passed; unapproved filesystem mutations refused |
+| Automatic workspace file edits | Consequential pending backend attestation | Approval required | same test | Automatic no-prompt editing NOT implemented |
 | Outside/symlink/relative file write | Consequential | Yes | `test_symlink_and_outside_workspace_write_cannot_use_internal_classification` | Passed |
 | Missing config, off mode, policy exception, hook skip flags | Refused | Yes | policy-errors, off-mode and model-dispatch tests | Passed |
 | Provider model IDs, quota fallback, paid/unknown-price tool | Not implemented | **No free-only cost guard** | Not run | BLOCKED / next increment |
@@ -91,12 +90,10 @@ asserts that declined action's Refused row. No real provider or recipient is use
 - An approved script can depend on files/environment that change independently of
   its argument string. Arbitrary commands can perform multiple effects. Approval
   binds the invocation, not a verified semantic decomposition of shell programs.
-- Workspace resolution still has filesystem race risk; no atomic no-follow file
-  adapter or whole-process filesystem/network boundary was added. Read tools retain
-  existing access policy; this increment does not establish per-user file isolation.
-  The local/remote classification checks configured backend settings; session-local
-  backend overrides need separate negative tests before file-operation coverage
-  can be considered complete.
+- Automatic workspace filesystem editing is deferred; all file mutations ask.
+  No atomic no-follow file adapter or per-user file isolation proof was added.
+  Approved file operations still use the existing backend and its guards. Reads
+  retain existing access policy. Session/backend ownership needs further tests.
 - A capability probe `unshare -Urn true` succeeded in this managed executor. That
   does not establish namespace availability on Render. A namespace alone blocks
   legitimate approved outbound operations too; selective egress requires a mediated
@@ -124,6 +121,11 @@ passed ESLint. The required final `just aura-check` adds the policy tests and li
 to its default checks. Final-tree JSON and the complete UI run are recorded in the
 PR after execution, including any failure; they must not be inferred from these
 pre-commit focused results. The full repository Python suite remains unrun.
+After review, `safety-conservative.log` passed all **29 current policy tests**,
+exit 0. This final candidate deliberately requires approval for filesystem edits;
+it does not satisfy the requested automatic internal-workspace-edit acceptance.
+The earlier final-gate/UI runs were interrupted for the patch correction and are
+not passing evidence. Only the restarted final-commit results in the PR count.
 
 Next smallest step is **complete server-side free-only provider/tool routing and
 its quota/unknown-price negatives**, followed by remaining authority-path tests.

@@ -217,7 +217,7 @@ def test_unknown_browser_and_app_writes_require_approval(lab):
         assert hits == []
 
 
-def test_read_and_internal_write_regression(lab):
+def test_reads_and_internal_state_run_but_file_mutations_wait(lab):
     registry, _, _, _, _, workspace = lab
     path = workspace / "note.md"
     registry.register(
@@ -234,9 +234,23 @@ def test_read_and_internal_write_regression(lab):
             Path(args["path"]).write_text(args["content"]) and '{"success":true}'
         ),
     )
-    assert json.loads(
-        registry.dispatch("write_file", {"path": str(path), "content": "synthetic"})
-    )["success"]
+    assert (
+        json.loads(
+            registry.dispatch("write_file", {"path": str(path), "content": "synthetic"})
+        )["status"]
+        == "refused"
+    )
+    assert not path.exists()
+    path.write_text("synthetic", encoding="utf-8")
+    state = []
+    registry.register(
+        name="todo",
+        toolset="todo",
+        schema={"name": "todo"},
+        handler=lambda args: state.append(args["text"]) or '{"success":true}',
+    )
+    assert json.loads(registry.dispatch("todo", {"text": "synthetic draft"}))["success"]
+    assert state == ["synthetic draft"]
     assert (
         json.loads(registry.dispatch("read_file", {"path": str(path)}))["text"]
         == "synthetic"
