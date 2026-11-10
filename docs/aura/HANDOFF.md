@@ -60,6 +60,34 @@ The PR records actual exit codes and every unavailable check; this document is
 not a claim that an unexecuted future run passed. `aura-check-live` remains a
 refusal-only placeholder and was not run. Fake responses are not real-model proof.
 
+## Recorded verification
+
+Pre-commit working-tree verification on 10 November 2026 completed as follows.
+The PR also contains the clean committed-tree rerun, its exact SHA and full JSON;
+the pre-commit run must not be mistaken for that later evidence.
+
+| Command / check | Exit | Observed result |
+|---|---:|---|
+| `just aura-check` | 0 | Webapp build, typecheck, desktop lint and the checks below passed |
+| `pnpm --dir apps/desktop run typecheck` | 0 | 4 GiB Node heap |
+| `pnpm --dir apps/desktop run lint` | 0 | 0 errors; existing warnings retained |
+| Gate's selected UI test files | 0 | 88 tests passed |
+| Gate's isolated foundation/config/runner tests | 0 | 15 tests passed |
+| Gate's selected public-Origin contracts | 0 | 14 tests passed |
+| `python scripts/reveta/aura_browser.py` | 0 | Real Webapp + fake streaming, approvals, reopening, attachments, no-model, mobile and desktop checks |
+| `scripts/run_tests.sh tests/hermes_cli/test_dashboard_auth_prefix.py --noconftest -q` | 0 | 26 sign-in/prefix regression tests passed |
+| `pnpm exec eslint -c apps/desktop/eslint.config.mjs scripts/reveta/aura_browser.mjs` | 0 | Browser harness lint passed |
+| Ruff on the new Python harness/config files | 0 | Passed |
+
+The broad `vitest run --project ui --maxWorkers=2 --reporter=dot` sweep was started
+while development continued. Its eventual result and that limitation are recorded
+separately in the PR; it is not substituted for the final gate on the committed
+code. The final gate reruns all new/changed component contracts.
+
+Verified text/accent contrast pairs: light primary on Mist 15.31:1, light secondary
+on Mist 5.26:1, white on link blue 4.62:1; dark primary on base 16.93:1, dark secondary
+on surface 7.36:1, dark base on accent blue 6.77:1. This is not a blanket WCAG audit.
+
 ## Model configuration without provider calls
 
 `scripts/reveta/aura_config.py` previews a configuration without network calls or
