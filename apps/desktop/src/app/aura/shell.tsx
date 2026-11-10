@@ -52,7 +52,7 @@ export function AuraShell({ actions, children }: { actions: WiringActions; child
   const menu = useRef<HTMLButtonElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const lastConversationRoute = useRef('/')
+  const [lastConversationRoute, setLastConversationRoute] = useState('/')
 
   useEffect(() => {
     if (location.pathname.startsWith('/settings')) {
@@ -64,11 +64,11 @@ export function AuraShell({ actions, children }: { actions: WiringActions; child
         setOpen(true)
       }
 
-      navigate(lastConversationRoute.current, { replace: true })
-    } else {
-      lastConversationRoute.current = location.pathname
+      navigate(lastConversationRoute, { replace: true })
+    } else if (lastConversationRoute !== location.pathname) {
+      setLastConversationRoute(location.pathname)
     }
-  }, [location.pathname, navigate, wide])
+  }, [lastConversationRoute, location.pathname, navigate, wide])
 
   useEffect(() => {
     const node = dialog.current
