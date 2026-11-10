@@ -8,7 +8,16 @@ import { $busy, $messages } from '@/store/session'
 import { AuraCard } from './card'
 import { auraSources } from './sources'
 
-function GoalCard({ text, onSave }: { text: string; onSave: (text: string) => void }) {
+interface GoalCardProps {
+  text: string
+  onSave: (text: string) => void
+}
+
+interface AuraConversationCardsProps {
+  resumed: boolean
+}
+
+function GoalCard({ text, onSave }: GoalCardProps) {
   const goal = text
   const [draft, setDraft] = useState(text)
   const [editing, setEditing] = useState(false)
@@ -55,7 +64,7 @@ function GoalCard({ text, onSave }: { text: string; onSave: (text: string) => vo
   )
 }
 
-export function AuraConversationCards({ resumed }: { resumed: boolean }) {
+export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   const [goals, setGoals] = useState<Record<string, string>>({})
   const messages = useStore($messages)
   const busy = useStore($busy)

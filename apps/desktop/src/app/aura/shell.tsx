@@ -34,7 +34,12 @@ export function conversationGroup(seconds: number, now = new Date()) {
   return 'Earlier'
 }
 
-export function AuraShell({ actions, children }: { actions: WiringActions; children: ReactNode }) {
+interface AuraShellProps {
+  actions: WiringActions
+  children: ReactNode
+}
+
+export function AuraShell({ actions, children }: AuraShellProps) {
   const wide = useMediaQuery('(min-width: 900px)')
   const [collapsed, setCollapsed] = useState(false)
   const [open, setOpen] = useState(false)
