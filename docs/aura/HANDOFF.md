@@ -1,5 +1,109 @@
 # Aura interface handoff
 
+## Step-history slice — 10 November 2026
+
+Starting SHA: `2d77e5cbef0903f6c5fbd876f8eff12b8d87a649`; fetched remote
+matched, with no local or concurrent modifications. Work remains on the same
+feature branch / draft PR #3. The PR records the final exact SHA and clean-tree
+gate results; this section describes a bounded first-priority slice, not the full
+proposed product or a completed live loop.
+
+Implementation commit: `9b929bfea498585cfafe110ae7eb71c244c4142e`. The follow-up
+evidence commit changes only this handoff, screenshot index and synthetic images.
+
+Implemented: the Progress card now projects real transcript tool-call parts,
+including hydrated history, instead of manufacturing a two-row plan from a busy
+flag. A single lookup checked against the existing presentation registry supplies
+plain names; unknown actions say “Used a tool”. Rows collapse by default, carry
+text statuses and recorded timing, and expose only allowlisted outcome facts.
+Commands, arbitrary inputs/results, URLs and internal identifiers are withheld
+from this new Details view because they may contain credentials. This does not
+retroactively audit other existing runtime detail views.
+
+Done requires a confirming result flag, completed status or zero exit code. Failed,
+queued, running and interrupted outcomes remain distinct. Unrecognized results
+say Result received; a settled call without a result says Unconfirmed. Missing
+timestamps say Timing unavailable. Neither an assistant's prose nor a busy flag
+creates a step. Progress announcements exclude the ticking timer and never move
+focus. Native disclosure controls support keyboard operation.
+
+This slice introduces no new semantic colours, movement, success toast or backend
+authority. Pills use existing neutral text/background tokens: light primary on
+white 16.35:1; dark primary on surface 16.13:1. Amber/red/green pills and the shared
+Needs-you indicator are deferred, so no unmeasured colour or fixture is presented
+as implemented. The existing approval card remains the authority-facing UI.
+
+### Runtime seams and deferred work
+
+- Approval requests already carry queue request IDs. `resolve_gateway_approval_card`
+  resolves an exact ID and does not answer the next request when that ID is stale.
+  The renderer's current `ApprovalRequest` has no tool-call ID or verified cost.
+  This slice does not guess a per-row Needs-you binding or call unknown cost Free.
+- A local-fake probe found that a plain `curl --data` loopback POST ran without an
+  approval prompt. Manual mode is not an every-send/submit guard. The final isolated
+  regression uses the existing pipe-to-shell guard, consuming a fixed harmless
+  response from a loopback-only mock. It checks Change/Approve-once and a request
+  counter, not generalized external-action enforcement. No real recipient or
+  deletion is used by this updated harness. The old inherited deletion-based
+  test was run before this replacement; it touched only its disposable fixture.
+- `tools/mcp_tool_costs.py` provides declared per-server costs/limits; a zero limit
+  is not a global zero-spend switch, and unknown tools are not established free.
+  Aura-wide fail-closed free-only enforcement is **not implemented or verified**.
+  No new policy plugin was enabled; the previous provider defaults are unchanged.
+- Existing files: `desktop-fs.ts` sends owner/profile/session scope; the gateway's
+  `/api/fs/read-text`, `/api/fs/read-data-url` and download path already exist.
+  `preview-file.tsx`, `preview-artifact.tsx` and the artifact registry provide other
+  preview surfaces. `_fs_owned_session` checks profile-owned sessions when supplied;
+  this is not proof of per-user file isolation. No new public file route was added.
+- A new File card/shared panel, task/routine lists, browser takeover/guards,
+  Apps/Skills and workspace screens remain unwired. No fixture-only production
+  surface was added. File bytes/download ownership and safe rendering still need
+  focused end-to-end tests before reuse. Existing code-block artifacts do not
+  establish that a real model wrote a workspace file.
+- Goal edits remain in-memory annotations. The step reload test verifies only
+  current-process history hydration, not edited-goal survival or restart durability.
+
+### Live acceptance — BLOCKED
+
+The local managed environment reports no configured secrets/runtime variables;
+OPENROUTER_API_KEY, GEMINI_API_KEY and GOOGLE_API_KEY are absent. No authorized,
+tool-capable exact free model, verified pricing/quota or disabled paid fallback
+route was established. No provider call was made. Render belongs to the separate
+deployment owner and was not inspected or changed. No physical phone is available.
+
+| Gate | Local live-free / deployed live-free result |
+|---|---|
+| Real provider reply and follow-up context | BLOCKED: no verified free route |
+| Actual example.com read invocation/result | NOT RUN: live route blocked |
+| Model-written sourced file, bytes and download | NOT RUN: live route/file adapter acceptance pending |
+| Reopening with source/file/context retained | NOT RUN for live loop; local-fake step reload tested separately |
+| Isolated approval control | Local-fake browser harness only; not every-tool safety |
+| Costed fixture refused under Aura free-only | BLOCKED: blanket free-only authority is not implemented |
+| Physical phone / restart continuity | NOT VERIFIED; no production restart performed |
+
+Focused verification before the evidence commit:
+
+| Command | Exit | Result |
+|---|---:|---|
+| `pnpm --dir apps/desktop exec vitest run --project ui src/app/aura --maxWorkers=2 --reporter=dot` | 0 | 11 tests across 4 files |
+| `HERMES_PYTHON=.venv/bin/python bash scripts/run_tests.sh tests/tools/test_mcp_tool_costs.py tests/tools/test_approval_gateway_wait_late_choice.py --noconftest -q` | 0 | 16 existing runtime contract tests; not blanket free-only proof |
+| `pnpm --dir apps/desktop run build:webapp` with `NODE_OPTIONS=--max-old-space-size=4096` | 0 | Fresh candidate build |
+| `python scripts/reveta/aura_browser.py` | 0 | Local-fake streaming, guarded loopback mock Change/Approve-once counter, confirmed step, page reload, attachments, no-model, mobile/theme regressions |
+| ESLint on changed TS/TSX/browser harness; Ruff on Python browser harness | 0 | No new lint errors/warnings |
+
+The final PR adds the exact final-head commands, exit codes and JSON. Final gates
+are run once on the final committed tree: `just aura-check` (4096 MiB Node heap)
+and the complete `vitest run --project ui --maxWorkers=3` project. The gate includes
+the browser harness. Earlier build refusal while inputs changed, corrected import/
+registry errors, and interrupted old-harness runs are not passing evidence.
+
+No paid calls, new spending, private source/assets, deployments, Render, secrets,
+authentication, hosting or repository-visibility changes. Next smallest step:
+design/test a backend free-only refusal boundary including unknown costs, then
+verify an authorized exact free model route; reuse the scoped file adapters only
+after their user/session ownership and download acceptance pass. Do not infer the
+requested live conversation → sourced file loop passed from these regressions.
+
 Branch: `feat/aura-chat-slice-20261109`, draft PR #3 into
 `fix/chat-session-ux-navigation-20261106`. The PR records the exact verified SHA,
 command output, JSON gate result and screenshot links. Starting remote checkpoint:
@@ -51,9 +155,10 @@ Cleanup deliberately interrupts only that temporary test gateway with
 The browser flow checks sign-in into chat, fake streaming, no upstream branding
 in the tested signed-in states, source chips, editable goal, grouped/searchable
 history, reopening with a resume card, theme controls, header touch targets,
-reduced motion and overflow at 320/375/390 px. A disposable directory must exist
-while an approval is pending and is removed only after Approve. No external
-recipient or customer data is involved. Image and URL attachment and the no-model
+reduced motion and overflow at 320/375/390 px. The original checkpoint used a
+disposable-directory approval fixture. The current harness replaces that with a
+loopback-only mock: zero requests before approval or after Change, exactly one
+after Approve once. No external recipient or customer data is involved. Image and URL attachment and the no-model
 screen are separate assertions. Screenshots use synthetic data only.
 
 The PR records actual exit codes and every unavailable check; this document is
