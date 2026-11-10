@@ -1,4 +1,41 @@
 /* Public-safe values only, based on the approved Reveta palette. */
+.aura-steps > summary,
+.aura-steps li > details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.aura-steps summary:focus-visible {
+  outline: 2px solid var(--aura-link);
+  outline-offset: 3px;
+}
+.aura-steps ol {
+  padding: 0;
+  list-style: none;
+}
+.aura-steps li {
+  padding-block: 16px;
+  border-top: 1px solid var(--aura-line);
+  overflow-wrap: anywhere;
+}
+.aura-step-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.aura-step-status {
+  padding: 4px 8px;
+  border: 1px solid var(--aura-line);
+  border-radius: 16px;
+  color: var(--aura-ink);
+  font-size: 13px;
+}
+.aura-steps small {
+  color: var(--aura-muted);
+}
 .aura-app {
   --aura-ink: #101c49;
   --aura-muted: #5b6788;

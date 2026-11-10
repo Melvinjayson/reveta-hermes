@@ -7,6 +7,8 @@ import { $busy, $messages } from '@/store/session'
 
 import { AuraCard } from './card'
 import { auraSources } from './sources'
+import { AuraSteps } from './step-history'
+import { auraSteps } from './steps'
 
 interface GoalCardProps {
   text: string
@@ -112,15 +114,10 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
           </AuraCard>
         ))}
       </details>
+      <AuraSteps steps={auraSteps(messages)} />
       {busy && (
         <div aria-live="polite" role="status">
-          <AuraCard kind="progress" title="Finding your next step">
-            <ol>
-              <li>Message received</li>
-              <li aria-current="step">Preparing your response…</li>
-            </ol>
-            <p>You can stop the response below.</p>
-          </AuraCard>
+          <p>Waiting for Aura’s response. You can stop it below.</p>
         </div>
       )}
     </div>

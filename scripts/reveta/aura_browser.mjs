@@ -1,6 +1,6 @@
 /* global document, getComputedStyle, innerWidth */
 import { createRequire } from 'node:module'
-import { mkdirSync, existsSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 const require = createRequire(new URL('../../apps/desktop/package.json', import.meta.url))
 const { chromium, expect } = require('@playwright/test')
 let url = ''
@@ -73,7 +73,7 @@ try {
     })
     await page.screenshot({ path: `${output}/streaming-dark.png` })
     await expect(page.locator('[data-role=assistant]')).toContainText('Stub output:', { timeout: 60000 })
-    await expect(page.locator('[data-aura-card=progress]')).toBeVisible()
+    await expect(page.locator('[data-aura-card=progress]')).toHaveCount(0)
     await page.locator('.aura-context').evaluate(node => (node.scrollTop = node.scrollHeight))
     await page.screenshot({ path: `${output}/progress-dark.png` })
     await expect(
@@ -150,15 +150,22 @@ try {
     await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
     await page.getByRole('dialog').getByRole('combobox').selectOption('light')
     await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
-    await editor.fill('Synthetic approval exercise: remove only the disposable test directory.')
+    const actionCount = () => JSON.parse(readFileSync(launch.target, 'utf8'))
+    await editor.fill('Synthetic approval exercise: ask before the loopback mock action.')
     await editor.press('Enter')
-    await expect(page.locator('[data-aura-card=progress]')).toBeVisible()
     await page.locator('.aura-context').evaluate(node => (node.scrollTop = node.scrollHeight))
     await page.screenshot({ path: `${output}/progress-light.png` })
     const approval = page.locator('[data-aura-card=approval]')
     await expect(approval).toBeVisible({ timeout: 60000 })
-    if (!existsSync(launch.target)) throw new Error('Approval action ran before approval')
+    if (actionCount() !== 0) throw new Error('Mock action ran before approval')
     await expect(approval.getByRole('button')).toHaveCount(2)
+    await approval.getByRole('button', { name: 'Change', exact: true }).click()
+    await expect(page.locator('[data-role=assistant]').getByText('Stub output: Synthetic action was not run.', { exact: true }))
+      .toBeVisible({ timeout: 60000 })
+    if (actionCount() !== 0) throw new Error('Change executed the mock action')
+    await editor.fill('Retry the synthetic mock action, asking for approval again.')
+    await editor.press('Enter')
+    await expect(approval).toBeVisible({ timeout: 60000 })
     for (const mode of ['dark', 'light']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
@@ -166,9 +173,9 @@ try {
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
       await approval.screenshot({ path: `${output}/approval-${mode}.png` })
     }
-    if (!existsSync(launch.target)) throw new Error('Approval action ran while reviewing')
+    if (actionCount() !== 0) throw new Error('Mock action ran while reviewing')
     await approval.getByRole('button', { name: /^Approve/ }).click()
-    await expect.poll(() => existsSync(launch.target), { timeout: 60000 }).toBe(false)
+    await expect.poll(actionCount, { timeout: 60000 }).toBe(1)
     await expect(
       page
         .locator('[data-role=assistant]')
@@ -176,6 +183,27 @@ try {
     ).toBeVisible({
       timeout: 60000
     })
+    const steps = page.locator('.aura-steps')
+    await steps.locator(':scope > summary').click()
+    await expect(steps.locator('[data-aura-step=Done]')).toHaveCount(1)
+    await expect(steps.getByText('Run a command in Aura’s workspace', { exact: true }).last()).toBeVisible()
+    await steps.locator('[data-aura-step=Done]').getByText('Details', { exact: true }).click()
+    await expect(steps.getByText('Exit code: 0', { exact: true })).toBeVisible()
+    await expect(steps).not.toContainText(launch.target)
+    await steps.locator('[data-aura-step=Done]').getByText('Details', { exact: true }).click()
+    for (const mode of ['light', 'dark']) {
+      await page.getByRole('button', { name: 'Open menu', exact: true }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
+      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
+      await page.locator('.aura-context').evaluate(node => (node.scrollTop = node.scrollHeight))
+      await page.screenshot({ path: `${output}/steps-${mode}.png` })
+    }
+    await page.reload()
+    await expect(steps.locator('[data-aura-step=Done]')).toHaveCount(1)
+    await steps.locator(':scope > summary').click()
+    await expect(steps.getByText('Run a command in Aura’s workspace', { exact: true }).last()).toBeVisible()
+    if (actionCount() !== 1) throw new Error('Approved action executed more than once')
     await page.getByRole('button', { name: 'Open menu', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
     await page.getByRole('button', { name: 'Add context', exact: true }).click()
