@@ -126,8 +126,7 @@ def main() -> int:
                 staging.replace(target)
                 self.send_response(200)
                 self.end_headers()
-                # The guarded pipe consumes only this fixed harmless fixture.
-                self.wfile.write(b"printf 'Synthetic mock action received'")
+                self.wfile.write(b"Synthetic mock action received")
 
             def log_message(self, *_args):
                 pass
@@ -135,7 +134,7 @@ def main() -> int:
         action_server = HTTPServer(("127.0.0.1", 0), MockAction)
         action_thread = Thread(target=action_server.serve_forever, daemon=True)
         action_thread.start()
-        command = f"curl -sS --data synthetic-approval http://127.0.0.1:{action_server.server_port}/approval | sh"
+        command = f"curl -sS --data synthetic-approval http://127.0.0.1:{action_server.server_port}/approval"
         try:
             return run_scenarios(directory, target, command)
         finally:

@@ -1,7 +1,7 @@
 import type { ToolTitleKey } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 
-export type StepStatus = 'Queued' | 'Running' | 'Failed' | 'Done' | 'Stopped' | 'Result received' | 'Unconfirmed'
+export type StepStatus = 'Queued' | 'Running' | 'Failed' | 'Done' | 'Stopped' | 'Result received' | 'Unconfirmed' | 'Refused'
 
 // Keys are checked against the existing runtime presentation registry. Unknown
 // extensions stay generic rather than exposing their internal identifiers.
@@ -39,6 +39,10 @@ function record(value: unknown): Record<string, unknown> {
 
 function statusOf(part: { result?: unknown; isError?: boolean; interrupted?: boolean; completedAt?: number }): StepStatus {
   const result = record(part.result)
+
+  if (result.status === 'refused') {
+    return 'Refused'
+  }
 
   if (part.interrupted || result.status === 'cancelled' || result.status === 'stopped') {
     return 'Stopped'

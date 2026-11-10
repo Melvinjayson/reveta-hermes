@@ -1,5 +1,128 @@
 # Aura interface handoff
 
+## Dispatch approval increment — safety slice remains incomplete
+
+Base verified clean and remote-matching: `1995763097c489e2394fc3e45d0fea94de66a586`.
+The final PR records the exact implementation/evidence SHA and final-tree gate
+outputs. This increment stops at the dispatch gate and command-family negatives,
+as allowed by the safety directive's budget rule. **Free-only provider/tool routing
+has not been implemented. The overall safety slice has not passed; live work waits.**
+
+### Enforcement and binding
+
+`tools/aura_dispatch_policy.py` is one policy implementation called at the registry,
+connected-app, inline-agent, sequential helper, context-engine and memory-provider
+execution boundaries. It runs after argument-transforming middleware. The new gate
+is default-on across profiles, including missing configuration; no mode-off, YOLO,
+permanent/session approval or helper callback disables it. This is intentionally
+stricter than legacy native/programmatic behavior. Without a registered user
+approval bridge, consequential actions are refused rather than auto-approved.
+
+Only reviewed named reads and internal todo state bypass prompts. Local typed
+workspace edits require an explicit absolute `aura.workspace_root`; relative,
+outside, symlink-outside, remote-backend or runtime/settings writes do not qualify.
+Broad roots containing the runtime, settings or user home do not qualify. No
+terminal command or interpreter is considered provably read-only: **all command
+strings ask**, including apparently harmless ones. This avoids a shell parser or
+curl-only heuristic. Unknown/new tool names ask too. Existing handler-level guards
+remain in place and can require another approval or block an approved action.
+
+Approvals bind the current profile/home, tool name and canonical exact arguments
+with SHA-256. The handler receives a JSON snapshot; mutation of the original
+arguments or a profile change invalidates it. Each queue entry has a unique ID,
+nonce and a maximum 120-second lifetime. The resolver rejects expired/replayed
+IDs, FIFO/bulk approval, session and permanent choices for these requests. One
+request releases one invocation, never future or parallel calls. Change refuses
+execution. Known sensitive argument patterns are masked with the existing forced
+redactor. Oversized payloads and policy/config/serialization errors refuse before
+the handler. Cron/unattended contexts refuse even if legacy config says approve.
+
+The existing card remains in use, with unknown cost explicitly described as not
+verified; it is never labelled Free. Step rows now recognize Refused. No other
+screen, File card, panel or provider capability was added.
+
+### Coverage
+
+Tests use an actual loopback HTTP listener and the production `ToolRegistry`
+dispatcher with executable shell handlers. Each command variant is first denied
+with zero hits, then explicitly approved and proven executable with exactly one
+hit. Replaying its request adds no hit. All twelve command negatives failed on
+the pinned old dispatcher (12 failures, exit 1); the read/internal regression is
+expected to pass on both versions. Other new negative tests were not all separately
+run against the old checkout and are not claimed as baseline-red evidence.
+
+| Action type | Classification | Guarded on server? | Test | Result before final gates |
+|---|---|---|---|---|
+| curl data / explicit POST | Consequential | Yes, registry | `test_command_indirections_wait_and_change_has_no_effect[curl-data/curl-method]` | Passed |
+| wget POST | Consequential | Yes | same `[wget]` | Passed |
+| Python / Node POST | Consequential | Yes | same `[python/node]` | Passed |
+| Written script / pipe to sh / base64 | Consequential | Yes | same `[script/pipe/base64]` | Passed |
+| Environment / alias / subshell / chain | Consequential | Yes | same `[env/alias/subshell/chain]` | Passed |
+| Argument mutation, replay, bulk/session/always, expiry | Refused | Yes | `test_changed_arguments_invalidate_approval`, `test_expired_bulk_and_scope_approvals_cannot_execute` | Passed |
+| Helper action | Consequential | Yes in simulated delegated context | `test_helper_cannot_self_approve` | Passed; no live child model |
+| Cron / webhook / programmatic action | Refused | Yes in real session-context machinery | `test_cron_denies_even_with_auto_approve_configuration` | Passed; scheduler run not exercised |
+| Browser submit | Consequential | Registry gate | `test_unknown_browser_and_app_writes_require_approval` | Fixture-only; no live browser submission |
+| Connected-app write | Consequential | Registry + connector dispatch | previous test + `test_connected_app_real_dispatch_entry_does_not_reach_transport` | Fixture-only; no app account |
+| Skills, routine creation, connect, deletion | Consequential | Registry / inline gate | unknown-action test; `test_inline_setting_change_does_not_reach_callback` | Fixtures; full backend action lifecycles unrun |
+| Reads / internal local workspace edits | Read / Internal | Yes, classified before execution | `test_read_and_internal_write_regression` | Passed with actual filesystem fixture handlers |
+| Outside/symlink/relative file write | Consequential | Yes | `test_symlink_and_outside_workspace_write_cannot_use_internal_classification` | Passed |
+| Missing config, off mode, policy exception, hook skip flags | Refused | Yes | policy-errors, off-mode and model-dispatch tests | Passed |
+| Provider model IDs, quota fallback, paid/unknown-price tool | Not implemented | **No free-only cost guard** | Not run | BLOCKED / next increment |
+
+The browser harness now uses the original plain loopback POST, without the old
+pipe-to-shell trigger. Its user-facing Change/Approve-once counter test passed
+locally with FakeLLMServer. The final gate also rebuilds the Refused renderer and
+asserts that declined action's Refused row. No real provider or recipient is used.
+
+### Residual risks and limits
+
+- **Cost enforcement is absent.** The previous `openrouter/free` auto-router and
+  Gemini fallback configuration is unchanged and is not a verified free route.
+  Models, auxiliary calls, tools and add-ons need a complete fail-closed price and
+  routing boundary next. No live calls are authorized by this handoff.
+- This is application dispatch enforcement, not containment of adversarial Python,
+  trusted plugins/hooks, installed code or an already-approved arbitrary command.
+  Direct internal handler calls outside the instrumented dispatch boundaries, and
+  user/operator REST actions, have not all been audited. No every-entry-point or
+  every-tool safety claim is made.
+- An approved script can depend on files/environment that change independently of
+  its argument string. Arbitrary commands can perform multiple effects. Approval
+  binds the invocation, not a verified semantic decomposition of shell programs.
+- Workspace resolution still has filesystem race risk; no atomic no-follow file
+  adapter or whole-process filesystem/network boundary was added. Read tools retain
+  existing access policy; this increment does not establish per-user file isolation.
+- A capability probe `unshare -Urn true` succeeded in this managed executor. That
+  does not establish namespace availability on Render. A namespace alone blocks
+  legitimate approved outbound operations too; selective egress requires a mediated
+  network boundary. No wrapper, proxy, hosting configuration or deployment was
+  provisioned. Outer containment remains a required separate verification.
+- Forced redaction covers known secret patterns, not arbitrary undisclosed secret
+  prose. No authenticated connection, saved-login browser guard, actual external
+  service, physical phone or restart-continuity test ran.
+- Full-repository Python compatibility is not established. Default-on denial with
+  no user bridge intentionally changes legacy direct/native/unattended execution.
+  The final PR lists exactly which Python and UI gates ran; no skipped gate passes.
+
+Focused evidence: `safety-base-command-family.log` (old code, 12 failed),
+`safety-precommit.log` (27 new + 13 existing tests passed before final minor
+classification/test additions), `safety-browser.log` (plain-POST browser passed),
+and `safety-runtime-ruff.log` (changed runtime files passed). Files are in the local
+`/workspace/aura-evidence` directory; final clean-tree command/exit-code evidence is
+recorded in draft PR #3. No secrets/private Reveta OS source, paid or real-model
+calls, deployments, Render, auth, visibility, or infrastructure changes occurred.
+
+The final focused candidate run `safety-ready.log` passed **41 tests** (28 new
+policy tests and 13 existing approval/race contracts), exit 0. Changed Python
+runtime files, policy/tests and harness passed Ruff; the minimal UI/harness edits
+passed ESLint. The required final `just aura-check` adds the policy tests and lint
+to its default checks. Final-tree JSON and the complete UI run are recorded in the
+PR after execution, including any failure; they must not be inferred from these
+pre-commit focused results. The full repository Python suite remains unrun.
+
+Next smallest step is **complete server-side free-only provider/tool routing and
+its quota/unknown-price negatives**, followed by remaining authority-path tests.
+Do not choose a live model or start the file loop before that slice passes.
+
 ## Step-history slice — 10 November 2026
 
 Starting SHA: `2d77e5cbef0903f6c5fbd876f8eff12b8d87a649`; fetched remote

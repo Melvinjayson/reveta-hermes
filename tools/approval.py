@@ -17,6 +17,7 @@ import importlib
 import logging
 import os
 import threading
+import time
 from typing import Optional
 
 from utils import env_var_enabled, is_truthy_value
@@ -155,16 +156,23 @@ def resolve_gateway_approval(session_key: str, choice: str,
         queue = _gateway_queues.get(session_key)
         if not queue:
             return 0
+        # Aura requests never accept FIFO, bulk, session or permanent grants.
+        # Expiry is checked under the same lock as consumption, before removal.
+        eligible = [entry for entry in queue if not entry.data.get("single_use") or (
+            request_id == entry.data.get("request_id") and choice in {"once", "deny"}
+            and time.monotonic() < entry.data.get("expires_at_monotonic", 0)
+        )]
         if request_id:
-            targets = [entry for entry in queue if entry.data.get("request_id") == request_id]
+            targets = [entry for entry in eligible if entry.data.get("request_id") == request_id]
             if not targets:
                 return 0
             queue[:] = [entry for entry in queue if entry not in targets]
         elif resolve_all:
-            targets = list(queue)
-            queue.clear()
+            targets = eligible
+            queue[:] = [entry for entry in queue if entry not in targets]
         else:
-            targets = [queue.pop(0)]
+            targets = eligible[:1]
+            queue[:] = [entry for entry in queue if entry not in targets]
         if not queue:
             _gateway_queues.pop(session_key, None)
         # Popping the entry and committing its outcome are ONE critical section: the waiter's

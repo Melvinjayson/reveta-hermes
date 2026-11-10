@@ -15,6 +15,7 @@ function messages(result?: unknown, extra = {}): ChatMessage[] {
 
 it('requires explicit confirmation and never treats a queued receipt or missing result as done', () => {
   expect(auraSteps(messages())[0].status).toBe('Running')
+  expect(auraSteps(messages({ status: 'refused', error: 'Not approved' }, { isError: true }))[0].status).toBe('Refused')
   expect(auraSteps(messages(undefined, { completedAt: 103 }))[0].status).toBe('Unconfirmed')
   expect(auraSteps(messages({ status: 'queued', success: true }))[0].status).toBe('Queued')
   expect(auraSteps(messages({ output: 'Done!' }))[0].status).toBe('Result received')

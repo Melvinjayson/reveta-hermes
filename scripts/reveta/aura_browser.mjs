@@ -186,6 +186,7 @@ try {
     const steps = page.locator('.aura-steps')
     await steps.locator(':scope > summary').click()
     await expect(steps.locator('[data-aura-step=Done]')).toHaveCount(1)
+    await expect(steps.locator('[data-aura-step=Refused]')).toHaveCount(1)
     await expect(steps.getByText('Run a command in Aura’s workspace', { exact: true }).last()).toBeVisible()
     await steps.locator('[data-aura-step=Done]').getByText('Details', { exact: true }).click()
     await expect(steps.getByText('Exit code: 0', { exact: true })).toBeVisible()

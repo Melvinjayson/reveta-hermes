@@ -118,7 +118,7 @@ def main() -> int:
             ("Reveta isolated Python tests", ["bash", "scripts/run_tests.sh",
                 "tests/test_reveta_foundation.py", "tests/test_reveta_container_entrypoint.py",
                 "tests/skills/test_reveta_ecosystem_skill.py", "tests/scripts/test_aura_check.py",
-                "tests/scripts/test_aura_config.py",
+                "tests/scripts/test_aura_config.py", "tests/tools/test_aura_dispatch_gate.py",
                 "--noconftest", "-q"]),
             ("dashboard public Origin contracts", ["bash", "scripts/run_tests.sh",
                 "tests/hermes_cli/test_web_server_host_header.py", "--noconftest", "-q", "-k",
@@ -126,7 +126,7 @@ def main() -> int:
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
             ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
             ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs"]),
-            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py"]),
+            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py"]),
         ]:
             checks.append(execute(name, command, env))
     skipped = [
