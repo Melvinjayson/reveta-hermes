@@ -47,6 +47,10 @@ def _config():
 
 
 def _classification(name, args, config):
+    if name == "patch" and (
+        args.get("mode", "replace") != "replace" or args.get("patch")
+    ):
+        return "consequential"
     if name in _READ:
         return "read"
     if name in _INTERNAL:
@@ -60,7 +64,11 @@ def _classification(name, args, config):
         if isinstance(root, str) and isinstance(path, str) and Path(path).is_absolute():
             target = Path(path).resolve()
             workspace = Path(root).resolve()
-            if not Path(root).is_absolute() or Path(root) != workspace or Path(path) != target:
+            if (
+                not Path(root).is_absolute()
+                or Path(root) != workspace
+                or Path(path) != target
+            ):
                 return "consequential"
             protected = (
                 get_hermes_home().resolve(),

@@ -457,3 +457,23 @@ def test_parallel_identical_calls_do_not_share_one_approval(lab):
                 approval.withdraw_gateway_approval(
                     key, request["request_id"], "test cleanup"
                 )
+
+
+def test_multi_file_patch_cannot_launder_outside_changes_through_safe_path(lab):
+    registry, _, hits, _, home, workspace = lab
+    registry.register(
+        name="patch",
+        toolset="file",
+        schema={"name": "patch"},
+        handler=lambda args: hits.append("write") or '{"success":true}',
+    )
+    result = registry.dispatch(
+        "patch",
+        {
+            "path": str(workspace / "safe.md"),
+            "mode": "patch",
+            "patch": f"*** Begin Patch\n*** Add File: {home}/outside.md\n+synthetic\n*** End Patch",
+        },
+    )
+    assert hits == []
+    assert json.loads(result)["status"] == "refused"

@@ -21,6 +21,9 @@ approval bridge, consequential actions are refused rather than auto-approved.
 Only reviewed named reads and internal todo state bypass prompts. Local typed
 workspace edits require an explicit absolute `aura.workspace_root`; relative,
 outside, symlink-outside, remote-backend or runtime/settings writes do not qualify.
+Multi-file patch mode always asks: a decoy top-level path cannot authorize the
+other paths inside a patch body. The regression failed on the first candidate
+(the fixture write ran), and was corrected before restarting the final gates.
 Broad roots containing the runtime, settings or user home do not qualify. No
 terminal command or interpreter is considered provably read-only: **all command
 strings ask**, including apparently harmless ones. This avoids a shell parser or
@@ -91,6 +94,9 @@ asserts that declined action's Refused row. No real provider or recipient is use
 - Workspace resolution still has filesystem race risk; no atomic no-follow file
   adapter or whole-process filesystem/network boundary was added. Read tools retain
   existing access policy; this increment does not establish per-user file isolation.
+  The local/remote classification checks configured backend settings; session-local
+  backend overrides need separate negative tests before file-operation coverage
+  can be considered complete.
 - A capability probe `unshare -Urn true` succeeded in this managed executor. That
   does not establish namespace availability on Render. A namespace alone blocks
   legitimate approved outbound operations too; selective egress requires a mediated
