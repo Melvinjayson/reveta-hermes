@@ -44,6 +44,7 @@ export async function productFlow(page, expect, output) {
   await expect(steps).toContainText('python/cpython')
   await expect(steps).toContainText('nodejs/node')
   await expect(steps).toContainText('curl/curl')
+  await steps.screenshot({ path: `${output}/product-steps-mobile.png` })
   await expect(page.locator('[data-role=assistant]').last()).toContainText('Brief ready')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
