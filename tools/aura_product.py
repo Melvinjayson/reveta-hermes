@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import hashlib
+from html.parser import HTMLParser
 import json
 from pathlib import Path
 import re
@@ -129,19 +130,36 @@ def fetch_tool(args, **_kw):
                 if len(data) > 200_000:
                     break
             text = data[:200_000].decode('utf-8', errors='replace')
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(text, 'html.parser')
-    for node in soup(['script', 'style', 'noscript']):
-        node.decompose()
-    title = soup.title.get_text(' ', strip=True) if soup.title else url
-    content = soup.get_text(' ', strip=True)[:14000]
-    return outcome({'success': True, 'url': url, 'title': title, 'content': content},
+    parser = PageText()
+    parser.feed(text)
+    content = ' '.join(parser.parts)[:14000]
+    return outcome({'success': True, 'url': url, 'content': content},
                    url=url, summary=content[:1800])
+
+
+class PageText(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.parts = []
+        self.hidden = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in {'script', 'style', 'noscript'}:
+            self.hidden += 1
+
+    def handle_endtag(self, tag):
+        if tag in {'script', 'style', 'noscript'}:
+            self.hidden = max(0, self.hidden - 1)
+
+    def handle_data(self, data):
+        if not self.hidden and data.strip():
+            self.parts.append(data.strip())
 
 
 def browser_tool(args, **_kw):
     from tools.browser_use_cli import browser_exec
-    from tools.browser_session_cloud import get_cloud_provider, get_cdp_override_raw, use_real_profile
+    from tools.browser_session_cloud import get_cloud_provider, use_real_profile
+    from tools.browser_session_cdp import get_cdp_override_raw
     url = safe_url(args['url'])
     if get_cloud_provider() is not None or get_cdp_override_raw() or use_real_profile():
         raise PermissionError('Aura read-only browsing requires its isolated local Chromium')

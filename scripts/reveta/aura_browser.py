@@ -25,6 +25,7 @@ def browser_session(
     *,
     no_model: bool = False,
     cost_blocked: bool = False,
+    product: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -41,6 +42,17 @@ def browser_session(
     # The test owns this exact loopback action and its zero-cost attestation.
     command = json.loads((home.parent / "command.json").read_text())
     attest_tool(home, "terminal", {"command": command})
+    if product:
+        from ruamel.yaml import YAML
+
+        yaml = YAML()
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config['aura']['enabled'] = True
+        config['platform_toolsets'] = {'cli': ['aura', 'todo']}
+        config['browser'] = {'cloud_provider': 'local', 'engine': 'auto', 'executable_path': '/usr/bin/chromium'}
+        config['terminal'] = {'backend': 'local', 'cwd': str(home / 'aura-workspace')}
+        with (home / "config.yaml").open("w", encoding="utf-8") as output:
+            yaml.dump(config, output)
     if cost_blocked:
         from ruamel.yaml import YAML
 
@@ -106,10 +118,11 @@ def browser_session(
                     "target": str(target),
                     "noModel": no_model,
                     "costBlocked": cost_blocked,
+                    "product": product,
                 }
             ),
             text=True,
-            timeout=240,
+            timeout=360,
             check=False,
         ).returncode
     finally:
@@ -172,6 +185,10 @@ def main() -> int:
 def run_scenarios(directory: str, target: Path, command: str) -> int:
     from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
 
+    result = product_scenario(directory, target)
+    if result:
+        return result
+
     with FakeLLMServer(
         [
             Text(
@@ -204,6 +221,41 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
         return browser_session(
             Path(directory) / "no-model", fake.base_url, target, no_model=True
         )
+
+
+def product_scenario(directory: str, target: Path) -> int:
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
+
+    urls = ['https://www.rfc-editor.org/rfc/rfc9110.html',
+            'https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview',
+            'https://www.w3.org/Protocols/']
+    brief = ('# HTTP semantics\n\nHTTP is a stateless application-level protocol. '
+             'Methods express intent, status codes describe outcomes, and representations carry data. '
+             'Use safe methods for retrieval; idempotent methods permit retry when appropriate.\n\n'
+             '## Sources\n' + '\n'.join(f'- [{url}]({url})' for url in urls))
+    with FakeLLMServer([
+        ToolCall('aura_fetch', {'url': urls[0]}, text='I will read three sources, compare the HTTP guidance, and write a one-page cited brief.'),
+        ToolCall('aura_browser', {'url': urls[1], 'screenshot': True}),
+        ToolCall('aura_browser', {'url': urls[2]}),
+        ToolCall('aura_file', {'name': 'brief.md', 'action': 'write', 'content': brief}),
+        Text('Brief ready. HTTP methods, status codes and representations define the exchange.\n\n' + '\n'.join(f'[Source {index}]({url})' for index, url in enumerate(urls, 1))),
+        Text('Remember the HTTP methods and status codes from your brief.', chunk_chars=4, delay_per_chunk=0.15),
+    ]) as fake:
+        result = browser_session(Path(directory) / 'product', fake.base_url, target, product=True)
+        if result:
+            return result
+        requests = fake.main_requests()
+        if len(requests) != 6:
+            raise AssertionError(f'Product loop expected 6 fake generations, got {len(requests)}')
+        history = requests[-1]['messages']
+        tool_results = [message for message in history if message.get('role') == 'tool']
+        if len(tool_results) < 4 or any('"success": false' in str(row.get('content')) for row in tool_results):
+            raise AssertionError('Real source/file adapters did not succeed')
+        if not any('Research HTTP semantics' in str(row.get('content')) for row in history):
+            raise AssertionError('Voice follow-up lost the original text context')
+        if not any('HTTP Semantics' in str(row.get('content')) for row in tool_results):
+            raise AssertionError('RFC content did not reach the chat agent')
+        return 0
 
 
 if __name__ == "__main__":

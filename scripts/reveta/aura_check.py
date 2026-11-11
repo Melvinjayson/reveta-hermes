@@ -120,6 +120,7 @@ def main() -> int:
                 "tests/skills/test_reveta_ecosystem_skill.py", "tests/scripts/test_aura_check.py",
                 "tests/scripts/test_aura_config.py", "tests/tools/test_aura_dispatch_gate.py",
                 "tests/tools/test_aura_free_only.py",
+                "tests/tools/test_aura_product.py",
                 "tests/tools/test_approval_gateway_wait_late_choice.py",
                 "tests/tools/test_approval_gateway_wait_coalesce_race.py",
                 "--noconftest", "-q"]),
@@ -128,14 +129,14 @@ def main() -> int:
                 "declared_public_url or without_public_url"]),
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
             ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
-            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs"]),
-            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py"]),
+            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs", "scripts/reveta/aura_product_browser.mjs"]),
+            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py", "tools/aura_product.py", "tools/aura_spend.py", "tests/tools/test_aura_product.py"]),
         ]:
             checks.append(execute(name, command, env))
     skipped = [
         {"name": name, "reason": "G1 acceptance suite not implemented in this foundation checkpoint"}
         for name in ["complete mobile light/dark accessibility",
-                     "browser reopening", "logout/login history", "local restart persistence",
+                     "logout/login history", "local restart persistence",
                      "provider retry without duplicates", "interrupt streaming",
                      "anonymous session boundary", "dashboard browser smoke"]
     ]

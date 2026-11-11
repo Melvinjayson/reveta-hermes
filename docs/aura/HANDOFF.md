@@ -1,3 +1,130 @@
+# Working Aura increment — 11 November 2026
+
+This section supersedes the historical checkpoints below. Base:
+`feat/aura-chat-slice-20261109` at `135185c286a52717390736918aa367fcb66c7992`.
+Work branch: `aura/working-product-20261111`, draft PR into that feature branch.
+No deployment, Render/AWS/auth/visibility change or paid model call is part of this work.
+
+## Wired
+
+- Startup now selects provider `gemini`, exact model `gemini-2.5-flash`, native
+  endpoint `https://generativelanguage.googleapis.com/v1beta`. The ID and endpoint
+  are documented in `website/docs/guides/google-gemini.md` and implemented in
+  `agent/gemini_native_adapter.py`. Either `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+  selects it. The generated `aura.free_models` attests that exact route at zero
+  cost. Use an **AI Studio free-tier project**, not a billing-enabled project:
+  the allowlist is an operator pricing assertion, not a provider billing switch.
+  Missing keys remain disconnected. No `openrouter/free`, aliases, aggregator
+  auto-router or automatic fallback is generated. Existing fallback guards remain.
+  The free guard now seals both native Gemini and its async facade's HTTPX client.
+- `platform_toolsets.cli: [aura, todo]` exposes the small service-gated Aura
+  toolset in the existing chat loop. `aura_fetch` uses Hermes's SSRF-safe HTTPX
+  transport (bounded public GET, no redirects, keys or extraction vendor).
+  `aura_browser` composes fixed navigate/read/screenshot operations through
+  Hermes's `browser_exec`/browser-harness on isolated local Chromium; arbitrary
+  code, page interaction, authenticated profiles and paid cloud browsers are not
+  exposed. The computer is the real gateway/Render host, not another paid VM.
+- `aura_file` calls Hermes read/write adapters in a conversation directory under
+  `$HERMES_HOME/aura-workspace`; reads/new files run directly. Plain basenames,
+  size limits and symlink/traversal checks apply. Existing-file writes ask.
+  `aura_computer` calls Hermes terminal in that directory; every command/code
+  execution asks, including installs, deletes and network writes. The existing
+  nonce/expiry/profile/argument-bound single-use gate remains authoritative.
+  Unknown/legacy tools still require their existing exact price attestations.
+  A workspace directory is application scoping, **not an OS sandbox**: an
+  explicitly approved shell command has host authority. No claim of OS egress
+  containment or arbitrary-command price inference is made.
+- Step cards project actual backend status/exit code and server-redacted URL,
+  command and bounded output summary. Failed/refused calls stay failed/refused.
+  File cards derive from successful adapter results, not assistant Markdown;
+  downloads use the existing authenticated owner/session-scoped ticket bridge.
+  Source links remain in the answer. Browser screenshot files can be downloaded.
+- `aura_complex` is the explicit provider `anthropic` route for a user-requested
+  complex reasoning task. It is a tool/subrequest in this chat, never provider
+  recovery and never the default. Both positive chat/day USD caps, a key, bundled
+  model pricing, available budget and a bound approval card showing the estimated
+  maximum are required. The task includes relevant chat context. It uses the
+  existing Anthropic adapter with retries disabled, max 4096 output tokens, no
+  thinking/cache/tools add-ons. Unknown models/prices stay disabled. SQLite
+  reservations serialize concurrent admissions; denied cards release them,
+  unknown transport usage retains the full reservation. `aura-spend.db` records
+  actual input/output token counts' derived USD cost (bundled rates, not a vendor
+  invoice) in the tool result and durable ledger. Paid calls were tested with a
+  stub only; no Anthropic request was made.
+
+## Voice — wired fallback, honestly labelled
+
+Hermes has an existing live/chained voice implementation. It may use billed
+services, so Aura's browser surface uses browser SpeechRecognition + speechSynthesis
+without a model voice endpoint or exposed key. Final transcripts enter the exact
+same `onSubmit` path and persisted chat as typed text; interim text stays visible.
+Spoken replies consume the same assistant messages. Interrupt cancels playback
+and the active turn; permission errors and unsupported browsers are visible.
+
+The UI explicitly says **turn-based; full duplex unavailable**. Recognition
+pauses during playback and the user taps Interrupt to barge in. This is not a
+claim of Gemini Live, reliable acoustic echo cancellation, or hands-free full
+duplex. Speech API availability, voices, recognition processing and permission
+behavior depend on the phone/browser; the browser may send audio to its own
+speech service. Hardware/microphone behavior needs a physical-phone check.
+
+## Persistence and free-host limitation
+
+Existing Hermes SQLite conversation history stores messages, tool calls/results,
+source links and file metadata. Files live under HERMES_HOME; reload/reopen
+hydrates those same results and the File card. Voice context uses those messages.
+Interim speech and active approval/live processes are not durable.
+
+A Render **free web service filesystem is ephemeral**. A service restart/redeploy
+can lose `state.db`, conversation workspace files, the spend ledger and profile
+state if `/opt/data` is not a persistent disk. Browser localStorage cannot restore
+missing server files. No durable cross-restart guarantee is claimed or paid disk
+added. The smallest free fix is to run the same Docker image on an existing
+always-on machine with a bind mount/volume for HERMES_HOME. On Render free alone,
+manual encrypted export/restore of the whole home before maintenance is a free
+backup option, but cannot guarantee recovery from an unexpected restart. Keep
+Anthropic caps at zero on an ephemeral host: losing its ledger also loses spend
+history. No paid infrastructure was added.
+
+## Render configuration and deployment — documentation only
+
+Retain the current auth and service. Required secret: `GEMINI_API_KEY` (alias
+`GOOGLE_API_KEY`) from a free-tier AI Studio project. Optional
+`OPENROUTER_API_KEY` is not auto-selected; the optional exact `:free` route is
+not configured by this generator. Optional `ANTHROPIC_API_KEY` alone enables
+nothing. Optional startup settings (copied into `aura.anthropic` config):
+`AURA_ANTHROPIC_MODEL` (default `claude-sonnet-4-5`, must have bundled pricing),
+`AURA_ANTHROPIC_PER_CHAT_USD` and `AURA_ANTHROPIC_PER_DAY_USD` (both default 0).
+Do not set positive caps on ephemeral Render storage. No keys are written into
+config, source, PR evidence or logs by the generator.
+
+Docker command is unchanged:
+
+```sh
+/bin/sh -c '/opt/hermes/.venv/bin/python /opt/hermes/scripts/reveta/aura_config.py --write "$HERMES_HOME/config.yaml" && exec /opt/hermes/docker/entrypoint-dispatch.sh gateway run'
+```
+
+After review, the deployment owner can select the tested feature commit, retain
+`HERMES_HOME=/opt/data`, `PORT=10000`, the existing public URL/basic-auth settings
+and `HERMES_YOLO_MODE=0`, and use the wrapper above. The generator enables the
+single Webapp listener on 10000 with existing auth and no second server. Inspect
+its preview first. After deployment, sign in on a phone and check text context,
+real source reads, download/reopen and the actual browser's speech support.
+A quota/permission/model error should be reported; do not enable billing or add
+fallbacks as a recovery action. No deployment was performed in this increment.
+
+## Verification evidence
+
+Final local verification commands/results are recorded below after execution.
+FakeLLMServer controls generation; browser/file/terminal adapters and download
+bytes are real. Browser speech states are simulated; no physical mic or paid
+voice service was used. Real public-source GET/navigation is separate from real
+model evidence: **no live Gemini/Anthropic/OpenRouter inference was run**.
+
+---
+
+# Historical handoff (superseded where noted above)
+
 # Aura interface handoff
 
 ## Radix focus teardown correction
