@@ -57,6 +57,9 @@ def require_tool(name, args):
     try:
         if _declared_paid_tool(name):
             raise FreeOnlyRefused()
+        from tools.aura_product import owned_tool
+        if owned_tool(name):
+            return True
         digest = argument_hash(args)
         entries = _entries(config, "free_tools")
         matches = [

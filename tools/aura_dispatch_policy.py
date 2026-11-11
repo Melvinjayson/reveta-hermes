@@ -46,6 +46,9 @@ def _config():
 
 
 def _classification(name, args, config):
+    from tools.aura_product import owned_tool, classification
+    if owned_tool(name):
+        return classification(name, args)
     if name in _READ:
         return "read"
     if name in _INTERNAL:
@@ -67,7 +70,7 @@ def _canonical(args):
     )
 
 
-def _approve(name, snapshot, digest, confirmed_zero=False):
+def _approve(name, snapshot, digest, confirmed_zero=False, description=None):
     from agent.redact import redact_sensitive_text
     from tools import approval, approval_context
     from tools.approval_gateway_wait import _await_gateway_decision
@@ -89,7 +92,7 @@ def _approve(name, snapshot, digest, confirmed_zero=False):
             "command": redact_sensitive_text(
                 f"{name} {_canonical(snapshot)}", force=True
             ),
-            "description": ("One exact action. Cost: Free (confirmed zero-price action). Change refuses execution."
+            "description": description or ("One exact action. Cost: Free (confirmed zero-price action). Change refuses execution."
                             if confirmed_zero else "One exact action. Cost is not verified. Change refuses execution."),
             "pattern_key": f"aura:{digest}:{nonce}",
             "pattern_keys": [f"aura:{digest}:{nonce}"],
