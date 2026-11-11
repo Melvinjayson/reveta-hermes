@@ -45,8 +45,11 @@ def aura_settings(env: dict[str, str]) -> dict:
             },
         },
         "terminal": {"backend": "local", "cwd": str(Path(env.get("HERMES_HOME", ".")) / "aura-workspace")},
-        "platform_toolsets": {"cli": ["aura", "todo"]},
-        "browser": {"cloud_provider": "local", "engine": "auto", "headless": True},
+        "platform_toolsets": {"cli": ["aura", "todo"], "api_server": ["aura", "todo"]},
+        # This compact surface needs no deferred catalog/bridge calls.
+        "tools": {"tool_search": {"enabled": "off"}},
+        "browser": {"cloud_provider": "local", "engine": "auto", "headless": True,
+                    "harness_home": str(Path(env.get("HERMES_HOME", ".")) / "cache" / "browser-harness")},
         "agent": {"system_prompt": "You are Aura. For research, explain a short plan, read 2-3 real sources with aura_browser, then use aura_file to create brief.md with citations. Never invent a tool result, source, file or completion. Link sources in your answer. Use the same conversation for text and voice. Anthropic is opt-in via its approval card, never a fallback."},
         "approvals": {
             "mode": "manual",

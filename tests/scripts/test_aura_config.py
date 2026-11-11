@@ -21,6 +21,9 @@ def test_gemini_precedes_router_and_is_exactly_allowlisted_without_copying_keys(
     assert config["fallback_model"] == []
     assert "synthetic" not in json.dumps(config)
     assert config["approvals"]["mode"] == "manual"
+    from hermes_cli.tools_config import _get_platform_tools
+    for platform in ('cli', 'api_server'):
+        assert 'aura' in _get_platform_tools(config, platform)
 
 
 def test_gemini_only_and_no_key_are_explicit_and_anthropic_stays_disabled():

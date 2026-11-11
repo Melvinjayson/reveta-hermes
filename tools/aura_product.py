@@ -121,7 +121,7 @@ def fetch_tool(args, **_kw):
     from tools.url_safety import create_ssrf_safe_client
     url = safe_url(args['url'])
     # No third-party extract service, credentials, redirects or paid add-ons.
-    with create_ssrf_safe_client(timeout=25, follow_redirects=False, trust_env=False) as client:
+    with create_ssrf_safe_client(timeout=25, follow_redirects=False) as client:
         with client.stream('GET', url) as response:
             response.raise_for_status()
             data = bytearray()

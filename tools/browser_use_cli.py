@@ -196,6 +196,8 @@ def _base_subprocess_env() -> dict:
         env.pop("PYTHONPATH", None)
     env["PATH"] = _floor_subprocess_path(env.get("PATH", ""))
     env.setdefault("ANONYMIZED_TELEMETRY", "false")
+    if harness_home := _read_browser_cfg().get("harness_home"):
+        env["BH_HOME"] = str(Path(harness_home).expanduser())
     namespace_harness_dirs(env, _served_profile_tag())  # a served profile's own harness runtime/tmp dirs
     # A daemon the CLI starts inherits this tag; _own_harness_daemon owns only one that names us.
     env.update(spawn_env("browser-harness-daemon"))

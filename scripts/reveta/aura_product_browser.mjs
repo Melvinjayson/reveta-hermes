@@ -24,18 +24,18 @@ export async function productFlow(page, expect, output) {
   })
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
-  await editor.fill('Research HTTP semantics and give me a one-page brief')
+  await editor.fill('Research HTTP client requests and give me a one-page brief')
   const send = page.locator('form').getByRole('button', { name: 'Send', exact: true })
   await expect(send).toBeEnabled({ timeout: 60000 })
   await send.click()
-  await expect(page.locator('[data-role=assistant]')).toContainText('I will read three sources', { timeout: 60000 })
+  await expect(page.locator('[data-role=assistant]').filter({ hasText: 'I will read three sources' }).first()).toBeVisible({ timeout: 60000 })
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible({ timeout: 180000 })
   const steps = page.locator('.aura-steps')
   await steps.locator(':scope > summary').click()
   await expect(steps.locator('[data-aura-step=Done]')).toHaveCount(4)
-  await expect(steps).toContainText('www.rfc-editor.org')
-  await expect(steps).toContainText('developer.mozilla.org')
-  await expect(steps).toContainText('www.w3.org')
+  await expect(steps).toContainText('python/cpython')
+  await expect(steps).toContainText('nodejs/node')
+  await expect(steps).toContainText('curl/curl')
   await expect(page.locator('[data-role=assistant]').last()).toContainText('Brief ready')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -43,7 +43,7 @@ export async function productFlow(page, expect, output) {
   ])
   if (await download.failure()) { throw new Error('Brief download failed') }
   const bytes = readFileSync(await download.path(), 'utf8')
-  for (const text of ['# HTTP semantics', 'https://www.rfc-editor.org', 'https://developer.mozilla.org', 'https://www.w3.org']) {
+  for (const text of ['# HTTP client requests', 'https://raw.githubusercontent.com/python/cpython', 'https://raw.githubusercontent.com/nodejs/node', 'https://raw.githubusercontent.com/curl/curl']) {
     if (!bytes.includes(text)) { throw new Error(`Brief lacks expected citation/content: ${text}`) }
   }
   await page.screenshot({ path: `${output}/product-research-mobile.png` })

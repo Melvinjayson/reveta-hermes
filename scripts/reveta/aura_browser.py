@@ -48,8 +48,16 @@ def browser_session(
         yaml = YAML()
         config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
         config['aura']['enabled'] = True
-        config['platform_toolsets'] = {'cli': ['aura', 'todo']}
-        config['browser'] = {'cloud_provider': 'local', 'engine': 'auto', 'executable_path': '/usr/bin/chromium'}
+        config['platform_toolsets'] = {'cli': ['aura', 'todo'], 'api_server': ['aura', 'todo']}
+        config['tools'] = {'tool_search': {'enabled': 'off'}}
+        config['browser'] = {'cloud_provider': 'local', 'engine': 'auto', 'executable_path': '/usr/bin/chromium',
+                             'harness_home': str(home / 'cache' / 'browser-harness'),
+                             'chromium_args': ['--no-sandbox', '--disable-dev-shm-usage']}
+        # This managed test host uses an outbound proxy. Never persist proxy credentials.
+        from urllib.parse import urlsplit
+        proxy = urlsplit(os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy') or '')
+        if proxy.hostname and proxy.port:
+            config['browser']['chromium_args'].append(f'--proxy-server={proxy.scheme}://{proxy.hostname}:{proxy.port}')
         config['terminal'] = {'backend': 'local', 'cwd': str(home / 'aura-workspace')}
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
@@ -142,6 +150,10 @@ def browser_session(
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--product-only', action='store_true')
+    args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="aura-browser-") as directory:
         target = Path(directory) / "synthetic-action-count.json"
         target.write_text("0", encoding="utf-8")
@@ -175,6 +187,8 @@ def main() -> int:
             json.dumps(command), encoding="utf-8"
         )
         try:
+            if args.product_only:
+                return product_scenario(directory, target)
             return run_scenarios(directory, target, command)
         finally:
             action_server.shutdown()
@@ -226,12 +240,13 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
 def product_scenario(directory: str, target: Path) -> int:
     from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
 
-    urls = ['https://www.rfc-editor.org/rfc/rfc9110.html',
-            'https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview',
-            'https://www.w3.org/Protocols/']
-    brief = ('# HTTP semantics\n\nHTTP is a stateless application-level protocol. '
-             'Methods express intent, status codes describe outcomes, and representations carry data. '
-             'Use safe methods for retrieval; idempotent methods permit retry when appropriate.\n\n'
+    urls = ['https://raw.githubusercontent.com/python/cpython/main/Doc/library/http.rst',
+            'https://raw.githubusercontent.com/nodejs/node/main/doc/api/http.md',
+            'https://raw.githubusercontent.com/curl/curl/master/docs/libcurl/opts/CURLOPT_HTTPGET.md']
+    brief = ('# HTTP client requests\n\nHTTP clients send methods, headers and optional bodies, '
+             'then receive response status codes, headers and data. Python defines HTTPStatus '
+             'and HTTPMethod enums. Node exposes streaming HTTP messages rather than buffering '
+             'entire requests or responses. libcurl HTTPGET selects an HTTP GET request.\n\n'
              '## Sources\n' + '\n'.join(f'- [{url}]({url})' for url in urls))
     with FakeLLMServer([
         ToolCall('aura_fetch', {'url': urls[0]}, text='I will read three sources, compare the HTTP guidance, and write a one-page cited brief.'),
@@ -243,6 +258,20 @@ def product_scenario(directory: str, target: Path) -> int:
     ]) as fake:
         result = browser_session(Path(directory) / 'product', fake.base_url, target, product=True)
         if result:
+            requests = fake.main_requests()
+            # Names only: never dump requests, launch links or credentials.
+            print(json.dumps({'exposed_tools': [tool['function']['name'] for tool in requests[0].get('tools', [])] if requests else [],
+                              'generation_count': len(requests)}), file=sys.stderr)
+            from agent.redact import redact_sensitive_text
+            for row in requests[-1].get('messages', []) if requests else []:
+                if row.get('role') == 'tool':
+                    try:
+                        data = json.loads(row.get('content', '{}'))
+                    except (ValueError, TypeError):
+                        continue
+                    if data.get('error') or data.get('success') is False:
+                        detail = data.get('error') or data.get('stderr') or data.get('output')
+                        print(redact_sensitive_text(str(detail), force=True)[:1000], file=sys.stderr)
             return result
         requests = fake.main_requests()
         if len(requests) != 6:
@@ -251,10 +280,10 @@ def product_scenario(directory: str, target: Path) -> int:
         tool_results = [message for message in history if message.get('role') == 'tool']
         if len(tool_results) < 4 or any('"success": false' in str(row.get('content')) for row in tool_results):
             raise AssertionError('Real source/file adapters did not succeed')
-        if not any('Research HTTP semantics' in str(row.get('content')) for row in history):
+        if not any('Research HTTP client requests' in str(row.get('content')) for row in history):
             raise AssertionError('Voice follow-up lost the original text context')
-        if not any('HTTP Semantics' in str(row.get('content')) for row in tool_results):
-            raise AssertionError('RFC content did not reach the chat agent')
+        if not any('HTTPStatus' in str(row.get('content')) for row in tool_results):
+            raise AssertionError('Real Python HTTP documentation did not reach the chat agent')
         return 0
 
 
