@@ -40,3 +40,10 @@ def test_gemini_only_and_no_key_are_explicit_and_anthropic_stays_disabled():
 def test_google_alias_and_router_key_alone_cannot_select_an_automatic_route():
     assert aura_settings({"GOOGLE_API_KEY": "synthetic"})["model"]["provider"] == "gemini"
     assert aura_settings({"OPENROUTER_API_KEY": "synthetic"})["aura"]["free_models"] == []
+
+
+def test_browser_proxy_config_never_serializes_proxy_credentials():
+    browser = aura_settings({'HTTPS_PROXY': 'http://proxy.example:8080'})['browser']
+    assert browser['chromium_args'] == ['--proxy-server=http://proxy.example:8080']
+    config = aura_settings({'HTTPS_PROXY': 'http://synthetic-user:synthetic-password@proxy.example:8080'})
+    assert 'synthetic' not in json.dumps(config)

@@ -17,13 +17,20 @@ No deployment, Render/AWS/auth/visibility change or paid model call is part of t
   Missing keys remain disconnected. No `openrouter/free`, aliases, aggregator
   auto-router or automatic fallback is generated. Existing fallback guards remain.
   The free guard now seals both native Gemini and its async facade's HTTPX client.
-- `platform_toolsets.cli: [aura, todo]` exposes the small service-gated Aura
-  toolset in the existing chat loop. `aura_fetch` uses Hermes's SSRF-safe HTTPX
+- `platform_toolsets.cli` and `platform_toolsets.api_server` both select
+  `[aura, todo]`. This compact catalog is eager (`tools.tool_search.enabled: off`),
+  so the Webapp agent sees the actual tool schemas in its existing chat loop.
+  `aura_fetch` uses Hermes's SSRF-safe HTTPX
   transport (bounded public GET, no redirects, keys or extraction vendor).
   `aura_browser` composes fixed navigate/read/screenshot operations through
   Hermes's `browser_exec`/browser-harness on isolated local Chromium; arbitrary
   code, page interaction, authenticated profiles and paid cloud browsers are not
   exposed. The computer is the real gateway/Render host, not another paid VM.
+  Browser-harness state is rooted at `browser.harness_home` under
+  `$HERMES_HOME/cache/browser-harness`, using the existing adapter's per-profile
+  runtime directories. Fetch honors the host proxy environment; startup passes
+  an unauthenticated `HTTPS_PROXY` authority to Chromium without persisting proxy
+  credentials. Chromium error/privacy pages are failed reads, not successful sources.
 - `aura_file` calls Hermes read/write adapters in a conversation directory under
   `$HERMES_HOME/aura-workspace`; reads/new files run directly. Plain basenames,
   size limits and symlink/traversal checks apply. Existing-file writes ask.
@@ -54,8 +61,8 @@ No deployment, Render/AWS/auth/visibility change or paid model call is part of t
 
 ## Voice — wired fallback, honestly labelled
 
-Hermes has an existing live/chained voice implementation. It may use billed
-services, so Aura's browser surface uses browser SpeechRecognition + speechSynthesis
+The existing full-duplex engine in `tools/voice_live.py` is billed GPT-Live;
+no Gemini Live engine was found. Aura's browser surface uses browser SpeechRecognition + speechSynthesis
 without a model voice endpoint or exposed key. Final transcripts enter the exact
 same `onSubmit` path and persisted chat as typed text; interim text stays visible.
 Spoken replies consume the same assistant messages. Interrupt cancels playback
@@ -67,6 +74,15 @@ claim of Gemini Live, reliable acoustic echo cancellation, or hands-free full
 duplex. Speech API availability, voices, recognition processing and permission
 behavior depend on the phone/browser; the browser may send audio to its own
 speech service. Hardware/microphone behavior needs a physical-phone check.
+
+## Not wired or not verified
+
+- Hands-free full duplex/Gemini Live and the optional OpenRouter secondary route
+  are not wired. Browser voice is the labelled turn-based fallback.
+- Live model inference, actual provider billing/quota and physical-phone audio
+  are unverified. Anthropic paid execution was stubbed, not called live.
+- Render deployment/restart durability and OS-level shell containment are not
+  provided by this increment. No deployment or infrastructure change was made.
 
 ## Persistence and free-host limitation
 
@@ -120,6 +136,15 @@ FakeLLMServer controls generation; browser/file/terminal adapters and download
 bytes are real. Browser speech states are simulated; no physical mic or paid
 voice service was used. Real public-source GET/navigation is separate from real
 model evidence: **no live Gemini/Anthropic/OpenRouter inference was run**.
+
+The targeted mobile acceptance already passed with real public CPython, Node.js
+and libcurl documentation from `raw.githubusercontent.com`. This host's proxy
+refuses the initially selected RFC/MDN hosts; those failed reads were not counted
+as successes. The test config uses its installed Chromium with container flags
+and imports the host-provided `NODE_EXTRA_CA_CERTS` CA into a disposable NSS
+database under the temporary profile. No system trust, production auth or TLS
+verification bypass is changed. Voice APIs are simulated in Playwright; source
+GET/navigation, screenshots, file creation and downloaded bytes are real.
 
 ---
 

@@ -48,8 +48,7 @@ def aura_settings(env: dict[str, str]) -> dict:
         "platform_toolsets": {"cli": ["aura", "todo"], "api_server": ["aura", "todo"]},
         # This compact surface needs no deferred catalog/bridge calls.
         "tools": {"tool_search": {"enabled": "off"}},
-        "browser": {"cloud_provider": "local", "engine": "auto", "headless": True,
-                    "harness_home": str(Path(env.get("HERMES_HOME", ".")) / "cache" / "browser-harness")},
+        "browser": browser_settings(env),
         "agent": {"system_prompt": "You are Aura. For research, explain a short plan, read 2-3 real sources with aura_browser, then use aura_file to create brief.md with citations. Never invent a tool result, source, file or completion. Link sources in your answer. Use the same conversation for text and voice. Anthropic is opt-in via its approval card, never a fallback."},
         "approvals": {
             "mode": "manual",
@@ -64,6 +63,17 @@ def aura_settings(env: dict[str, str]) -> dict:
             "public_url": "https://aura-zero.onrender.com",
         },
     }
+
+
+def browser_settings(env: dict[str, str]) -> dict:
+    from urllib.parse import urlsplit
+
+    browser = {"cloud_provider": "local", "engine": "auto", "headless": True,
+               "harness_home": str(Path(env.get("HERMES_HOME", ".")) / "cache" / "browser-harness")}
+    proxy = urlsplit(env.get("HTTPS_PROXY") or env.get("https_proxy") or "")
+    if proxy.hostname and proxy.port and not (proxy.username or proxy.password):
+        browser["chromium_args"] = [f"--proxy-server={proxy.scheme}://{proxy.hostname}:{proxy.port}"]
+    return browser
 
 
 def _cap(value: str) -> float:

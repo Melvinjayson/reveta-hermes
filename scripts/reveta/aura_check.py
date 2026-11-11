@@ -130,7 +130,7 @@ def main() -> int:
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
             ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
             ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs", "scripts/reveta/aura_product_browser.mjs"]),
-            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py", "tools/aura_product.py", "tools/aura_spend.py", "tests/tools/test_aura_product.py"]),
+            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py", "tools/aura_product.py", "tools/aura_spend.py", "tests/tools/test_aura_product.py", "tools/browser_use_cli.py", "tests/scripts/test_aura_config.py"]),
         ]:
             checks.append(execute(name, command, env))
     skipped = [

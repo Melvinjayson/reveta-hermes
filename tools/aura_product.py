@@ -174,7 +174,11 @@ def browser_tool(args, **_kw):
         raw = raw['text_summary']
     result = json.loads(raw) if isinstance(raw, str) else raw
     output = str(result.get('output', ''))
-    if shot.is_file() and not result.get('error'):
+    if result.get('success'):
+        page = json.loads(output.splitlines()[0])
+        if not str(page.get('url', '')).startswith(('https://', 'http://')):
+            result.update(success=False, error='The browser returned an error page instead of the requested source.')
+    if shot.is_file() and result.get('success'):
         result['file'] = {'path': str(shot), 'name': shot.name, 'bytes': shot.stat().st_size}
     return outcome(result, url=url, summary=output[:2400])
 

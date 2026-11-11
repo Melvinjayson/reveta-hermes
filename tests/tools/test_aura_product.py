@@ -67,6 +67,17 @@ def test_computer_uses_existing_single_use_approval(home):
     assert not replay
 
 
+def test_browser_error_page_is_not_reported_as_a_successful_source(home, monkeypatch):
+    from tools import browser_use_cli
+    monkeypatch.setattr(aura_product, 'safe_url', lambda url: url)
+    monkeypatch.setattr(browser_use_cli, 'browser_exec', lambda *a, **kw: json.dumps({
+        'success': True, 'exit_code': 0, 'output': json.dumps({
+            'url': 'chrome-error://chromewebdata/', 'text': 'Your connection is not private'})}))
+    result = dispatch('aura_browser', {'url': 'https://example.com'})
+    assert result['success'] is False and 'error page' in result['error']
+    assert 'file' not in result
+
+
 def test_gemini_native_route_and_async_sealing(home):
     from scripts.reveta.aura_config import aura_settings
     from tools.aura_free_only import require_model, seal_client, FreeOnlyRefused

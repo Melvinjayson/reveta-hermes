@@ -44,21 +44,18 @@ def browser_session(
     attest_tool(home, "terminal", {"command": command})
     if product:
         from ruamel.yaml import YAML
+        from scripts.reveta.aura_config import aura_settings
 
         yaml = YAML()
         config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        generated = aura_settings({**os.environ, 'HERMES_HOME': str(home)})
         config['aura']['enabled'] = True
-        config['platform_toolsets'] = {'cli': ['aura', 'todo'], 'api_server': ['aura', 'todo']}
-        config['tools'] = {'tool_search': {'enabled': 'off'}}
-        config['browser'] = {'cloud_provider': 'local', 'engine': 'auto', 'executable_path': '/usr/bin/chromium',
-                             'harness_home': str(home / 'cache' / 'browser-harness'),
-                             'chromium_args': ['--no-sandbox', '--disable-dev-shm-usage']}
-        # This managed test host uses an outbound proxy. Never persist proxy credentials.
-        from urllib.parse import urlsplit
-        proxy = urlsplit(os.environ.get('HTTPS_PROXY') or os.environ.get('https_proxy') or '')
-        if proxy.hostname and proxy.port:
-            config['browser']['chromium_args'].append(f'--proxy-server={proxy.scheme}://{proxy.hostname}:{proxy.port}')
-        config['terminal'] = {'backend': 'local', 'cwd': str(home / 'aura-workspace')}
+        for section in ('platform_toolsets', 'tools', 'browser', 'terminal'):
+            config[section] = generated[section]
+        config['agent'].update(generated['agent'])
+        config['browser']['executable_path'] = '/usr/bin/chromium'
+        config['browser'].setdefault('chromium_args', []).extend(['--no-sandbox', '--disable-dev-shm-usage'])
+        prepare_test_browser_trust(home)
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
     if cost_blocked:
@@ -89,6 +86,8 @@ def browser_session(
     env.update(
         HERMES_HOME=str(home), HERMES_YOLO_MODE="0", HERMES_PYTHON=sys.executable
     )
+    if product:
+        env['TERMINAL_HOME_MODE'] = 'profile'
     try:
         launch = subprocess.run(
             [
@@ -147,6 +146,22 @@ def browser_session(
             raise RuntimeError(
                 f"Temporary gateway cleanup failed: {stop.stdout[:500]} {stop.stderr[:500]}"
             )
+
+
+def prepare_test_browser_trust(home: Path) -> None:
+    """Import the host's supplied test CA into a disposable profile, never system trust."""
+    profile_home = home / 'home'
+    profile_home.mkdir(exist_ok=True)
+    extra_ca = os.environ.get('NODE_EXTRA_CA_CERTS')
+    if not extra_ca:
+        return
+    database = profile_home / '.pki' / 'nssdb'
+    database.mkdir(parents=True, mode=0o700)
+    for command in [
+        ['certutil', '-N', '-d', f'sql:{database}', '--empty-password'],
+        ['certutil', '-A', '-d', f'sql:{database}', '-n', 'environment-test-ca', '-t', 'C,,', '-i', extra_ca],
+    ]:
+        subprocess.run(command, check=True, capture_output=True, timeout=10)
 
 
 def main() -> int:
