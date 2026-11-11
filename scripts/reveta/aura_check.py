@@ -78,8 +78,9 @@ def main() -> int:
     parser.add_argument("--fake-provider-check", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.live:
-        print("Live verification is unavailable in this checkpoint. It requires separate explicit "
-              "authorization and provider/cost review before implementation and execution.", file=sys.stderr)
+        print("This gate uses isolated fake providers only. Run live acceptance separately in an "
+              "existing signed-in deployment session with the configured free-tier model; "
+              "no credentials are inherited by this gate.", file=sys.stderr)
         return 2
     if args.fake_provider_check:
         fake_provider_check()
