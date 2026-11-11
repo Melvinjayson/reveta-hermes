@@ -12,16 +12,25 @@
   },
   "full_desktop_ui": {
     "command": "PATH=$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PATH NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=$PWD/work/retirement-full-ui.json >work/retirement-full-ui.log 2>&1",
-    "status": "running",
+    "status": "passed",
     "started_on_commit": "75c699ab6cc9de75011e0a4991a52178be53ce66",
-    "desktop_tree_at_start_and_final_implementation": "fd425f959da946a68110b4ee7b320de502eb3f06"
+    "desktop_tree_at_start_and_final_implementation": "fd425f959da946a68110b4ee7b320de502eb3f06",
+    "exit_code": 0,
+    "success": true,
+    "test_files": 1582,
+    "passed_tests": 13175,
+    "failed_tests": 0,
+    "pending_tests": 0,
+    "duration_seconds": 3304.56,
+    "raw_json_sha256": "4755ebf403dd4f2799e63258636da095f456a1f98b2e25c4e1362a6e49e1005c",
+    "raw_json_workspace_path": "work/retirement-full-ui.json"
   },
   "repository_guards": {
-    "command": "PATH=$PWD/.venv/bin:$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PWD/work/toolchain:$PATH HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327",
-    "last_verified_commit": "46419ae8f4",
+    "command": "PATH=$PWD/.venv/bin:$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PWD/work/toolchain:$PATH HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327 >work/retirement-release-check.log 2>&1",
+    "last_verified_commit": "e6b1553ae5ec11ef2bf6ddb9811e64b4244dc482",
     "exit_code": 0,
     "checks": 14,
-    "status": "passed before documentation; release-tree rerun pending",
+    "status": "passed on committed handoff/evidence tree",
     "initial_failure": {
       "exit_code": 1,
       "guards": [
@@ -31,6 +40,12 @@
         "ruff: datetime.UTC alias"
       ],
       "correction": "Fixed reads, documentation path and UTC alias; moved ignored setup assets outside the checkout. No rule suppression."
+    },
+    "working_tree_dirty": false,
+    "health": {
+      "files": 9,
+      "blocking": 0,
+      "advisory": 0
     }
   },
   "live": {

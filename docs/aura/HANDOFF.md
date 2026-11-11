@@ -157,8 +157,8 @@ and [additional checks and live boundary](verification/2026-11-11-model-retireme
 | Public-Origin contracts | 14 passed |
 | Mobile Playwright / FakeLLMServer | Passed; full browser command 270.050s |
 | Fake HTTP/SSE, browser ESLint, Python Ruff | Exit 0 each |
-| Complete desktop UI project | RUNNING; not counted as passing yet |
-| Repository `scripts/check --base af65327` | 14 passed on `46419ae8f4`; release documentation rerun pending |
+| Complete desktop UI project | 13,175 passed across 1,582 files; exit 0; 3304.56s |
+| Repository `scripts/check --base af65327` | 14 passed on committed handoff/evidence `e6b1553ae5`; exit 0; 0 blocking/advisory health findings |
 | Initial focused route/retirement tests | 7 passed, exit 0 |
 
 Exact top-level commands, with the installed toolchain on PATH:
@@ -166,7 +166,7 @@ Exact top-level commands, with the installed toolchain on PATH:
 ```sh
 HERMES_RUNTIME_DIR=$PWD/work/runtime AURA_SCREENSHOT_DIR=$PWD/work/evidence/retirement-final just aura-check >work/retirement-final-aura-check.json 2>work/retirement-final-aura-check.log
 NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=$PWD/work/retirement-full-ui.json >work/retirement-full-ui.log 2>&1
-HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327
+HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327 >work/retirement-release-check.log 2>&1
 HERMES_PYTHON=$PWD/.venv/bin/python bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/agent/test_aura_model_retirement.py --noconftest -q
 ```
 
@@ -174,6 +174,12 @@ The first repository guard run failed on six BOM/encoding reads, a historical
 temporary-path example, an existing UTC alias, and two ignored setup archives.
 These were corrected without suppression; ignored setup assets were moved
 outside the checkout. The subsequent 14 guards passed.
+
+The complete UI run started on `75c699ab6c`. Its desktop tree
+`fd425f959da946a68110b4ee7b320de502eb3f06` is identical to the final
+implementation; no UI source changed during that run. The compact checks JSON
+records its exact command, counts, exit and raw workspace-report SHA-256. The
+final follow-up updates documentation/evidence only.
 
 [Model-unavailable card](screenshots/model-retirement-20261111/model-unavailable-mobile.png),
 [research/download](screenshots/model-retirement-20261111/product-research-mobile.png),
