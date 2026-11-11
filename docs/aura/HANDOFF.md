@@ -131,7 +131,62 @@ fallbacks as a recovery action. No deployment was performed in this increment.
 
 ## Verification evidence
 
-Final local verification commands/results are recorded below after execution.
+**Final gate passed, exit 0, on clean implementation commit
+`b3020194bcd115ee77620ccb5c90db46ef49f9f3`; duration 338.011s.**
+The evidence follow-up changes only documentation, JSON and screenshots.
+[Full commands, individual exits and environment](verification/2026-11-11-working-product-gate.json).
+Node 26.12.1, pnpm 12.15.0, Python 3.14.9, Ruff 0.15.22; 4096 MiB Node heap.
+
+Exact top-level command, with those tools on PATH:
+
+```sh
+HERMES_RUNTIME_DIR=$PWD/work/runtime AURA_SCREENSHOT_DIR=$PWD/work/evidence/final just aura-check >work/final-aura-check.json 2>work/final-aura-check.log
+```
+
+The sandbox granted the canonical Python runner write access only to its
+`/var/tmp/hermes-pytest-1000` scratch directory. All child commands are preserved
+verbatim in the linked JSON, including the targeted Python and UI file lists.
+
+| Check within `just aura-check` | Exit | Result |
+|---|---:|---|
+| Webapp build, TypeScript, desktop ESLint | 0 each | Passed; lint has 0 errors and 379 existing warnings |
+| Selected Webapp UI contracts | 0 | 13 files, 187 tests passed |
+| Isolated Python route/tool/config/approval contracts | 0 | 88 passed, 1 existing PID-namespace test skipped by this host |
+| Public-Origin contracts | 0 | 14 passed |
+| Fake provider HTTP/SSE integration | 0 | Passed; loopback only |
+| `python scripts/reveta/aura_browser.py` | 0 | Full mobile product flow plus existing approval/theme/history/attachment/refusal/no-model flows; 104.001s |
+| Browser ESLint and changed Python Ruff | 0 each | Passed |
+
+The new contracts include exact native Gemini route + async transport sealing,
+real Hermes file reads/creation, command approval/replay, disabled/capped/approved
+Anthropic with stubbed usage accounting, Chromium error-page refusal, and proxy
+credential exclusion. The mobile product flow fetches CPython HTTP docs, reads
+Node and libcurl docs in real headless Chromium (including a screenshot), writes
+and downloads the cited `brief.md`, reloads/reopens it, and sends a voice follow-up
+with the original text/tool context still in the FakeLLMServer request. Voice UI
+checks cover listening, interim/final transcript, thinking, speaking, interrupt,
+permission denial and reload. The browser's existing loopback approval exercise
+also proves Change=0, Approve once=1 and reload=1.
+
+The isolated acceptance command `python scripts/reveta/aura_browser.py --product-only`
+also passed before the final gate. [Research/File card](screenshots/working-20261111/product-research-mobile.png)
+and [voice/transcript](screenshots/working-20261111/product-voice-mobile.png) are
+from the final gate, with synthetic chat data.
+
+Earlier non-passing attempts are retained as
+[initial gate](verification/2026-11-11-working-product-initial.json) and
+[pre-integration gate](verification/2026-11-11-working-product-before-browser-fix.json).
+The initial run failed type/lint checks, could not create Python scratch files,
+and failed the browser fixture. The next gate passed build/type/lint/UI/Python
+but failed browser acceptance. Targeted `--product-only` diagnosis then exposed
+API-server/eager-catalog configuration, proxy-host restrictions, Chromium sandbox
+flags, browser-harness home placement, and the test CA requirement. Those failed
+reads were corrected and rerun; they are not passing evidence. No skip, assertion
+suppression, global TLS bypass or paid call was used to make the final gate pass.
+
+Live-model inference, physical-phone audio, deployment/restart continuity, full
+repository Python, full desktop UI and Electron E2E were not run in this increment.
+
 FakeLLMServer controls generation; browser/file/terminal adapters and download
 bytes are real. Browser speech states are simulated; no physical mic or paid
 voice service was used. Real public-source GET/navigation is separate from real
