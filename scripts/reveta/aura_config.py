@@ -14,13 +14,14 @@ import sys
 
 
 def aura_settings(env: dict[str, str]) -> dict:
-    gemini = {"provider": "gemini", "model": "gemini-2.5-flash"}
-    if env.get("OPENROUTER_API_KEY", "").strip():
-        model = {"provider": "openrouter", "default": "openrouter/free"}
-        fallback = [gemini] if env.get("GEMINI_API_KEY", "").strip() else []
-    elif env.get("GEMINI_API_KEY", "").strip():
-        model = {"provider": "gemini", "default": gemini["model"]}
-        fallback = []
+    # Exact native ID/endpoint: website/docs/guides/google-gemini.md.
+    # Use an AI Studio FREE-TIER project; a billing-enabled key can incur charges.
+    endpoint = "https://generativelanguage.googleapis.com/v1beta"
+    free_models = []
+    if any(env.get(key, "").strip() for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY")):
+        model = {"provider": "gemini", "default": "gemini-2.5-flash", "base_url": endpoint}
+        free_models = [{"provider": "gemini", "model": model["default"], "base_url": endpoint,
+                        "confirmed_free": True, "cost_usd": 0}]
     else:
         # An explicit closed loopback endpoint prevents ambient paid-provider
         # credentials from becoming an auto-selected default.
@@ -29,10 +30,24 @@ def aura_settings(env: dict[str, str]) -> dict:
             "default": "aura-not-connected",
             "base_url": "http://127.0.0.1:9/v1",
         }
-        fallback = []
     return {
         "model": model,
-        "fallback_model": fallback,
+        "fallback_model": [],
+        "aura": {
+            "enabled": True,
+            "free_only": True,
+            "free_models": free_models,
+            "free_tools": [],
+            "anthropic": {
+                "model": env.get("AURA_ANTHROPIC_MODEL", "claude-sonnet-4-5"),
+                "per_chat_usd": _cap(env.get("AURA_ANTHROPIC_PER_CHAT_USD", "0")),
+                "per_day_usd": _cap(env.get("AURA_ANTHROPIC_PER_DAY_USD", "0")),
+            },
+        },
+        "terminal": {"backend": "local", "cwd": str(Path(env.get("HERMES_HOME", ".")) / "aura-workspace")},
+        "platform_toolsets": {"cli": ["aura", "todo"]},
+        "browser": {"cloud_provider": "local", "engine": "auto", "headless": True},
+        "agent": {"system_prompt": "You are Aura. For research, explain a short plan, read 2-3 real sources with aura_browser, then use aura_file to create brief.md with citations. Never invent a tool result, source, file or completion. Link sources in your answer. Use the same conversation for text and voice. Anthropic is opt-in via its approval card, never a fallback."},
         "approvals": {
             "mode": "manual",
             "cron_mode": "deny",
@@ -46,6 +61,16 @@ def aura_settings(env: dict[str, str]) -> dict:
             "public_url": "https://aura-zero.onrender.com",
         },
     }
+
+
+def _cap(value: str) -> float:
+    import math
+
+    try:
+        number = float(value)
+        return number if math.isfinite(number) and number > 0 else 0
+    except (ValueError, TypeError):
+        return 0
 
 
 def main() -> int:

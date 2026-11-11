@@ -198,6 +198,14 @@ def seal_client(client):
         import httpx
 
         transport = getattr(client, "_client", None)
+        # Hermes's canonical Gemini facade owns an httpx transport under _http;
+        # its auxiliary async facade holds that same client under _sync.
+        from agent.gemini_native_adapter import GeminiNativeClient, AsyncGeminiNativeClient
+
+        if isinstance(client, AsyncGeminiNativeClient):
+            client = client._sync
+        if type(client) is GeminiNativeClient:
+            transport = client._http
         if not isinstance(transport, (httpx.Client, httpx.AsyncClient)):
             raise FreeOnlyRefused()
         transport.follow_redirects = False
