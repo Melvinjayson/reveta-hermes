@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export interface AuraCardProps {
-  kind: 'goal' | 'source' | 'progress' | 'approval' | 'resume'
+  kind: 'goal' | 'source' | 'progress' | 'approval' | 'resume' | 'file'
   title: string
   children: ReactNode
   onApprove?: () => void

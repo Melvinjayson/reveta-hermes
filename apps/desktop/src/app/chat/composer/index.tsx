@@ -16,6 +16,7 @@ import { sanitizeComposerInput } from '@/lib/composer-input-sanitize'
 import { DATA_IMAGE_URL_RE } from '@/lib/embedded-images'
 import { triggerHaptic } from '@/lib/haptics'
 import { isBrowserHostedDesktop } from '@/lib/platform'
+import { AuraBrowserVoice } from '@/app/aura/browser-voice'
 import { $touchPointer } from '@/lib/touch-interaction'
 import { useStoreSelector, useStoresSelector } from '@/lib/use-session-slice'
 import { cn } from '@/lib/utils'
@@ -1495,6 +1496,7 @@ export function ChatBar({
                   />
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
+                  {isBrowserHostedDesktop() && <AuraBrowserVoice busy={busy} disabled={disabled} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
                   <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))}>

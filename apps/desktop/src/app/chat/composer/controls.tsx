@@ -6,7 +6,7 @@ import { Tip, TipKeybindLabel } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { hostHas } from '@/lib/host-capabilities'
-import { Ear, EarOff, iconSize, Layers3, Loader2, Mic, Square } from '@/lib/icons'
+import { Ear, EarOff, iconSize, Layers3, Loader2, Square } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { recordAction } from '@/store/desktop-metrics'
 import { $hudMode, closeHud, resetHudLayout } from '@/store/hud'
@@ -143,13 +143,7 @@ export function ComposerControls({
       className={cn('flex min-w-0 shrink items-center gap-(--composer-control-gap)', browserHost && 'justify-end')}
       style={{ flexWrap: browserHost && minimal ? 'wrap' : undefined }}
     >
-      {hostHas('webappCopy') ? (
-        <Tip label="Voice is coming soon" placement="control">
-          <button aria-label="Voice is coming soon" className="aura-mic" type="button">
-            <Mic size={20} />
-          </button>
-        </Tip>
-      ) : minimal ? null : (
+      {hostHas('webappCopy') || minimal ? null : (
         <>
           {hideModelPill ? null : (
             <>

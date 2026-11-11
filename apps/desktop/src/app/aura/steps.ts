@@ -1,4 +1,3 @@
-import type { ToolTitleKey } from '@/i18n'
 import type { ChatMessage } from '@/lib/chat-messages'
 
 export type StepStatus = 'Queued' | 'Running' | 'Failed' | 'Done' | 'Stopped' | 'Result received' | 'Unconfirmed' | 'Refused'
@@ -13,8 +12,13 @@ const STEP_NAMES = {
   patch: 'Change a file',
   web_search: 'Search the web',
   web_extract: 'Read a page',
-  browser_navigate: 'Open a page'
-} satisfies Partial<Record<ToolTitleKey, string>>
+  browser_navigate: 'Open a page',
+  aura_fetch: 'Fetch a source',
+  aura_browser: 'Read a page in the browser',
+  aura_file: 'Work with a conversation file',
+  aura_computer: 'Run a command in Aura’s workspace',
+  aura_complex: 'Anthropic complex workflow'
+}
 
 export interface AuraStep {
   id: string
@@ -23,6 +27,7 @@ export interface AuraStep {
   timestamp?: number
   completedAt?: number
   facts: string[]
+  detail?: { url?: string; command?: string; summary?: string }
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -95,6 +100,12 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
       }
 
       const result = record(part.result)
+      const display = part.toolName.startsWith('aura_') ? record(result.aura_display) : {}
+      const detail = {
+        url: typeof display.url === 'string' && /^https?:/.test(display.url) ? display.url : undefined,
+        command: typeof display.command === 'string' ? display.command : undefined,
+        summary: typeof display.summary === 'string' ? display.summary : undefined
+      }
 
       const label = Object.hasOwn(STEP_NAMES, part.toolName)
         ? STEP_NAMES[part.toolName as keyof typeof STEP_NAMES]
@@ -117,7 +128,7 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
 
       return [{
         id: `${message.id}:${part.toolCallId ?? index}`,
-        label, status, timestamp: part.timestamp, completedAt: part.completedAt, facts
+        label, status, timestamp: part.timestamp, completedAt: part.completedAt, facts, detail
       }]
     })
   })

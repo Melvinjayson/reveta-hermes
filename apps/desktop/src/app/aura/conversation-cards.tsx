@@ -6,6 +6,7 @@ import { chatMessageText } from '@/lib/chat-messages'
 import { $busy, $messages } from '@/store/session'
 
 import { AuraCard } from './card'
+import { AuraFiles } from './files'
 import { auraSources } from './sources'
 import { AuraSteps } from './step-history'
 import { auraSteps } from './steps'
@@ -115,6 +116,7 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
         ))}
       </details>
       <AuraSteps steps={auraSteps(messages)} />
+      <AuraFiles messages={messages} />
       {busy && (
         <div aria-live="polite" role="status">
           <p>Waiting for Aura’s response. You can stop it below.</p>
