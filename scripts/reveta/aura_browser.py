@@ -41,14 +41,14 @@ def browser_session(
     from tests.fakes.aura_price_policy import attest_tool
 
     # The test owns this exact loopback action and its zero-cost attestation.
-    command = json.loads((home.parent / "command.json").read_text())
+    command = json.loads((home.parent / "command.json").read_text(encoding="utf-8-sig"))
     attest_tool(home, "terminal", {"command": command})
     if product:
         from ruamel.yaml import YAML
         from scripts.reveta.aura_config import aura_settings
 
         yaml = YAML()
-        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
         generated = aura_settings({**os.environ, 'HERMES_HOME': str(home)})
         config['aura']['enabled'] = True
         for section in ('platform_toolsets', 'tools', 'browser', 'terminal'):
@@ -63,7 +63,7 @@ def browser_session(
         from ruamel.yaml import YAML
 
         yaml = YAML()
-        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
         config["aura"]["free_models"] = []
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
@@ -72,7 +72,7 @@ def browser_session(
         from scripts.reveta.aura_config import aura_settings
 
         yaml = YAML()
-        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
         config["model"] = aura_settings({})["model"]
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)

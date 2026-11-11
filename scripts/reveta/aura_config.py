@@ -106,7 +106,7 @@ def main() -> int:
     settings = aura_settings(dict(os.environ))
     if args.write:
         config = (
-            yaml.load(args.write.read_text(encoding="utf-8"))
+            yaml.load(args.write.read_text(encoding="utf-8-sig"))
             if args.write.exists()
             else {}
         )

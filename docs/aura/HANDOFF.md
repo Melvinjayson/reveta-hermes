@@ -659,7 +659,7 @@ Use Node 26.12.1, pnpm 12.15.0, Python 3.14, Ruff 0.15.22 and just 1.59.0:
 uv sync --frozen --group dev
 pnpm install --frozen-lockfile --ignore-scripts
 . .venv/bin/activate
-just aura-check > /tmp/aura-check.json
+just aura-check > work/aura-check.json
 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=2 --reporter=dot
 ```
 
