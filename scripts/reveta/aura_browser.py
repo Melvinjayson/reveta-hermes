@@ -26,6 +26,7 @@ def browser_session(
     no_model: bool = False,
     cost_blocked: bool = False,
     product: bool = False,
+    retired_model: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -126,6 +127,7 @@ def browser_session(
                     "noModel": no_model,
                     "costBlocked": cost_blocked,
                     "product": product,
+                    "retiredModel": retired_model,
                 }
             ),
             text=True,
@@ -212,7 +214,14 @@ def main() -> int:
 
 
 def run_scenarios(directory: str, target: Path, command: str) -> int:
-    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall, Error
+
+    with FakeLLMServer([Error(404, 'This model models/gemini-2.5-flash is no longer available to new users. Please use gemini-3.8-flash.')]) as retired:
+        result = browser_session(Path(directory) / 'retired', retired.base_url, target, retired_model=True)
+        if result:
+            return result
+        if len(retired.main_requests()) != 1:
+            raise AssertionError('Retired model was retried or a fallback was called')
 
     result = product_scenario(directory, target)
     if result:
@@ -267,6 +276,7 @@ def product_scenario(directory: str, target: Path) -> int:
         ToolCall('aura_fetch', {'url': urls[0]}, text='I will read three sources, compare the HTTP guidance, and write a one-page cited brief.'),
         ToolCall('aura_browser', {'url': urls[1], 'screenshot': True}),
         ToolCall('aura_browser', {'url': urls[2]}),
+        ToolCall('aura_computer', {'command': 'pwd'}),
         ToolCall('aura_file', {'name': 'brief.md', 'action': 'write', 'content': brief}),
         Text('Brief ready. HTTP methods, status codes and representations define the exchange.\n\n' + '\n'.join(f'[Source {index}]({url})' for index, url in enumerate(urls, 1))),
         Text('Remember the HTTP methods and status codes from your brief.', chunk_chars=4, delay_per_chunk=0.15),
@@ -289,11 +299,11 @@ def product_scenario(directory: str, target: Path) -> int:
                         print(redact_sensitive_text(str(detail), force=True)[:1000], file=sys.stderr)
             return result
         requests = fake.main_requests()
-        if len(requests) != 6:
-            raise AssertionError(f'Product loop expected 6 fake generations, got {len(requests)}')
+        if len(requests) != 7:
+            raise AssertionError(f'Product loop expected 7 fake generations, got {len(requests)}')
         history = requests[-1]['messages']
         tool_results = [message for message in history if message.get('role') == 'tool']
-        if len(tool_results) < 4 or any('"success": false' in str(row.get('content')) for row in tool_results):
+        if len(tool_results) < 5 or any('"success": false' in str(row.get('content')) for row in tool_results):
             raise AssertionError('Real source/file adapters did not succeed')
         if not any('Research HTTP client requests' in str(row.get('content')) for row in history):
             raise AssertionError('Voice follow-up lost the original text context')

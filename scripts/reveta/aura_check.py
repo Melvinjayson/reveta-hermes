@@ -113,6 +113,7 @@ def main() -> int:
                 "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts",
                 "src/app/aura", "src/store/browser-tab-title.test.ts",
                 "src/components/assistant-ui/tool/approval.test.tsx",
+                "src/components/assistant-ui/thread/assistant-message.test.tsx",
                 "src/store/browser-tab-attention.test.ts", "src/store/profile-rail-prefs.test.tsx",
                 "src/store/updates.test.ts", "src/components/ui/__tests__/no-native-title.test.ts"]),
             ("Reveta isolated Python tests", ["bash", "scripts/run_tests.sh",
@@ -121,6 +122,9 @@ def main() -> int:
                 "tests/scripts/test_aura_config.py", "tests/tools/test_aura_dispatch_gate.py",
                 "tests/tools/test_aura_free_only.py",
                 "tests/tools/test_aura_product.py",
+                "tests/agent/test_aura_model_retirement.py",
+                "tests/agent/test_error_classifier.py", "tests/agent/test_error_surface.py",
+                "tests/agent/test_gemini_native_adapter.py", "tests/hermes_cli/test_dashboard_auth_prefix.py",
                 "tests/tools/test_approval_gateway_wait_late_choice.py",
                 "tests/tools/test_approval_gateway_wait_coalesce_race.py",
                 "--noconftest", "-q"]),
@@ -142,7 +146,7 @@ def main() -> int:
     ]
     skipped.extend([
         {"name": "full desktop unit and Electron E2E suites", "reason": "This gate selects relevant Webapp unit contracts"},
-        {"name": "live provider verification", "reason": "Unavailable; separate explicit authorization required"},
+        {"name": "live provider verification", "reason": "Run separately with an existing signed-in deployment session; no credentials are inherited by this fake-model gate"},
     ])
     dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
                            text=True, check=True).stdout
