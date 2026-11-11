@@ -10,18 +10,26 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import re
 import sys
+
+DEFAULT_FREE_GEMINI_MODEL = "gemini-3.8-flash"
 
 
 def aura_settings(env: dict[str, str]) -> dict:
     # Exact native ID/endpoint: website/docs/guides/google-gemini.md.
     # Use an AI Studio FREE-TIER project; a billing-enabled key can incur charges.
     endpoint = "https://generativelanguage.googleapis.com/v1beta"
+    model_id = env.get("AURA_GEMINI_MODEL", "").strip() or DEFAULT_FREE_GEMINI_MODEL
+    if not re.fullmatch(r"gemini-[a-z0-9][a-z0-9.-]*", model_id) or model_id.endswith('-latest'):
+        raise ValueError('AURA_GEMINI_MODEL must be an exact Gemini model ID, not a route or alias')
+    confirmed_free = model_id == DEFAULT_FREE_GEMINI_MODEL or env.get(
+        'AURA_GEMINI_MODEL_CONFIRMED_FREE', '').strip().lower() == 'true'
     free_models = []
     if any(env.get(key, "").strip() for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY")):
-        model = {"provider": "gemini", "default": "gemini-2.5-flash", "base_url": endpoint}
+        model = {"provider": "gemini", "default": model_id, "base_url": endpoint}
         free_models = [{"provider": "gemini", "model": model["default"], "base_url": endpoint,
-                        "confirmed_free": True, "cost_usd": 0}]
+                        "confirmed_free": True, "cost_usd": 0}] if confirmed_free else []
     else:
         # An explicit closed loopback endpoint prevents ambient paid-provider
         # credentials from becoming an auto-selected default.
