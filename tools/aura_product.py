@@ -125,7 +125,7 @@ def fetch_tool(args, **_kw):
         with client.stream('GET', url) as response:
             response.raise_for_status()
             data = bytearray()
-            for chunk in response.iter_bytes():
+            for chunk in response.iter_bytes(chunk_size=8192):
                 data.extend(chunk)
                 if len(data) > 200_000:
                     break
@@ -167,7 +167,7 @@ def browser_tool(args, **_kw):
     shot = root / ('page-' + uuid.uuid4().hex[:10] + '.png')
     # The model controls only a URL. No click, submit, arbitrary JS or Python surface.
     code = (f'new_tab({url!r})\nwait_for_load()\n'
-            "print(js('JSON.stringify({url:location.href,title:document.title,text:document.body.innerText.slice(0,14000)})'))\n"
+            "print(js('JSON.stringify({url:location.href,title:document.title,text:document.body.innerText.slice(0,14000),links:Array.from(document.querySelectorAll(\"a[href]\")).map(a=>({title:a.innerText,url:a.href})).filter(a=>a.url.startsWith(\"http\")).slice(0,60)})'))\n"
             + (f'capture_screenshot({str(shot)!r})\n' if args.get('screenshot', False) else ''))
     raw = browser_exec(code, session='aura-' + root.name, timeout_s=60, task_id='aura-' + root.name)
     if isinstance(raw, dict) and raw.get('_multimodal'):
@@ -184,22 +184,27 @@ def complex_tool(args, **_kw):
     return complex_workflow(args)
 
 
-def _register(name, description, properties, required, handler):
-    registry.register(name=name, toolset='aura', check_fn=available, handler=handler,
-                      schema={'name': name, 'description': description,
-                              'parameters': {'type': 'object', 'properties': properties,
-                                             'required': required, 'additionalProperties': False}})
+def _definition(name, description, properties, required, handler):
+    return dict(name=name, toolset='aura', check_fn=available, handler=handler,
+                schema={'name': name, 'description': description,
+                        'parameters': {'type': 'object', 'properties': properties,
+                                       'required': required, 'additionalProperties': False}})
 
 
-_register('aura_fetch', 'Fetch a public URL as read-only text. No paid extraction service. Cite the returned URL.',
-          {'url': {'type': 'string'}}, ['url'], fetch_tool)
-_register('aura_browser', 'Navigate/read a public page with real isolated headless Chromium; optionally capture a screenshot. Read only. Cite sources; report failures honestly.',
-          {'url': {'type': 'string'}, 'screenshot': {'type': 'boolean'}}, ['url'], browser_tool)
-_register('aura_file', 'Read or create a file in this conversation workspace using Hermes file tools. Creation is direct; overwrites ask. Return the File card. For research write brief.md with real citations.',
+_TOOLS = [
+_definition('aura_fetch', 'Fetch a public URL as read-only text. No paid extraction service. Cite the returned URL.',
+          {'url': {'type': 'string'}}, ['url'], fetch_tool),
+_definition('aura_browser', 'Navigate/read a public page with real isolated headless Chromium; optionally capture a screenshot. Read only. Cite sources; report failures honestly.',
+          {'url': {'type': 'string'}, 'screenshot': {'type': 'boolean'}}, ['url'], browser_tool),
+_definition('aura_file', 'Read or create a file in this conversation workspace using Hermes file tools. Creation is direct; overwrites ask. Return the File card. For research write brief.md with real citations.',
           {'name': {'type': 'string'}, 'action': {'type': 'string', 'enum': ['read', 'write']},
-           'content': {'type': 'string'}}, ['name', 'action'], file_tool)
-_register('aura_computer', 'Run a terminal command or code on the cloud host in this conversation workspace using Hermes terminal. Every command requires single-use approval, including installs, network writes and deletes. Prefer aura_file for direct reads/creation.',
-          {'command': {'type': 'string'}}, ['command'], computer_tool)
-_register('aura_complex', 'Opt-in Anthropic reasoning for a complex task, NEVER an automatic fallback. Only request when the user asks for Anthropic. Disabled without positive per-chat/day caps and an approval card showing estimated cost. Include all relevant conversation context in task.',
+           'content': {'type': 'string'}}, ['name', 'action'], file_tool),
+_definition('aura_computer', 'Run a terminal command or code on the cloud host in this conversation workspace using Hermes terminal. Every command requires single-use approval, including installs, network writes and deletes. Prefer aura_file for direct reads/creation.',
+          {'command': {'type': 'string'}}, ['command'], computer_tool),
+_definition('aura_complex', 'Opt-in Anthropic reasoning for a complex task, NEVER an automatic fallback. Only request when the user asks for Anthropic. Disabled without positive per-chat/day caps and an approval card showing estimated cost. Include all relevant conversation context in task.',
           {'task': {'type': 'string'}, 'max_output_tokens': {'type': 'integer', 'minimum': 1, 'maximum': 4096}},
-          ['task'], complex_tool)
+          ['task'], complex_tool),
+
+]
+for _entry in _TOOLS:
+    registry.register(**_entry)

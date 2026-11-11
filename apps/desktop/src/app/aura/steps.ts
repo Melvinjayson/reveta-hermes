@@ -85,7 +85,7 @@ function statusOf(part: { result?: unknown; isError?: boolean; interrupted?: boo
 /** A conservative projection: arbitrary payloads, commands and URLs may contain
  * credentials. Details exposes only allowlisted outcome facts, never raw text. */
 export function auraSteps(messages: ChatMessage[]): AuraStep[] {
-  return messages.filter(message => !message.hidden).flatMap(message => {
+  return messages.filter(message => !message.hidden).flatMap<AuraStep>(message => {
     if (message.errorSurface?.code === 'aura_free_only_refused') {
       return [{ id: `${message.id}:cost-refusal`, label: 'Reply request', status: 'Refused' as const,
         timestamp: message.timestamp, completedAt: message.completedAt,
@@ -101,6 +101,7 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
 
       const result = record(part.result)
       const display = part.toolName.startsWith('aura_') ? record(result.aura_display) : {}
+
       const detail = {
         url: typeof display.url === 'string' && /^https?:/.test(display.url) ? display.url : undefined,
         command: typeof display.command === 'string' ? display.command : undefined,
