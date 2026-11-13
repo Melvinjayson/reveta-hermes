@@ -242,6 +242,7 @@ try {
     await steps.locator(':scope > summary').click()
     await expect(steps.getByText('Run a command in Aura’s workspace', { exact: true }).last()).toBeVisible()
     if (actionCount() !== 1) throw new Error('Approved action executed more than once')
+    await page.locator('.aura-context-panel > summary').click()
     await page.getByRole('button', { name: 'Open menu', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
     await page.getByRole('button', { name: 'Add context', exact: true }).click()
