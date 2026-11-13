@@ -1,3 +1,298 @@
+# Startup workspace and fork runners — 13 November 2026
+
+This scoped follow-up starts at `defc60b288` on
+`aura/working-product-20261111`, draft PR #6. The owner reports repeated
+`TERMINAL_CWD does not exist: /opt/data/aura-workspace` warnings on Render at
+01:38 on 13 November. No live Render inspection or configuration change was made.
+
+`aura_config.py --write` now creates the exact configured `terminal.cwd` with
+`parents=True, exist_ok=True` before writing the startup config. Preview still
+has no filesystem side effects. `agent.runtime_cwd` only validates/reads the cwd;
+it should not create arbitrary configured directories. Existing
+`aura_product.workspace()` still creates the conversation-hash children under
+this parent for `aura_file`/`aura_computer`; no second creator or new wrapper,
+flag or config setting is needed. Repeated writes preserve workspace files.
+The Docker command is unchanged; the intended branch push uses the existing
+Render auto-deploy. Warning removal on the live instance remains unverified.
+
+Foundation's `isolated-boundary-tests` uses GitHub-hosted `ubuntu-latest` and
+passed: [job 130659568383](https://github.com/Melvinjayson/reveta-hermes/actions/runs/43059980560/job/130659568383).
+Its actual setup log identifies **Hosted Compute Agent / Azure / ubuntu-26.04**.
+The repository is public. GitHub's current standard-runner documentation lists
+standard public-repository runners as free, including native Ubuntu ARM64.
+There is no observed GitHub-hosted billing/spending lock in that successful run.
+The old Nix/Docker controller jobs are independently confirmed cancelled with no
+executed steps; CI's detector is queued. The 24-hour awaiting-runner annotation
+was supplied by the owner (the connector did not expose annotations).
+
+All **95 active Blacksmith runner-label values in 38 workflows** now use standard
+GitHub-hosted equivalents, including matrices and reusable-workflow inputs:
+
+| Old runner family | Replacement |
+|---|---|
+| Ubuntu 24.04 x64, all Blacksmith CPU sizes | `ubuntu-24.04` |
+| Ubuntu 24.04 ARM64 | `ubuntu-24.04-arm` (public repository confirmed) |
+| Windows 2025 x64 | `windows-2025` |
+| macOS 15 / latest | `macos-15` / `macos-latest` (native ARM64) |
+
+Jobs, steps, action references, matrix entries, conditions, required checks and
+all timeouts remain unchanged. Existing non-Blacksmith labels remain unchanged.
+One existing missing final newline in `desktop-bundle-smoke.yml` was repaired for
+YAML lint. No paid/larger runner or billing setting was added. A parsed YAML deep
+comparison found only the allowed runner scalar changes (96 expanded paths,
+because an alias repeats one textual value).
+
+Method: **gstack HOLD SCOPE eng plan → Ponytail smallest complete change →
+Thermonuclear self-review: APPROVE** before commit/push. The named playbooks are
+not installed here; these are the owner's requested procedure labels, not a
+claim that an external skill/agent was invoked. The review checked startup-only
+creation, preview/idempotence, existing conversation scoping and exact workflow
+semantic preservation.
+
+| Focused check | Exit | Result |
+|---|---:|---|
+| New CLI regression before fix | 1 | Expected failure: directory absent after `--write` |
+| Config, Aura adapter and runtime-cwd tests | 0 | 17 passed, no failures/skips |
+| Ruff on changed Python files | 0 | Passed |
+| yamllint 1.37.1, built-in `relaxed`, all changed workflows | 0 | 0 errors; 1,429 existing style warnings retained |
+| Workflow semantic audit / `git diff --check` | 0 each | Only runner labels changed semantically |
+
+Exact test and Ruff commands:
+
+```sh
+HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py --noconftest -q -k test_write_creates_configured_workspace_in_fresh_home
+HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/tools/test_aura_product.py tests/agent/test_runtime_cwd.py --noconftest -q
+.venv/bin/python -m ruff check scripts/reveta/aura_config.py tests/scripts/test_aura_config.py
+```
+
+[Verification JSON](verification/2026-11-13-workspace-runners.json) records the
+full 38-file workflow list, exact yamllint argument vector/environment, mapping,
+exits and runner receipts. The full 1000-second Aura gate was not rerun: no shared
+agent/runtime/UI code changed. The test runner used its existing isolated scratch
+permission. No live or paid model call ran. Free-only/no paid fallback, zero
+default Anthropic caps and bound exact-action approvals remain untouched.
+
+One normal push is intended. **New-head CI states and failure-log evidence are
+recorded in the PR body after that push**, without a second documentation push.
+Queued/running checks must not be described as passed. This section supersedes
+only the workspace/runner status; previous model/product evidence follows.
+
+---
+
+# Working Aura product — 11 November 2026
+
+This section supersedes the historical checkpoints below. Base:
+`feat/aura-chat-slice-20261109` at `135185c286a52717390736918aa367fcb66c7992`.
+Work branch: `aura/working-product-20261111`; [draft PR #6](https://github.com/Melvinjayson/reveta-hermes/pull/6).
+The owner reports `af65327` deployed at `https://aura-zero.onrender.com`, with
+sign-in and new-chat working, but Google rejecting `gemini-2.5-flash` with 404.
+This repair is pushed to that same auto-deployed branch. No Render/AWS/auth or
+visibility setting was changed, no secret was added, and no paid call was made.
+
+## Wired
+
+- Startup selects provider `gemini`, exact model **`gemini-3.8-flash`**, native
+  endpoint `https://generativelanguage.googleapis.com/v1beta`, with
+  `confirmed_free: true`, `cost_usd: 0`, `free_only: true` and no fallback.
+  The model ID is in `website/docs/guides/google-gemini.md`; the owner confirms
+  Google's pricing page lists it free of charge on the free tier. This executor
+  could not independently fetch that pricing page through its proxy. Either
+  `GEMINI_API_KEY` or `GOOGLE_API_KEY` selects the route. Use the existing AI Studio
+  free-tier project; this allowlist is a pricing assertion, not a Google billing
+  account switch. Missing keys remain disconnected. No `openrouter/free`, latest
+  alias, auto-router or paid fallback is generated. Native Gemini and its async
+  facade pass the HTTP transport seal.
+- `AURA_GEMINI_MODEL` overrides the exact ID at startup. A non-default ID is
+  allowlisted only with **`AURA_GEMINI_MODEL_CONFIRMED_FREE=true`**, after the owner
+  checks its free-tier pricing. Otherwise the free guard refuses inference.
+  Route/`-latest` aliases are rejected. Retirement needs an environment update
+  and restart rather than a code edit. Provider 404 now produces **Model
+  unavailable: <model>**, rather than a generic failure, with no retry/fallback.
+- Both CLI and API-server catalogs select the eager `[aura, todo]` toolset in
+  the existing agent loop. `aura_fetch` uses Hermes's bounded SSRF-safe public
+  GET transport. `aura_browser` composes navigate/read/screenshot through the
+  existing browser-harness and isolated local headless Chromium. The model
+  supplies a public URL, without arbitrary browser code, clicks, submissions or
+  an authenticated profile. Source links are included in the answer.
+- The real computer is the gateway/Render host. `aura_file` reuses Hermes file
+  adapters under `$HERMES_HOME/aura-workspace/<conversation-hash>`; reads/new files
+  run directly, overwrites ask. Plain filenames, size and symlink/traversal
+  checks apply. `aura_computer` reuses Hermes terminal in that directory; every
+  command asks, including installs, deletes and network writes. Approval remains
+  nonce/expiry/profile/argument-bound and single-use. Workspace scoping is not
+  OS-level shell containment: an approved command has host authority.
+- Step cards show actual backend status, server-redacted URL/command, bounded
+  output summary and exit status. Failed/refused calls retain that state. File
+  cards derive from successful adapter results and use the existing authenticated
+  owner/session-scoped download bridge. A cited `brief.md` and browser screenshot
+  are downloadable; Markdown claiming a file exists does not create a card.
+- Chromium state lives below `$HERMES_HOME/cache/browser-harness`. Fetch honors
+  the host proxy; startup supplies a credential-free proxy authority to Chromium
+  when applicable. Browser error/privacy pages fail the read. The acceptance
+  container uses explicit Chromium container flags and the host public CA in a
+  disposable NSS profile; no TLS bypass or production trust/auth change is used.
+- `aura_complex` is explicit opt-in Anthropic reasoning in the same chat, never
+  recovery or an automatic fallback. A key alone enables nothing. Positive chat
+  AND day caps, known bundled model pricing, available budget and a bound approval
+  card showing estimated maximum USD are required. Keep both caps **0** until
+  Melvin deliberately sets them. SQLite serializes reservations and records
+  usage-derived actual USD cost (bundled rates, not a vendor invoice); unknown
+  transport usage retains its reservation. Paid transport was stubbed only.
+
+## Voice — wired fallback, honestly labelled
+
+The existing full-duplex engine `tools/voice_live.py` is billed GPT-Live; no free
+Gemini Live plugin is present. Browser SpeechRecognition + speechSynthesis reuse
+the same submit/context/history path as text, with live interim transcript,
+spoken replies, interrupt, visible permission errors and unsupported-browser
+state. The UI says **turn-based; full duplex unavailable**. Recognition pauses
+during playback; Interrupt cancels speech and the active turn before listening.
+No extra model voice endpoint or exposed key is used. Phone/browser speech
+availability and processing vary; the browser may send audio to its own speech
+service. Physical-phone microphone/echo behavior is unverified.
+
+## Remaining work and live evidence boundary
+
+| Item | Status |
+|---|---|
+| Free route retirement repair and exact env override | Wired and locally tested; owner-authorized 3.8 free-tier assertion |
+| Research → browser/source steps → approved terminal → cited `brief.md` → download → reload/reopen | Passed with FakeLLMServer generation and real browser/terminal/file/download adapters; live inference acceptance remains blocked |
+| Deployed sign-in/new-chat and retired-model 404 | Owner-reported on `af65327`; not independently observed here |
+| Live free-model reply/research/context | Not verified: attached browser fails before opening tabs ("Browser Use could not read requirements"), unauthenticated HTTP is proxy-blocked, no existing signed-in session or Google key is available to this executor |
+| Phone speech and hands-free full duplex | Physical phone unavailable; labelled browser fallback retained; a free full-duplex plugin is not present |
+| Optional OpenRouter secondary route | Not configured; would need a separately confirmed exact `:free` route and existing key; never an automatic fallback |
+| Render restart durability / OS sandbox | Not provided by the free host/workspace directory; see below |
+
+The previous handoff's no-cost browser/computer/file/speech implementation is
+wired; the remaining live and hardware checks cannot be inferred from fake-model
+results. No placeholder screen or untested live harness was added. Google pricing,
+provider quota/billing, Anthropic execution, full repository Python and Electron
+E2E are not established by this increment.
+Render deployment-status inspection was skipped at the owner's request; no
+deployment status is inferred from the branch push.
+
+## Persistence and free-host limitation
+
+Hermes SQLite history persists messages, tool calls/results, source links and file
+metadata; created files live under HERMES_HOME. Reload/reopen restores the same
+results and download card while server files exist. Voice shares this context.
+Interim speech and active approvals/processes are not durable.
+
+Render free web service storage is ephemeral. Restart/redeploy can lose `state.db`,
+workspace files, the spend ledger and profile state when `/opt/data` is not a
+persistent disk. Browser localStorage cannot recover server files. The smallest
+free durable fix is the same Docker image on an existing always-on host with a
+HERMES_HOME bind mount/volume. Manual encrypted home export/restore before planned
+maintenance is a free backup, but cannot protect against an unexpected restart.
+No paid storage or hosting/auth change was made. Keep Anthropic caps zero on the
+ephemeral host because losing its ledger loses spend history too.
+
+## Render environment and deploy steps
+
+**No environment/settings change is required for the 3.8 default** if the existing
+startup wrapper and `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) are already in use.
+Optional non-secret override: `AURA_GEMINI_MODEL=<exact-free-model-id>` and, for a
+non-default model, `AURA_GEMINI_MODEL_CONFIRMED_FREE=true` after pricing review.
+Do not retain an old `AURA_GEMINI_MODEL=gemini-2.5-flash` override.
+
+`OPENROUTER_API_KEY` is optional and unused by this generator. Optional
+`ANTHROPIC_API_KEY` alone does nothing. `AURA_ANTHROPIC_MODEL` defaults to
+`claude-sonnet-4-5` and must have bundled pricing. Leave
+`AURA_ANTHROPIC_PER_CHAT_USD=0` and `AURA_ANTHROPIC_PER_DAY_USD=0` until Melvin
+sets caps; do not use positive caps with an ephemeral spend ledger. The generator
+does not write key values into config, source or evidence.
+
+Docker command is unchanged:
+
+```sh
+/bin/sh -c '/opt/hermes/.venv/bin/python /opt/hermes/scripts/reveta/aura_config.py --write "$HERMES_HOME/config.yaml" && exec /opt/hermes/docker/entrypoint-dispatch.sh gateway run'
+```
+
+1. Push this branch without force; the owner's existing Render auto-deploy picks
+   it up. Retain `HERMES_HOME=/opt/data`, `PORT=10000`, `HERMES_YOLO_MODE=0` and
+   all existing URL/auth settings. No second server or new listener is needed.
+2. After Render reports the new commit live, sign in and start a **new chat** so
+   the route is taken from startup config. Existing conversations can retain a
+   previously selected model; no mid-conversation prompt/model rewrite is made.
+3. Send: **Research HTTP client requests and give me a one-page brief.** Confirm
+   plan, 2–3 successful real source reads, honest step results, answer citations,
+   Download brief.md, reload and reopen. Approve a terminal step only if its
+   displayed command is wanted. Try a text/voice follow-up in the same chat.
+4. Report 404 as model unavailable and quota/permission failures honestly. Do not
+   enable billing or a paid fallback to recover. A push is not evidence that
+   Render deployed successfully or that live acceptance passed.
+
+## Verification evidence
+
+Final `just aura-check`: **exit 0, all 14 checks, 1000.119s**, on clean
+implementation commit `6c9d1ee8b3176a0fa4453b1da72cc3f38107a9f3`.
+Following changes are documentation/evidence only.
+[Full child commands/exits](verification/2026-11-11-model-retirement-gate.json)
+and [additional checks and live boundary](verification/2026-11-11-model-retirement-checks.json).
+
+| Check | Result |
+|---|---|
+| Webapp build / TypeScript / desktop ESLint | Exit 0 each; lint 0 errors, 379 existing warnings |
+| Selected chat/UI contracts | 225 passed across 14 files |
+| Python routes/tools/config/approval/native adapter/error surface/auth contracts | 397 passed, 1 existing host PID-namespace skip |
+| Public-Origin contracts | 14 passed |
+| Mobile Playwright / FakeLLMServer | Passed; full browser command 270.050s |
+| Fake HTTP/SSE, browser ESLint, Python Ruff | Exit 0 each |
+| Complete desktop UI project | 13,175 passed across 1,582 files; exit 0; 3304.56s |
+| Repository `scripts/check --base af65327` | 14 passed on committed handoff/evidence `e6b1553ae5`; exit 0; 0 blocking/advisory health findings |
+| Initial focused route/retirement tests | 7 passed, exit 0 |
+
+Exact top-level commands, with the installed toolchain on PATH:
+
+```sh
+HERMES_RUNTIME_DIR=$PWD/work/runtime AURA_SCREENSHOT_DIR=$PWD/work/evidence/retirement-final just aura-check >work/retirement-final-aura-check.json 2>work/retirement-final-aura-check.log
+NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=$PWD/work/retirement-full-ui.json >work/retirement-full-ui.log 2>&1
+HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327 >work/retirement-release-check.log 2>&1
+HERMES_PYTHON=$PWD/.venv/bin/python bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/agent/test_aura_model_retirement.py --noconftest -q
+```
+
+The first repository guard run failed on six BOM/encoding reads, a historical
+temporary-path example, an existing UTC alias, and two ignored setup archives.
+These were corrected without suppression; ignored setup assets were moved
+outside the checkout. The subsequent 14 guards passed.
+
+The complete UI run started on `75c699ab6c`. Its desktop tree
+`fd425f959da946a68110b4ee7b320de502eb3f06` is identical to the final
+implementation; no UI source changed during that run. The compact checks JSON
+records its exact command, counts, exit and raw workspace-report SHA-256. The
+final follow-up updates documentation/evidence only.
+
+[Model-unavailable card](screenshots/model-retirement-20261111/model-unavailable-mobile.png),
+[research/download](screenshots/model-retirement-20261111/product-research-mobile.png),
+and [voice/transcript](screenshots/model-retirement-20261111/product-voice-mobile.png)
+show synthetic chats from the final gate.
+
+
+The canonical runner was granted access only to its
+`/var/tmp/hermes-pytest-1000` scratch directory. The fake gate strips provider
+credentials. Toolchain: Node 26.12.1, pnpm 12.15.0, Python 3.14.9, Ruff 0.15.22;
+4096 MiB Node heap. The full commands/exits are preserved in linked JSON.
+
+FakeLLMServer controls the model's plan, selected URLs, tool arguments and brief
+text. Browser/fetch/terminal/file adapters and downloaded bytes are real. Three
+public CPython, Node.js and libcurl sources on `raw.githubusercontent.com` were
+read. The mobile run verifies five completed steps (three source reads, `pwd`
+approved once, file creation), command/exit details, citations in downloaded bytes,
+reload/reopen context, and simulated voice listening/interim/final/thinking/
+speaking/interrupt/denial states. The retired-model run verifies a clear error
+and exactly one generation, without retry/fallback. A native Gemini error-adapter
+unit contract separately covers Google's exact 404 wording.
+
+Browser speech APIs are simulated; no physical microphone or voice vendor call
+was used. **No live Gemini/Anthropic/OpenRouter inference occurred here.** Earlier
+local working-product evidence remains in
+[the original gate JSON](verification/2026-11-11-working-product-gate.json).
+Initial failures and their corrections are recorded, not counted as passes.
+
+---
+
+# Historical handoff (superseded where noted above)
+
 # Aura interface handoff
 
 ## Radix focus teardown correction
@@ -452,7 +747,7 @@ Use Node 26.12.1, pnpm 12.15.0, Python 3.14, Ruff 0.15.22 and just 1.59.0:
 uv sync --frozen --group dev
 pnpm install --frozen-lockfile --ignore-scripts
 . .venv/bin/activate
-just aura-check > /tmp/aura-check.json
+just aura-check > work/aura-check.json
 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=2 --reporter=dot
 ```
 

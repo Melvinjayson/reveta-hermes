@@ -66,7 +66,7 @@ export const enErrorCodes: ThreadCopy['errorCodes'] = {
       `The request, including attachments, is over ${provider}'s size limit. Compress the conversation or remove attachments.`
   },
   model_not_found: {
-    title: (_provider, model) => `${model || 'This model'} isn't available`,
+    title: (_provider, model) => `Model unavailable${model ? `: ${model}` : ''}`,
     body: (provider, model) =>
       `${provider} doesn't offer ${model || 'this model'} on your account. Choose another model.`
   },

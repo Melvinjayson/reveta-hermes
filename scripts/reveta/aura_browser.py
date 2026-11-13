@@ -25,6 +25,8 @@ def browser_session(
     *,
     no_model: bool = False,
     cost_blocked: bool = False,
+    product: bool = False,
+    retired_model: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -39,13 +41,29 @@ def browser_session(
     from tests.fakes.aura_price_policy import attest_tool
 
     # The test owns this exact loopback action and its zero-cost attestation.
-    command = json.loads((home.parent / "command.json").read_text())
+    command = json.loads((home.parent / "command.json").read_text(encoding="utf-8-sig"))
     attest_tool(home, "terminal", {"command": command})
+    if product:
+        from ruamel.yaml import YAML
+        from scripts.reveta.aura_config import aura_settings
+
+        yaml = YAML()
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
+        generated = aura_settings({**os.environ, 'HERMES_HOME': str(home)})
+        config['aura']['enabled'] = True
+        for section in ('platform_toolsets', 'tools', 'browser', 'terminal'):
+            config[section] = generated[section]
+        config['agent'].update(generated['agent'])
+        config['browser']['executable_path'] = '/usr/bin/chromium'
+        config['browser'].setdefault('chromium_args', []).extend(['--no-sandbox', '--disable-dev-shm-usage'])
+        prepare_test_browser_trust(home)
+        with (home / "config.yaml").open("w", encoding="utf-8") as output:
+            yaml.dump(config, output)
     if cost_blocked:
         from ruamel.yaml import YAML
 
         yaml = YAML()
-        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
         config["aura"]["free_models"] = []
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
@@ -54,7 +72,7 @@ def browser_session(
         from scripts.reveta.aura_config import aura_settings
 
         yaml = YAML()
-        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8"))
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
         config["model"] = aura_settings({})["model"]
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
@@ -69,6 +87,8 @@ def browser_session(
     env.update(
         HERMES_HOME=str(home), HERMES_YOLO_MODE="0", HERMES_PYTHON=sys.executable
     )
+    if product:
+        env['TERMINAL_HOME_MODE'] = 'profile'
     try:
         launch = subprocess.run(
             [
@@ -106,10 +126,12 @@ def browser_session(
                     "target": str(target),
                     "noModel": no_model,
                     "costBlocked": cost_blocked,
+                    "product": product,
+                    "retiredModel": retired_model,
                 }
             ),
             text=True,
-            timeout=240,
+            timeout=360,
             check=False,
         ).returncode
     finally:
@@ -128,7 +150,27 @@ def browser_session(
             )
 
 
+def prepare_test_browser_trust(home: Path) -> None:
+    """Import the host's supplied test CA into a disposable profile, never system trust."""
+    profile_home = home / 'home'
+    profile_home.mkdir(exist_ok=True)
+    extra_ca = os.environ.get('NODE_EXTRA_CA_CERTS')
+    if not extra_ca:
+        return
+    database = profile_home / '.pki' / 'nssdb'
+    database.mkdir(parents=True, mode=0o700)
+    for command in [
+        ['certutil', '-N', '-d', f'sql:{database}', '--empty-password'],
+        ['certutil', '-A', '-d', f'sql:{database}', '-n', 'environment-test-ca', '-t', 'C,,', '-i', extra_ca],
+    ]:
+        subprocess.run(command, check=True, capture_output=True, timeout=10)
+
+
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--product-only', action='store_true')
+    args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="aura-browser-") as directory:
         target = Path(directory) / "synthetic-action-count.json"
         target.write_text("0", encoding="utf-8")
@@ -162,6 +204,8 @@ def main() -> int:
             json.dumps(command), encoding="utf-8"
         )
         try:
+            if args.product_only:
+                return product_scenario(directory, target)
             return run_scenarios(directory, target, command)
         finally:
             action_server.shutdown()
@@ -170,7 +214,18 @@ def main() -> int:
 
 
 def run_scenarios(directory: str, target: Path, command: str) -> int:
-    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall, Error
+
+    with FakeLLMServer([Error(404, 'This model models/gemini-2.5-flash is no longer available to new users. Please use gemini-3.8-flash.')]) as retired:
+        result = browser_session(Path(directory) / 'retired', retired.base_url, target, retired_model=True)
+        if result:
+            return result
+        if len(retired.main_requests()) != 1:
+            raise AssertionError('Retired model was retried or a fallback was called')
+
+    result = product_scenario(directory, target)
+    if result:
+        return result
 
     with FakeLLMServer(
         [
@@ -204,6 +259,57 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
         return browser_session(
             Path(directory) / "no-model", fake.base_url, target, no_model=True
         )
+
+
+def product_scenario(directory: str, target: Path) -> int:
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
+
+    urls = ['https://raw.githubusercontent.com/python/cpython/main/Doc/library/http.rst',
+            'https://raw.githubusercontent.com/nodejs/node/main/doc/api/http.md',
+            'https://raw.githubusercontent.com/curl/curl/master/docs/libcurl/opts/CURLOPT_HTTPGET.md']
+    brief = ('# HTTP client requests\n\nHTTP clients send methods, headers and optional bodies, '
+             'then receive response status codes, headers and data. Python defines HTTPStatus '
+             'and HTTPMethod enums. Node exposes streaming HTTP messages rather than buffering '
+             'entire requests or responses. libcurl HTTPGET selects an HTTP GET request.\n\n'
+             '## Sources\n' + '\n'.join(f'- [{url}]({url})' for url in urls))
+    with FakeLLMServer([
+        ToolCall('aura_fetch', {'url': urls[0]}, text='I will read three sources, compare the HTTP guidance, and write a one-page cited brief.'),
+        ToolCall('aura_browser', {'url': urls[1], 'screenshot': True}),
+        ToolCall('aura_browser', {'url': urls[2]}),
+        ToolCall('aura_computer', {'command': 'pwd'}),
+        ToolCall('aura_file', {'name': 'brief.md', 'action': 'write', 'content': brief}),
+        Text('Brief ready. HTTP methods, status codes and representations define the exchange.\n\n' + '\n'.join(f'[Source {index}]({url})' for index, url in enumerate(urls, 1))),
+        Text('Remember the HTTP methods and status codes from your brief.', chunk_chars=4, delay_per_chunk=0.15),
+    ]) as fake:
+        result = browser_session(Path(directory) / 'product', fake.base_url, target, product=True)
+        if result:
+            requests = fake.main_requests()
+            # Names only: never dump requests, launch links or credentials.
+            print(json.dumps({'exposed_tools': [tool['function']['name'] for tool in requests[0].get('tools', [])] if requests else [],
+                              'generation_count': len(requests)}), file=sys.stderr)
+            from agent.redact import redact_sensitive_text
+            for row in requests[-1].get('messages', []) if requests else []:
+                if row.get('role') == 'tool':
+                    try:
+                        data = json.loads(row.get('content', '{}'))
+                    except (ValueError, TypeError):
+                        continue
+                    if data.get('error') or data.get('success') is False:
+                        detail = data.get('error') or data.get('stderr') or data.get('output')
+                        print(redact_sensitive_text(str(detail), force=True)[:1000], file=sys.stderr)
+            return result
+        requests = fake.main_requests()
+        if len(requests) != 7:
+            raise AssertionError(f'Product loop expected 7 fake generations, got {len(requests)}')
+        history = requests[-1]['messages']
+        tool_results = [message for message in history if message.get('role') == 'tool']
+        if len(tool_results) < 5 or any('"success": false' in str(row.get('content')) for row in tool_results):
+            raise AssertionError('Real source/file adapters did not succeed')
+        if not any('Research HTTP client requests' in str(row.get('content')) for row in history):
+            raise AssertionError('Voice follow-up lost the original text context')
+        if not any('HTTPStatus' in str(row.get('content')) for row in tool_results):
+            raise AssertionError('Real Python HTTP documentation did not reach the chat agent')
+        return 0
 
 
 if __name__ == "__main__":

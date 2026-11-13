@@ -1,0 +1,65 @@
+{
+  "implementation_commit": "6c9d1ee8b3176a0fa4453b1da72cc3f38107a9f3",
+  "aura_gate": {
+    "command": "PATH=$PWD/.venv/bin:$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PWD/work/toolchain:$PATH HERMES_RUNTIME_DIR=$PWD/work/runtime AURA_SCREENSHOT_DIR=$PWD/work/evidence/retirement-final just aura-check >work/retirement-final-aura-check.json 2>work/retirement-final-aura-check.log",
+    "exit_code": 0,
+    "report": "2026-11-11-model-retirement-gate.json"
+  },
+  "targeted_retirement_tests": {
+    "command": "HERMES_PYTHON=$PWD/.venv/bin/python bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/agent/test_aura_model_retirement.py --noconftest -q",
+    "exit_code": 0,
+    "passed": 7
+  },
+  "full_desktop_ui": {
+    "command": "PATH=$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PATH NODE_OPTIONS=--max-old-space-size=4096 pnpm --dir apps/desktop exec vitest run --project ui --maxWorkers=3 --reporter=dot --reporter=json --outputFile.json=$PWD/work/retirement-full-ui.json >work/retirement-full-ui.log 2>&1",
+    "status": "passed",
+    "started_on_commit": "75c699ab6cc9de75011e0a4991a52178be53ce66",
+    "desktop_tree_at_start_and_final_implementation": "fd425f959da946a68110b4ee7b320de502eb3f06",
+    "exit_code": 0,
+    "success": true,
+    "test_files": 1582,
+    "passed_tests": 13175,
+    "failed_tests": 0,
+    "pending_tests": 0,
+    "duration_seconds": 3304.56,
+    "raw_json_sha256": "4755ebf403dd4f2799e63258636da095f456a1f98b2e25c4e1362a6e49e1005c",
+    "raw_json_workspace_path": "work/retirement-full-ui.json"
+  },
+  "repository_guards": {
+    "command": "PATH=$PWD/.venv/bin:$PWD/work/toolchain/node-v26.12.1-linux-x64/bin:$PWD/work/toolchain/node_modules/.bin:$PWD/work/toolchain:$PATH HERMES_HOME=$PWD/work/retirement-check-home HERMES_RUNTIME_DIR=$PWD/work/runtime python scripts/check --base af65327 >work/retirement-release-check.log 2>&1",
+    "last_verified_commit": "e6b1553ae5ec11ef2bf6ddb9811e64b4244dc482",
+    "exit_code": 0,
+    "checks": 14,
+    "status": "passed on committed handoff/evidence tree",
+    "initial_failure": {
+      "exit_code": 1,
+      "guards": [
+        "footguns: six BOM/encoding reads",
+        "no-tmp: historical command path",
+        "profile-archives: two ignored setup assets",
+        "ruff: datetime.UTC alias"
+      ],
+      "correction": "Fixed reads, documentation path and UTC alias; moved ignored setup assets outside the checkout. No rule suppression."
+    },
+    "working_tree_dirty": false,
+    "health": {
+      "files": 9,
+      "blocking": 0,
+      "advisory": 0
+    }
+  },
+  "live": {
+    "inference_observed": false,
+    "owner_reported_commit": "af65327",
+    "owner_reported_result": "Render sign-in/new-chat work; Google rejects gemini-2.5-flash with model retirement 404. Owner confirms gemini-3.8-flash free-tier pricing.",
+    "blockers": [
+      "Attached browser fails before opening tabs: Browser Use could not read requirements",
+      "Unauthenticated public HTTP probe blocked with ProxyError",
+      "No existing signed-in Aura session or Google key in this executor"
+    ],
+    "render_status_inspection": "skipped at owner request",
+    "paid_calls": false,
+    "provider_calls": false,
+    "physical_phone_audio": false
+  }
+}

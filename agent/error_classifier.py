@@ -315,6 +315,7 @@ CODEX_ACCOUNT_MODEL_ENTITLEMENT_MARKER = "model is not supported when using code
 _MODEL_NOT_FOUND_PATTERNS = (
     "is not a valid model", "invalid model", "model not found", "model_not_found", "does not exist",
     "no such model", "unknown model", "unsupported model", "no endpoints found that support tool use",
+    "no longer available to new users", "model has been retired", "model was retired",
     # Nous 404 when the provider retires a :free route — the slug is dead for every
     # credential, so fall back instead of burning retries (#123180). Unlike the free-tier
     # billing wording, the account's balance/tier is not what rejected the call.
@@ -1140,6 +1141,8 @@ def _status_404(c: _Ctx) -> Verdict:
     # so _by_error_code never sees it; a bare "Not Found" message has nothing to match.
     if c.code in _BILLING_ERROR_CODES:
         return _V_BILLING
+    if c.provider_slug == 'gemini' and getattr(c.error, 'code', '') == 'gemini_model_not_found':
+        return _V_MODEL_NOT_FOUND
     verdict = _first_match(c.msg, _404_RULES)
     if verdict is not None:
         return verdict

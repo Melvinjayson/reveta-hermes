@@ -1,6 +1,7 @@
 /* global document, getComputedStyle, innerWidth */
 import { createRequire } from 'node:module'
 import { mkdirSync, readFileSync } from 'node:fs'
+import { productFlow } from './aura_product_browser.mjs'
 const require = createRequire(new URL('../../apps/desktop/package.json', import.meta.url))
 const { chromium, expect } = require('@playwright/test')
 let url = ''
@@ -22,7 +23,17 @@ try {
   await page.goto(launch.url)
   await expect(page.locator('.aura-empty')).toBeVisible({ timeout: 60000 })
   await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible()
-  if (launch.costBlocked) {
+  if (launch.retiredModel) {
+    const editor = page.locator('[contenteditable="true"]:visible').first()
+    await editor.fill('Synthetic retired-model check')
+    await page.locator('form').getByRole('button', { name: 'Send', exact: true }).click()
+    await expect(page.locator('.aui-error-card-title')).toContainText('Model unavailable', { timeout: 60000 })
+    await expect(page.locator('.aui-error-card-body')).toContainText("doesn't offer")
+    await page.screenshot({ path: `${output}/model-unavailable-mobile.png` })
+    console.log('PASS: provider 404 shows Model unavailable; no retry or paid fallback.')
+  } else if (launch.product) {
+    await productFlow(page, expect, output)
+  } else if (launch.costBlocked) {
     const blockedEditor = page.locator('[contenteditable="true"]:visible').first()
     await blockedEditor.fill('Synthetic blocked price check')
     await page.locator('form').getByRole('button', { name: 'Send', exact: true }).click()

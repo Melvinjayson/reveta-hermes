@@ -46,12 +46,14 @@ export function AuraSteps({ steps }: AuraStepsProps) {
                 <span className="aura-step-status">{step.status}</span>
               </div>
               <small>{stepDuration(step, now)}</small>
+              {step.detail?.url && <p><a href={step.detail.url} rel="noreferrer" target="_blank">{step.detail.url}</a></p>}
               {step.status === 'Refused' && step.facts.includes("This would cost money, so I didn't run it.") && (
                 <p>This would cost money, so I didn't run it.</p>
               )}
               <details>
                 <summary>Details</summary>
-                <p>Inputs and result content are hidden to protect private information.</p>
+                {step.detail?.command && <pre>{step.detail.command}</pre>}
+                {step.detail?.summary ? <pre>{step.detail.summary}</pre> : <p>Inputs and result content are hidden to protect private information.</p>}
                 {step.facts.filter(fact => fact !== "This would cost money, so I didn't run it.").map(fact => <p key={fact}>{fact}</p>)}
               </details>
             </li>

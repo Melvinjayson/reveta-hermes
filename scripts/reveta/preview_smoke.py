@@ -193,7 +193,7 @@ def _read_token() -> str:
     path = os.environ.get("REVETA_SMOKE_SESSION_TOKEN_FILE", "")
     if not path:
         return ""
-    with open(path, encoding="utf-8") as fh:
+    with open(path, encoding="utf-8-sig") as fh:
         return fh.read().strip()
 
 

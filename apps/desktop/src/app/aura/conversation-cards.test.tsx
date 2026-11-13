@@ -13,7 +13,7 @@ vi.mock('@/app/chat/composer/focus', () => ({ requestComposerFocus: vi.fn() }))
 vi.mock('@/store/session', async () => {
   const { atom } = await import('nanostores')
 
-  return { $busy: atom(false), $messages: atom<ChatMessage[]>([]) }
+  return { $busy: atom(false), $messages: atom<ChatMessage[]>([]), $activeSessionId: atom(null), $selectedStoredSessionId: atom(null) }
 })
 
 it('keeps a goal annotation across navigation without rewriting stored messages', () => {

@@ -341,6 +341,7 @@ const ApprovalCard: FC<ApprovalCardProps> = ({ request, total, position, stack }
           <h2>Your approval is needed</h2>
           <p>This action stays paused until you approve it once. Change declines it so you can revise your request.</p>
           <p>Destination and effect: review the complete command below. No recipient information is inferred.</p>
+          {!showsDescription && request.description.trim() && <p>{request.description}</p>}
         </div>
       )}
       <div className="flex items-center gap-2 px-2.5 pt-2 text-xs text-(--ui-text-secondary)">

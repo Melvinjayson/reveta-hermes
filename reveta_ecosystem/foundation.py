@@ -117,7 +117,7 @@ def _github_revision(repo: str) -> dict[str, Any]:
             return {"connection": "unknown", "revision": None, "checked_at": None}
         return {
             "connection": "observed", "revision": sha,
-            "checked_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "checked_at": dt.datetime.now(dt.UTC).isoformat(),
         }
     except (urllib.error.URLError, ValueError, TimeoutError, OSError):
         return {"connection": "unknown", "revision": None, "checked_at": None}

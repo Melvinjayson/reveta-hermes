@@ -2,6 +2,7 @@ import { ComposerPrimitive } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { AuraBrowserVoice } from '@/app/aura/browser-voice'
 import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
 import { useHudComposerDrag } from '@/app/hud/composer-drag'
@@ -1495,6 +1496,7 @@ export function ChatBar({
                   />
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
+                  {isBrowserHostedDesktop() && <AuraBrowserVoice busy={busy} disabled={disabled} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
                   <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))}>

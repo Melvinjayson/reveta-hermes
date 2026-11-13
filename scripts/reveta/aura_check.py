@@ -78,8 +78,9 @@ def main() -> int:
     parser.add_argument("--fake-provider-check", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.live:
-        print("Live verification is unavailable in this checkpoint. It requires separate explicit "
-              "authorization and provider/cost review before implementation and execution.", file=sys.stderr)
+        print("This gate uses isolated fake providers only. Run live acceptance separately in an "
+              "existing signed-in deployment session with the configured free-tier model; "
+              "no credentials are inherited by this gate.", file=sys.stderr)
         return 2
     if args.fake_provider_check:
         fake_provider_check()
@@ -113,6 +114,7 @@ def main() -> int:
                 "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts",
                 "src/app/aura", "src/store/browser-tab-title.test.ts",
                 "src/components/assistant-ui/tool/approval.test.tsx",
+                "src/components/assistant-ui/thread/assistant-message.test.tsx",
                 "src/store/browser-tab-attention.test.ts", "src/store/profile-rail-prefs.test.tsx",
                 "src/store/updates.test.ts", "src/components/ui/__tests__/no-native-title.test.ts"]),
             ("Reveta isolated Python tests", ["bash", "scripts/run_tests.sh",
@@ -120,6 +122,10 @@ def main() -> int:
                 "tests/skills/test_reveta_ecosystem_skill.py", "tests/scripts/test_aura_check.py",
                 "tests/scripts/test_aura_config.py", "tests/tools/test_aura_dispatch_gate.py",
                 "tests/tools/test_aura_free_only.py",
+                "tests/tools/test_aura_product.py",
+                "tests/agent/test_aura_model_retirement.py",
+                "tests/agent/test_error_classifier.py", "tests/agent/test_error_surface.py",
+                "tests/agent/test_gemini_native_adapter.py", "tests/hermes_cli/test_dashboard_auth_prefix.py",
                 "tests/tools/test_approval_gateway_wait_late_choice.py",
                 "tests/tools/test_approval_gateway_wait_coalesce_race.py",
                 "--noconftest", "-q"]),
@@ -128,20 +134,20 @@ def main() -> int:
                 "declared_public_url or without_public_url"]),
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
             ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
-            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs"]),
-            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py"]),
+            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs", "scripts/reveta/aura_product_browser.mjs"]),
+            ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py", "tools/aura_product.py", "tools/aura_spend.py", "tests/tools/test_aura_product.py", "tools/browser_use_cli.py", "tests/scripts/test_aura_config.py"]),
         ]:
             checks.append(execute(name, command, env))
     skipped = [
         {"name": name, "reason": "G1 acceptance suite not implemented in this foundation checkpoint"}
         for name in ["complete mobile light/dark accessibility",
-                     "browser reopening", "logout/login history", "local restart persistence",
+                     "logout/login history", "local restart persistence",
                      "provider retry without duplicates", "interrupt streaming",
                      "anonymous session boundary", "dashboard browser smoke"]
     ]
     skipped.extend([
         {"name": "full desktop unit and Electron E2E suites", "reason": "This gate selects relevant Webapp unit contracts"},
-        {"name": "live provider verification", "reason": "Unavailable; separate explicit authorization required"},
+        {"name": "live provider verification", "reason": "Run separately with an existing signed-in deployment session; no credentials are inherited by this fake-model gate"},
     ])
     dirty = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True,
                            text=True, check=True).stdout
