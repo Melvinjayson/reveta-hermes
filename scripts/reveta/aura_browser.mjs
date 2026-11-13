@@ -40,6 +40,7 @@ try {
     await expect(page.locator('[data-role=user]')).toContainText('Synthetic blocked price check', { timeout: 60000 })
     const refused = page.locator('[data-aura-step=Refused]')
     await expect(refused).toHaveCount(1, { timeout: 60000 })
+    await page.locator('.aura-context-panel').evaluate(node => (node.open = true))
     await page.locator('.aura-steps > summary').click()
     await expect(refused.getByText("This would cost money, so I didn't run it.", { exact: true })).toBeVisible()
     console.log('PASS: non-allowlisted model refused as a step; no provider request.')
