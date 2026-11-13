@@ -1,0 +1,240 @@
+{
+  "date": "2026-11-13",
+  "branch": "aura/working-product-20261111",
+  "base_commit": "defc60b288778a5b039d6004c0c93ee9c31985d4",
+  "pr": 6,
+  "method": {
+    "eng_plan": "HOLD SCOPE: create only the configured startup cwd; migrate Blacksmith runner labels only; preserve all existing runtime and CI policy.",
+    "implementation": "Ponytail smallest complete change: one mkdir call, one CLI regression, mechanical runner-label substitutions.",
+    "self_review": "APPROVE",
+    "review_basis": [
+      "Preview does not create a home/workspace.",
+      "Write creates terminal.cwd in an empty home and repeated writes preserve existing files.",
+      "agent.runtime_cwd remains a read/validation consumer; existing Aura workspace() creates hashed conversation children.",
+      "YAML deep comparison permits only the mapped runner scalar changes; job/step/matrix/check/condition/timeout structure is identical.",
+      "Free-only routing, zero default Anthropic caps, exact-action approvals, voice, layout, model routing, Render/auth/secrets/visibility are unchanged.",
+      "Live provider workflow remains tag/manual-only and upstream-repository-gated, so this branch push cannot run it."
+    ]
+  },
+  "workspace": {
+    "runtime_change": "Path(settings[terminal][cwd]).mkdir(parents=True, exist_ok=True) only inside --write",
+    "source_review": [
+      "agent/runtime_cwd.py:_existing_dir",
+      "tools/aura_product.py:workspace",
+      "tools/aura_product.py:local_workspace",
+      "tools/aura_product.py:file_tool",
+      "tools/aura_product.py:computer_tool"
+    ],
+    "no_second_creator_needed": true
+  },
+  "checks": [
+    {
+      "name": "Regression before fix",
+      "command": "HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py --noconftest -q -k test_write_creates_configured_workspace_in_fresh_home",
+      "exit_code": 1,
+      "result": "Expected red: workspace.is_dir() is false after --write; 1 failed, 5 deselected."
+    },
+    {
+      "name": "Focused regression and existing adapter/cwd contracts",
+      "command": "HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/tools/test_aura_product.py tests/agent/test_runtime_cwd.py --noconftest -q",
+      "exit_code": 0,
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "Ruff",
+      "command": ".venv/bin/python -m ruff check scripts/reveta/aura_config.py tests/scripts/test_aura_config.py",
+      "exit_code": 0
+    },
+    {
+      "name": "yamllint",
+      "environment": {
+        "UV_CACHE_DIR": "$PWD/work/yamllint-cache",
+        "UV_TOOL_DIR": "$PWD/work/yamllint-tools",
+        "UV_TOOL_BIN_DIR": "$PWD/work/yamllint-bin"
+      },
+      "command": [
+        "uv",
+        "tool",
+        "run",
+        "--from",
+        "yamllint==1.37.1",
+        "yamllint",
+        "-d",
+        "relaxed",
+        ".github/workflows/archive-inputs.yml",
+        ".github/workflows/bootstrap-installer-build.yml",
+        ".github/workflows/bootstrap-installer.yml",
+        ".github/workflows/canary-release.yml",
+        ".github/workflows/catalog-tests.yml",
+        ".github/workflows/ci-review-comment.yml",
+        ".github/workflows/ci.yaml",
+        ".github/workflows/deploy-site.yml",
+        ".github/workflows/desktop-bundle-smoke.yml",
+        ".github/workflows/desktop-bundled-release.yml",
+        ".github/workflows/docker.yml",
+        ".github/workflows/docs-site-checks.yml",
+        ".github/workflows/e2e-desktop-core.yml",
+        ".github/workflows/e2e-desktop-update.yml",
+        ".github/workflows/e2e-desktop.yml",
+        ".github/workflows/install-e2e-macos-run.yml",
+        ".github/workflows/install-e2e-red.yml",
+        ".github/workflows/js-autofix.yml",
+        ".github/workflows/js-tests.yml",
+        ".github/workflows/label-rerun.yml",
+        ".github/workflows/lint.yml",
+        ".github/workflows/live-providers.yml",
+        ".github/workflows/nix.yml",
+        ".github/workflows/plugin-catalog-ci.yml",
+        ".github/workflows/pm-bundle.yml",
+        ".github/workflows/remote-backends.yml",
+        ".github/workflows/repo-guards.yml",
+        ".github/workflows/rust-tests.yml",
+        ".github/workflows/sandbox-image.yml",
+        ".github/workflows/skills-index-freshness.yml",
+        ".github/workflows/skills-index.yml",
+        ".github/workflows/stable-release.yml",
+        ".github/workflows/termux-verify.yml",
+        ".github/workflows/tests-os.yml",
+        ".github/workflows/tests.yml",
+        ".github/workflows/windows-desktop-attach-e2e.yml",
+        ".github/workflows/windows-install-update-e2e.yml",
+        ".github/workflows/windows-venv-e2e.yml"
+      ],
+      "exit_code": 0,
+      "warnings": 1429,
+      "errors": 0,
+      "config": "yamllint built-in relaxed",
+      "initial_exit_code": 1,
+      "initial_error": "pre-existing missing final newline in desktop-bundle-smoke.yml; final newline added without semantic changes"
+    },
+    {
+      "name": "Workflow semantic audit",
+      "exit_code": 0,
+      "passed": true,
+      "files": 38,
+      "textual_runner_substitutions": 95,
+      "expanded_runner_scalar_changes": 96,
+      "other_semantic_changes": 0,
+      "algorithm": "Parse baseline and working YAML with ruamel.yaml; recursively require identical dict keys/list lengths and unchanged values except exact runner-label mapping values under runner/runs-on/default. Aliases expand one raw edit to multiple scalar paths."
+    },
+    {
+      "name": "git diff --check",
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "runner_migration": {
+    "repository_visibility": "public",
+    "github_hosted_proof": {
+      "workflow": ".github/workflows/reveta-foundation.yml",
+      "job": "isolated-boundary-tests",
+      "runs_on": "ubuntu-latest",
+      "run_id": 43059980560,
+      "job_id": 130659568383,
+      "conclusion": "success",
+      "log_evidence": [
+        "Hosted Compute Agent",
+        "Cloud: Azure",
+        "Image: ubuntu-26.04"
+      ],
+      "url": "https://github.com/Melvinjayson/reveta-hermes/actions/runs/43059980560/job/130659568383"
+    },
+    "github_standard_runner_reference": "https://github.com/github/docs/blob/main/data/reusables/actions/supported-github-runners.md",
+    "public_standard_runners_free": true,
+    "mapping": {
+      "blacksmith-2vcpu-ubuntu-2404": "ubuntu-24.04",
+      "blacksmith-4vcpu-ubuntu-2404": "ubuntu-24.04",
+      "blacksmith-32vcpu-ubuntu-2404": "ubuntu-24.04",
+      "blacksmith-4vcpu-ubuntu-2404-arm": "ubuntu-24.04-arm",
+      "blacksmith-32vcpu-ubuntu-2404-arm": "ubuntu-24.04-arm",
+      "blacksmith-2vcpu-windows-2025": "windows-2025",
+      "blacksmith-32vcpu-windows-2025": "windows-2025",
+      "blacksmith-6vcpu-macos-15": "macos-15",
+      "blacksmith-12vcpu-macos-15": "macos-15",
+      "blacksmith-6vcpu-macos-latest": "macos-latest",
+      "blacksmith-12vcpu-macos-latest": "macos-latest"
+    },
+    "files": {
+      ".github/workflows/archive-inputs.yml": 1,
+      ".github/workflows/bootstrap-installer-build.yml": 2,
+      ".github/workflows/bootstrap-installer.yml": 2,
+      ".github/workflows/canary-release.yml": 2,
+      ".github/workflows/catalog-tests.yml": 1,
+      ".github/workflows/ci-review-comment.yml": 1,
+      ".github/workflows/ci.yaml": 2,
+      ".github/workflows/deploy-site.yml": 2,
+      ".github/workflows/desktop-bundle-smoke.yml": 2,
+      ".github/workflows/desktop-bundled-release.yml": 20,
+      ".github/workflows/docker.yml": 7,
+      ".github/workflows/docs-site-checks.yml": 1,
+      ".github/workflows/e2e-desktop-core.yml": 1,
+      ".github/workflows/e2e-desktop-update.yml": 1,
+      ".github/workflows/e2e-desktop.yml": 1,
+      ".github/workflows/install-e2e-macos-run.yml": 2,
+      ".github/workflows/install-e2e-red.yml": 1,
+      ".github/workflows/js-autofix.yml": 2,
+      ".github/workflows/js-tests.yml": 1,
+      ".github/workflows/label-rerun.yml": 1,
+      ".github/workflows/lint.yml": 1,
+      ".github/workflows/live-providers.yml": 1,
+      ".github/workflows/nix.yml": 3,
+      ".github/workflows/plugin-catalog-ci.yml": 2,
+      ".github/workflows/pm-bundle.yml": 2,
+      ".github/workflows/remote-backends.yml": 1,
+      ".github/workflows/repo-guards.yml": 1,
+      ".github/workflows/rust-tests.yml": 1,
+      ".github/workflows/sandbox-image.yml": 4,
+      ".github/workflows/skills-index-freshness.yml": 2,
+      ".github/workflows/skills-index.yml": 2,
+      ".github/workflows/stable-release.yml": 7,
+      ".github/workflows/termux-verify.yml": 4,
+      ".github/workflows/tests-os.yml": 4,
+      ".github/workflows/tests.yml": 4,
+      ".github/workflows/windows-desktop-attach-e2e.yml": 1,
+      ".github/workflows/windows-install-update-e2e.yml": 1,
+      ".github/workflows/windows-venv-e2e.yml": 1
+    },
+    "substitutions": 95,
+    "only_other_workflow_text_edit": "Final newline in desktop-bundle-smoke.yml (pre-existing omission).",
+    "unchanged": [
+      "all jobs and steps",
+      "matrix dimensions and entries",
+      "conditions",
+      "required checks",
+      "timeouts",
+      "existing action references",
+      "existing non-Blacksmith runner labels"
+    ]
+  },
+  "before_push": {
+    "nix_run": 43059980318,
+    "nix_detect": "cancelled without steps",
+    "docker_run": 43059980450,
+    "docker_resolve": "cancelled without steps",
+    "ci_run": 43059981138,
+    "ci_detect": "queued",
+    "owner_supplied_annotation": "The job has exceeded the maximum execution time while awaiting a runner for 24h0m0s",
+    "annotation_boundary": "GitHub API independently confirmed cancelled/queued states. Annotation text is supplied by owner; annotation endpoint was unavailable through connector."
+  },
+  "after_push": "Actual new-head check states and failure-log links will be recorded in the PR body after the single push. No second documentation push is planned.",
+  "not_run": [
+    "just aura-check (shared agent/runtime/UI untouched)",
+    "live model calls",
+    "paid model calls",
+    "Render deploy/status/config APIs"
+  ],
+  "out_of_scope_unchanged": [
+    "voice/Pipecat",
+    "layout",
+    "spend caps",
+    "Anthropic",
+    "model routing",
+    "Render configuration",
+    "authentication",
+    "secrets",
+    "visibility",
+    "billing"
+  ]
+}

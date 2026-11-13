@@ -61,3 +61,30 @@ def test_override_only_attests_an_owner_confirmed_exact_free_model():
     assert config['fallback_model'] == [] and config['aura']['free_only'] is True
     with pytest.raises(ValueError, match='exact Gemini model ID'):
         aura_settings({**env, 'AURA_GEMINI_MODEL': 'gemini-flash-latest'})
+
+
+def test_write_creates_configured_workspace_in_fresh_home(tmp_path, monkeypatch, capsys):
+    import sys
+
+    from ruamel.yaml import YAML
+    from scripts.reveta import aura_config
+
+    home = tmp_path / 'fresh-home'
+    config_path = home / 'config.yaml'
+    workspace = home / 'aura-workspace'
+    monkeypatch.setenv('HERMES_HOME', str(home))
+    monkeypatch.setattr(sys, 'argv', ['aura_config.py'])
+    assert aura_config.main() == 0
+    capsys.readouterr()
+    assert not home.exists()
+
+    monkeypatch.setattr(sys, 'argv', ['aura_config.py', '--write', str(config_path)])
+    assert aura_config.main() == 0
+    config = YAML().load(config_path.read_text(encoding='utf-8-sig'))
+    assert config['terminal']['cwd'] == str(workspace)
+    assert workspace.is_dir()
+
+    brief = workspace / 'brief.md'
+    brief.write_text('# Existing brief', encoding='utf-8')
+    assert aura_config.main() == 0
+    assert brief.read_text(encoding='utf-8-sig') == '# Existing brief'

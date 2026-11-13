@@ -116,6 +116,7 @@ def main() -> int:
             raise ValueError("Existing configuration must be a mapping")
         config.update(settings)
         args.write.parent.mkdir(parents=True, exist_ok=True)
+        Path(settings['terminal']['cwd']).mkdir(parents=True, exist_ok=True)
         with args.write.open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
     else:

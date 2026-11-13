@@ -1,3 +1,84 @@
+# Startup workspace and fork runners — 13 November 2026
+
+This scoped follow-up starts at `defc60b288` on
+`aura/working-product-20261111`, draft PR #6. The owner reports repeated
+`TERMINAL_CWD does not exist: /opt/data/aura-workspace` warnings on Render at
+01:38 on 13 November. No live Render inspection or configuration change was made.
+
+`aura_config.py --write` now creates the exact configured `terminal.cwd` with
+`parents=True, exist_ok=True` before writing the startup config. Preview still
+has no filesystem side effects. `agent.runtime_cwd` only validates/reads the cwd;
+it should not create arbitrary configured directories. Existing
+`aura_product.workspace()` still creates the conversation-hash children under
+this parent for `aura_file`/`aura_computer`; no second creator or new wrapper,
+flag or config setting is needed. Repeated writes preserve workspace files.
+The Docker command is unchanged; the intended branch push uses the existing
+Render auto-deploy. Warning removal on the live instance remains unverified.
+
+Foundation's `isolated-boundary-tests` uses GitHub-hosted `ubuntu-latest` and
+passed: [job 130659568383](https://github.com/Melvinjayson/reveta-hermes/actions/runs/43059980560/job/130659568383).
+Its actual setup log identifies **Hosted Compute Agent / Azure / ubuntu-26.04**.
+The repository is public. GitHub's current standard-runner documentation lists
+standard public-repository runners as free, including native Ubuntu ARM64.
+There is no observed GitHub-hosted billing/spending lock in that successful run.
+The old Nix/Docker controller jobs are independently confirmed cancelled with no
+executed steps; CI's detector is queued. The 24-hour awaiting-runner annotation
+was supplied by the owner (the connector did not expose annotations).
+
+All **95 active Blacksmith runner-label values in 38 workflows** now use standard
+GitHub-hosted equivalents, including matrices and reusable-workflow inputs:
+
+| Old runner family | Replacement |
+|---|---|
+| Ubuntu 24.04 x64, all Blacksmith CPU sizes | `ubuntu-24.04` |
+| Ubuntu 24.04 ARM64 | `ubuntu-24.04-arm` (public repository confirmed) |
+| Windows 2025 x64 | `windows-2025` |
+| macOS 15 / latest | `macos-15` / `macos-latest` (native ARM64) |
+
+Jobs, steps, action references, matrix entries, conditions, required checks and
+all timeouts remain unchanged. Existing non-Blacksmith labels remain unchanged.
+One existing missing final newline in `desktop-bundle-smoke.yml` was repaired for
+YAML lint. No paid/larger runner or billing setting was added. A parsed YAML deep
+comparison found only the allowed runner scalar changes (96 expanded paths,
+because an alias repeats one textual value).
+
+Method: **gstack HOLD SCOPE eng plan → Ponytail smallest complete change →
+Thermonuclear self-review: APPROVE** before commit/push. The named playbooks are
+not installed here; these are the owner's requested procedure labels, not a
+claim that an external skill/agent was invoked. The review checked startup-only
+creation, preview/idempotence, existing conversation scoping and exact workflow
+semantic preservation.
+
+| Focused check | Exit | Result |
+|---|---:|---|
+| New CLI regression before fix | 1 | Expected failure: directory absent after `--write` |
+| Config, Aura adapter and runtime-cwd tests | 0 | 17 passed, no failures/skips |
+| Ruff on changed Python files | 0 | Passed |
+| yamllint 1.37.1, built-in `relaxed`, all changed workflows | 0 | 0 errors; 1,429 existing style warnings retained |
+| Workflow semantic audit / `git diff --check` | 0 each | Only runner labels changed semantically |
+
+Exact test and Ruff commands:
+
+```sh
+HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py --noconftest -q -k test_write_creates_configured_workspace_in_fresh_home
+HERMES_PYTHON=$PWD/.venv/bin/python HERMES_TEST_FILE_RETRIES=0 bash scripts/run_tests.sh tests/scripts/test_aura_config.py tests/tools/test_aura_product.py tests/agent/test_runtime_cwd.py --noconftest -q
+.venv/bin/python -m ruff check scripts/reveta/aura_config.py tests/scripts/test_aura_config.py
+```
+
+[Verification JSON](verification/2026-11-13-workspace-runners.json) records the
+full 38-file workflow list, exact yamllint argument vector/environment, mapping,
+exits and runner receipts. The full 1000-second Aura gate was not rerun: no shared
+agent/runtime/UI code changed. The test runner used its existing isolated scratch
+permission. No live or paid model call ran. Free-only/no paid fallback, zero
+default Anthropic caps and bound exact-action approvals remain untouched.
+
+One normal push is intended. **New-head CI states and failure-log evidence are
+recorded in the PR body after that push**, without a second documentation push.
+Queued/running checks must not be described as passed. This section supersedes
+only the workspace/runner status; previous model/product evidence follows.
+
+---
+
 # Working Aura product — 11 November 2026
 
 This section supersedes the historical checkpoints below. Base:
