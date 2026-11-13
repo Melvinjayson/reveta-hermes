@@ -65,17 +65,26 @@ export async function productFlow(page, expect, output) {
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible()
 
   const voice = page.locator('.aura-browser-voice')
+  // Chromium's synthetic microphone exercises device access only. Recognition
+  // and speech playback below remain explicit fakes, not a live STT/TTS claim.
+  const audioTracks = await page.evaluate(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    try { return stream.getAudioTracks().length } finally { stream.getTracks().forEach(track => track.stop()) }
+  })
+  expect(audioTracks).toBe(1)
   await expect(voice).toContainText('Full duplex unavailable')
   await voice.getByRole('button', { name: 'Start voice', exact: true }).click()
-  await expect(voice).toHaveAttribute('data-aura-voice', 'Listening')
+  await expect(voice, 'voice listens immediately after enabling').toHaveAttribute('data-aura-voice', 'Listening')
   await page.evaluate(() => window.auraVoiceFixture.interim('What should I remember'))
   await expect(voice.getByLabel('Live transcript')).toContainText('What should I remember')
   await page.evaluate(() => window.auraVoiceFixture.final('What should I remember from the brief?'))
   await expect(page.locator('[data-role=user]').last()).toContainText('What should I remember from the brief?')
   await expect(voice).toHaveAttribute('data-aura-voice', 'Thinking')
   await expect(voice).toHaveAttribute('data-aura-voice', 'Speaking', { timeout: 60000 })
+  await page.evaluate(() => window.auraVoiceFixture.final('What should I remember from the brief?'))
+  await expect(page.locator('[data-role=user]').filter({ hasText: 'What should I remember from the brief?' })).toHaveCount(1)
   await voice.getByRole('button', { name: 'Interrupt and listen', exact: true }).click()
-  await expect(voice).toHaveAttribute('data-aura-voice', 'Listening')
+  await expect(voice, 'interrupt returns fallback to listening').toHaveAttribute('data-aura-voice', 'Listening')
   const cancels = await page.evaluate(() => window.auraVoiceFixture.state.cancels)
   if (!cancels) { throw new Error('Barge-in did not cancel speech') }
   await page.screenshot({ path: `${output}/product-voice-mobile.png` })

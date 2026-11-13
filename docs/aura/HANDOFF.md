@@ -1,3 +1,101 @@
+# Pipecat voice preflight — 13 November 2026 — NOT SHIPPED
+
+Branch `aura/pipecat-voice` starts at product branch commit
+`defc60b288778a5b039d6004c0c93ee9c31985d4`. This increment does **not**
+implement the requested continuous Pipecat voice layer. Keep the existing
+**Browser voice · turn-based** label. Do not deploy or describe this draft as
+hands-free voice acceptance. No merge, Render setting, paid provider, new key,
+or production audio capture was performed.
+
+Implemented fallback repair: each recognition run consumes a final result index
+once. Interim results only paint the live transcript. Duplicate final callbacks
+cannot submit twice, while equal words at a new result index or in a later run
+remain valid requests. Stopped/replaced microphones cannot submit queued results
+into a later recording. The production caller remains the existing text-chat
+`onSubmit`; no voice conversation, inference endpoint, or policy bypass is added.
+This is in-memory browser-event deduplication, **not** durable turn/reconnect
+idempotency. History hydration cannot restart a stopped spoken reply merely by
+replacing its live message id; a new user turn can still speak the same answer.
+Five component regressions cover this behavior; the base fails duplicate/stale-final cases.
+
+`scripts/reveta/aura_voice_probe.py` is a runnable **resource probe**, not a
+production adapter. Its pin is `pipecat-ai[silero]==1.15.0`. On Python 3.14.9 it
+loads real ONNX Silero and processes 100 synthetic silent PCM frames without
+opening a microphone or storing audio. It deliberately exits **2**, with
+`complete_voice_stack_verified: false`, because it cannot establish the whole
+stack's fitness. No STT or TTS model is loaded, and no provider call is performed.
+
+Observed preflight limits:
+
+- Pipecat 1.15.0 / Silero peaked at **112.969 MiB RSS**; the synthetic frames took
+  **0.1777 s**. A separate Hermes `run_agent` + `web_server` import peaked at
+  **138.871 MiB**. These are separate-process import floors, not simultaneous
+  peak memory or proof of safe capacity under Render's 512 MiB limit. No STT/TTS
+  model, active agent, browser tool, concurrency or container overhead was measured.
+- Adding Pipecat 1.15.0 directly to a copy of the core manifest fails resolution:
+  Pipecat requires `soundfile>=0.13.1,<0.14.dev0`; Hermes's optional KittenTTS extra
+  pins `soundfile==0.14.0`. The core manifest/lock were left intact. No override
+  relaxing a dependency requirement was introduced. An isolated PM environment
+  successfully installed Pipecat 1.15.0 and Vosk 0.3.45 on Python 3.14.9.
+- Pipecat 0.0.104 / Silero was also tried in isolation. Its ONNX dependency lacks
+  a Python 3.14 wheel; it loads on 3.12, which is not Hermes's supported runtime.
+  Pipecat 1.16.0 installs on 3.14 but was published inside the core's three-day
+  dependency age cutoff, so 1.15.0 is used for the recorded probe.
+- Attempts to retrieve the free Vosk small English model from its upstream host
+  and Hugging Face returned HTTP 403 in this executor. No loaded STT/TTS pair was
+  measured. **It is not established that no free server-side pair can fit.**
+- Existing `session.interrupt` reaches `request_hard_interrupt`, and
+  `InterruptControlMixin.interrupt` signals tool workers. It cannot be reused
+  as the requested tool-preserving voice cancellation path without further work.
+  No cancellation behavior was changed by this increment.
+
+## Required voice contract — pending implementation
+
+The following is the target contract, **not a claim about the fallback or probe**:
+
+1. One authenticated, owner-scoped WSS voice transport binds the same durable
+   `conversation_id` as text. Each spoken request has a stable `turn_id`, retained
+   across reconnect/retry. The server deduplicates finals by that pair; partials
+   never enter durable user history. Each server event has a monotonically
+   increasing sequence number; replay resumes after the acknowledged sequence,
+   with snapshot resync when retention expires. Duplicate/out-of-order events
+   must not repeat messages, playback, tools or approval responses.
+2. Pinned Pipecat pipeline: transport input + Silero VAD → free STT → turn handling
+   with interruptions enabled → custom `HermesBridge` → free TTS → transport
+   output → played-text recorder. `HermesBridge` must call the existing signed-in
+   chat/agent admission path, retaining model routing, free/spend refusal, tools,
+   approvals and step events. No second LLM or separate voice history is allowed.
+   Sentence deltas feed TTS and the same chat turn together.
+3. On barge-in, stop/flush playback immediately, cancel only that turn's generation,
+   and persist the acknowledged played prefix marked interrupted. Prefer playback
+   acknowledgements; any estimate must be identified. A started tool is neither
+   cancelled nor re-executed; its eventual result remains a step card. Changed
+   request text invalidates pending old approvals. Approval decisions remain taps.
+4. One mic toggle exposes listening/thinking/speaking/interrupted. Log
+   speech-end→first-audio and barge-in→playback-stop durations, without raw audio
+   storage. Measure the complete stack and concurrency within 512 MiB; WSS only,
+   no inbound UDP, LiveKit, paid STT/TTS, new credentials or Render changes.
+
+Still unimplemented/unverified: `HermesBridge`, continuous transport and mobile
+control, sentence streaming, played-prefix persistence, tool-preserving
+cancellation, voice-specific approval invalidation, durable deduplication/replay,
+voice latency metrics, and all six requested fake-STT/TTS/Hermes safety contracts.
+The fallback's ordinary submit path retains the existing gates, but this does not
+prove those six continuous-voice contracts.
+
+No new production environment variables are required by this increment. For
+isolated probes use existing `HERMES_HOME` and `HERMES_RUNTIME_DIR` pointed at
+scratch directories; use PM `build_environment` / `ensure_environment`, never
+install these probes into the production Hermes environment. The browser harness
+uses existing `AURA_SCREENSHOT_DIR` for synthetic screenshots. Live microphone,
+provider, deployed service and physical-phone acceptance remain **NOT RUN**.
+
+Melvin's test after a separately reviewed merge/deploy remains pending: interrupt
+a long answer with a changed request; require playback stop in about one second,
+the new answer in the same thread, only the played prefix saved, one result for
+each started tool, and no duplicate or unapproved action. Never infer this result
+from the synthetic browser or component tests.
+
 # Startup workspace and fork runners — 13 November 2026
 
 This scoped follow-up starts at `defc60b288` on

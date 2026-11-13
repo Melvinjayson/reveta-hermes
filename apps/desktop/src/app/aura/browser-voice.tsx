@@ -66,7 +66,6 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
   }, [])
 
   // Re-home only when leaving a real conversation, not when its first voice turn adopts an id.
-  // eslint-disable-next-line no-restricted-syntax -- ownership latch, not an atom mirror
   useEffect(() => {
     if (owner.current && owner.current !== sessionId) { stop() }
     owner.current = sessionId
@@ -94,20 +93,27 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
   const start = () => {
     if (!ctor) { return }
     setError('')
-    lastSpoken.current = messages.findLast(message => message.role === 'assistant')?.id ?? ''
+    const last = messages.findLast(message => message.role === 'assistant')
+    lastSpoken.current = JSON.stringify([messages.filter(message => message.role === 'user').length,
+      last ? sanitizeTextForSpeech(chatMessageText(last)) : ''])
     const mic = new ctor()
     mic.continuous = true
     mic.interimResults = true
     mic.lang = navigator.language || 'en-US'
+    const finals = new Set<number>()
 
     mic.onresult = event => {
+      // A stopped/replaced recognizer can still deliver a queued browser event.
+      if (!enabled.current || speaking.current || recognition.current !== mic) { return }
       let final = ''
       let interim = ''
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i]
 
-        if (result.isFinal) { final += result[0].transcript } else { interim += result[0].transcript }
+        if (result.isFinal) {
+          if (!finals.has(i)) { final += result[0].transcript; finals.add(i) }
+        } else { interim += result[0].transcript }
       }
 
       setTranscript(final || interim)
@@ -129,6 +135,11 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     }
 
     mic.onend = () => {
+      if (recognition.current !== mic) { return }
+      // Result indexes restart at zero for each recognition run. Equal words in
+      // a later run are a new utterance, not a replay of an earlier final.
+      finals.clear()
+
       if (enabled.current && !speaking.current) { listen() }
     }
 
@@ -138,7 +149,6 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     listen()
   }
 
-  // eslint-disable-next-line no-restricted-syntax -- in-flight submit latch, not an atom mirror
   useEffect(() => {
     if (!active || !pending || busy || submitting.current) { return }
     submitting.current = true
@@ -153,16 +163,19 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     }).finally(() => { submitting.current = false })
   }, [active, busy, pending])
 
-  // eslint-disable-next-line no-restricted-syntax -- consumed speech epoch, not an atom mirror
   useEffect(() => {
     if (!active || busy || pending) { return }
     const last = messages.findLast(message => message.role === 'assistant' && !message.pending)
 
-    if (!last || last.id === lastSpoken.current) { return }
+    if (!last) { return }
     const text = sanitizeTextForSpeech(chatMessageText(last))
+    // History hydration can replace a live message id after playback stops.
+    // Scope content deduplication to the user-turn count so a later request
+    // with the same answer still gets spoken.
+    const replyKey = JSON.stringify([messages.filter(message => message.role === 'user').length, text])
 
-    if (!text.trim()) { return }
-    lastSpoken.current = last.id
+    if (!text.trim() || replyKey === lastSpoken.current) { return }
+    lastSpoken.current = replyKey
     const epoch = ++speechEpoch.current
     speaking.current = true
     recognition.current?.abort()
