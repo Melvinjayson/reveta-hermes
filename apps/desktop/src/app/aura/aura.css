@@ -441,8 +441,7 @@
 }
 .aura-context {
   padding: 0 20px;
-  max-height: 30%;
-  overflow: auto;
+  border-bottom: 1px solid var(--aura-line);
   flex-shrink: 0;
 }
 .aura-context summary {
@@ -451,6 +450,46 @@
   font-size: 12px;
   color: var(--aura-muted);
   min-height: 44px;
+}
+.aura-context-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  list-style: none;
+}
+.aura-context-panel > summary::-webkit-details-marker {
+  display: none;
+}
+.aura-context-goal {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aura-context-counts {
+  color: var(--aura-muted);
+  font-size: 10px;
+}
+.aura-context-panel > summary > svg {
+  flex-shrink: 0;
+  transition: transform 100ms;
+}
+.aura-context-panel[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.aura-context-body {
+  max-height: min(45dvh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.aura-context [data-aura-card='file'] > .aura-eyebrow {
+  display: none;
+}
+.aura-context-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--aura-muted);
 }
 .aura-context .aura-card {
   padding: 12px 16px;
@@ -561,7 +600,6 @@ html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
 }
 .aura-context {
   padding-inline: 16px;
-  max-height: 36%;
 }
 .aura-context .aura-card {
   margin-block: 8px;
