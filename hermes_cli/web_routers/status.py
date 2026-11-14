@@ -127,6 +127,8 @@ async def get_health():
     info = get_version_info()
     return {"ok": True, "version": info.base_version, "displayVersion": info.display_version,
             "commit": info.commit,
+            # Render sets RENDER_GIT_COMMIT; images built without .git have no other commit to show.
+            "deploy_commit": (os.environ.get("RENDER_GIT_COMMIT") or "")[:12] or None,
             "auth_required": bool(getattr(app.state, "auth_required", False))}
 
 
