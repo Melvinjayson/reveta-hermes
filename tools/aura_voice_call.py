@@ -24,12 +24,20 @@ from __future__ import annotations
 import asyncio
 import base64
 import importlib.util
+from pathlib import Path
 import json
 import logging
 import os
+import sys
 from typing import Any, Optional
 
 _log = logging.getLogger(__name__)
+
+# The Docker image installs Pipecat outside the sealed venv (see Dockerfile); append it LAST so
+# every package the venv already has wins over the copy pulled in for Pipecat.
+_VOICE_SITE = os.environ.get("AURA_VOICE_SITE", "/opt/aura-voice/site")
+if os.path.isdir(_VOICE_SITE) and _VOICE_SITE not in sys.path:
+    sys.path.append(_VOICE_SITE)
 
 IN_RATE = 16000
 OUT_RATE = 24000
@@ -49,6 +57,7 @@ _calls = asyncio.Semaphore(max(1, int(os.environ.get("AURA_VOICE_MAX_CALLS", "1"
 # $1.08/hour of audio, a little above OpenAI's ~$0.015/min estimate.
 OPENAI_STT_MODEL, OPENAI_TTS_MODEL, OPENAI_VOICE = "gpt-4o-mini-transcribe", "gpt-4o-mini-tts", "coral"
 OPENAI_STT_USD_PER_SECOND, OPENAI_TTS_USD_PER_SECOND = 0.003 / 60, 1.08 / 3600
+KOKORO_MODEL, KOKORO_VOICES, KOKORO_VOICE = "kokoro-v1.0.int8.onnx", "voices-v1.0.bin", "af_heart"
 OPENAI_TTS_STYLE = "Speak naturally and warmly at a relaxed conversational pace, like a thoughtful colleague."
 
 
@@ -85,6 +94,10 @@ def settings(env: Optional[dict[str, str]] = None) -> dict[str, Any]:
     else:
         stt, tts = _model(env, "STT", DEFAULT_STT_MODEL), _model(env, "TTS", DEFAULT_TTS_MODEL)
         voice, backend = (env.get("AURA_VOICE_NAME") or "").strip() or DEFAULT_VOICE, "gemini"
+    kokoro = _kokoro_dir(env)
+    if kokoro:
+        tts, voice, backend = "kokoro-82m-int8", (env.get("AURA_KOKORO_VOICE") or "").strip() or KOKORO_VOICE, \
+            f"{backend}+kokoro"
     reason = None
     if (env.get("AURA_VOICE_PIPECAT") or "").strip().lower() in {"0", "false", "off"}:
         reason = "disabled by AURA_VOICE_PIPECAT"
@@ -115,6 +128,55 @@ class GeminiSpeech:
 
     async def synthesize(self, text: str) -> bytes:
         return await synthesize(self._client, self._key, self._config["tts_model"], self._config["voice"], text)
+
+
+def _kokoro_dir(env: dict[str, str]) -> Optional[Path]:
+    """Local Kokoro TTS when AURA_KOKORO_DIR holds the kokoro-onnx model and voices files."""
+    raw = (env.get("AURA_KOKORO_DIR") or "").strip()
+    if not raw or importlib.util.find_spec("kokoro_onnx") is None:
+        return None
+    folder = Path(raw)
+    return folder if (folder / KOKORO_MODEL).is_file() and (folder / KOKORO_VOICES).is_file() else None
+
+
+class KokoroSpeech:
+    """Speaks with local Kokoro (no provider, no spend); hears with the wrapped backend.
+
+    Measured 14 Nov 2026 on one CPU core: ~1.1 s for a short sentence, real-time factor 0.62-0.75,
+    peak RSS ~365 MB. Needs about one dedicated core; Render free (0.1 CPU, 512 MB) cannot hold it.
+    """
+
+    _engine = None
+
+    def __init__(self, ear, folder: Path, voice: str):
+        self._ear, self._folder, self._voice = ear, folder, voice
+
+    async def transcribe(self, wav: bytes) -> str:
+        return await self._ear.transcribe(wav)
+
+    def _load(self):
+        if KokoroSpeech._engine is None:
+            import onnxruntime
+            from kokoro_onnx import Kokoro
+
+            options = onnxruntime.SessionOptions()
+            options.intra_op_num_threads = max(1, min(4, len(os.sched_getaffinity(0))))
+            options.inter_op_num_threads = 1
+            session = onnxruntime.InferenceSession(str(self._folder / KOKORO_MODEL), options,
+                                                   providers=["CPUExecutionProvider"])
+            KokoroSpeech._engine = Kokoro.from_session(session, str(self._folder / KOKORO_VOICES))
+        return KokoroSpeech._engine
+
+    def _speak(self, text: str) -> bytes:
+        import numpy
+
+        samples, rate = self._load().create(text[:1000], voice=self._voice, speed=1.0, lang="en-us")
+        if rate != OUT_RATE:
+            raise RuntimeError(f"Kokoro returned {rate} Hz audio, expected {OUT_RATE}")
+        return (numpy.clip(samples, -1.0, 1.0) * 32767).astype("<i2").tobytes()
+
+    async def synthesize(self, text: str) -> bytes:
+        return await asyncio.to_thread(self._speak, text)
 
 
 class OpenAISpeech:
@@ -347,10 +409,12 @@ async def run_call(ws, env: Optional[dict[str, str]] = None) -> None:
 
         Serializer, GeminiSTT, Conversation, VADProcessor, SileroVADAnalyzer, VADParams = _pipeline_classes()
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
-            if config["backend"] == "openai":
+            if config["backend"].startswith("openai"):
                 speech = OpenAISpeech(client, env["OPENAI_API_KEY"].strip(), config)
             else:
                 speech = GeminiSpeech(client, _key(env), config)
+            if config["backend"].endswith("+kokoro"):
+                speech = KokoroSpeech(speech, _kokoro_dir(env), config["voice"])
             transport = FastAPIWebsocketTransport(ws, FastAPIWebsocketParams(
                 audio_in_enabled=True, audio_out_enabled=True, audio_in_sample_rate=IN_RATE,
                 audio_out_sample_rate=OUT_RATE, add_wav_header=False, serializer=Serializer()))

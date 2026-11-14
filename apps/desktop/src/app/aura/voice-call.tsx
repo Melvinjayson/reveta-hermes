@@ -73,19 +73,21 @@ function toPcm16(input: Float32Array, fromRate: number, toRate: number): ArrayBu
  * the normal chat; each finished reply is spoken. Barge-in stops speech only: the chat turn,
  * its tools and its approvals keep running. */
 export function AuraVoice(props: Props) {
-  const [settings, setSettings] = useState<VoiceSettings | null | undefined>(undefined)
+  const [settings, setSettings] = useState<VoiceSettings | null>(null)
 
   useEffect(() => {
-    window.hermesDesktop
-      .api<VoiceSettings>({ path: '/api/aura/voice' })
+    const api = window.hermesDesktop?.api
+
+    if (!api) {
+      return
+    }
+
+    Promise.resolve(api<VoiceSettings>({ path: '/api/aura/voice' }))
       .then(setSettings)
       .catch(() => setSettings(null))
   }, [])
 
-  if (settings === undefined) {
-    return null
-  }
-
+  // The browser's turn-based voice serves until the server says a live call can start.
   if (!settings?.available) {
     return <AuraBrowserVoice {...props} />
   }
