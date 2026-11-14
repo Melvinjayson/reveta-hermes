@@ -181,6 +181,7 @@ export interface ClientSessionState {
   adoptedRunningTurn: boolean
   pendingBranchGroup: string | null
   interrupted: boolean
+  voiceInterrupted?: boolean
   /** True after message.interim finalized a bubble in the still-running turn. */
   interimBoundaryPending: boolean
   /** Stream bubble a running=false heartbeat settled before its turn's

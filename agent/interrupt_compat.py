@@ -6,6 +6,28 @@ import inspect
 from typing import Any
 
 
+def request_voice_interrupt(agent: Any) -> bool:
+    """Stop generation without signalling or abandoning already-started tools.
+
+    Never fall back to hard Stop on an older or remotely-owned agent.
+    """
+    if getattr(agent, "api_mode", None) == "codex_app_server":
+        return False
+    try:
+        inspect.getattr_static(agent, "interrupt")
+    except AttributeError:
+        return False
+    interrupt = agent.interrupt
+    try:
+        parameter = inspect.signature(interrupt).parameters.get("preserve_running_tools")
+    except (TypeError, ValueError):
+        return False
+    if parameter is None or parameter.kind is inspect.Parameter.POSITIONAL_ONLY:
+        return False
+    interrupt(preserve_running_tools=True)
+    return True
+
+
 def _accepts_keyword(callable_obj: Any, name: str) -> bool:
     """Return whether a callable explicitly supports a keyword argument."""
     try:

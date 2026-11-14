@@ -163,6 +163,7 @@ class InterruptControlMixin:
     def interrupt(
         self, message: Optional[str] = None, *, hard_cancel: bool = False,
         tool_reason: Optional[str] = None, require_generation: Optional[int] = None,
+        preserve_running_tools: bool = False,
     ) -> bool:
         """Request the agent to interrupt its current tool-calling loop (call from another thread).
 
@@ -171,6 +172,8 @@ class InterruptControlMixin:
         generation claim — published only if the turn's generation still matches at the final mutation edge;
         returns False if the turn resumed meanwhile.
         """
+        if preserve_running_tools and _ic_codex_method(self, "request_interrupt") is not None:
+            raise ValueError("voice interruption is not supported by the Codex app-server")
         if require_generation is not None:
             # RESERVE the claim under the SAME lock `_touch_activity` stamps with; real progress invalidates
             # it and it is CONSUMED at the final mutation edge, so a resumed turn abandons the abort.
@@ -197,6 +200,9 @@ class InterruptControlMixin:
                     and getattr(self, "_tool_interrupt_reason", None) in USER_INTERRUPT_REASONS):
                 self._interrupt_message = message
                 self._tool_interrupt_reason = tool_interrupt_reason
+            self._preserve_running_tools_on_interrupt = preserve_running_tools and (
+                not getattr(self, "_interrupt_requested", False)
+                or getattr(self, "_preserve_running_tools_on_interrupt", False) is True)
             self._interrupt_requested = True
             self._turn_user_intervened = True
             # The turn record and the log must agree on WHO asked for the stop (#112647).
@@ -245,6 +251,10 @@ class InterruptControlMixin:
         # Cron turns request on the conversation thread (no nested interrupt-worker deadlock); their client
         # is registered here so this cross-thread interrupt can still shut the sockets.
         _ic_abort_active_request(self, "interrupt_abort", "Failed to abort active inline request")
+        if preserve_running_tools:
+            # The turn loop still stops and the active model request is aborted.
+            # Tool futures must remain owned until their real results are committed.
+            return True
         # Scope the tool interrupt to this agent's execution thread so other in-process agents are unaffected.
         if self._execution_thread_id is not None:
             _set_interrupt(True, self._execution_thread_id, reason=tool_interrupt_reason)
@@ -288,6 +298,7 @@ class InterruptControlMixin:
             if preserve_redirect and not _ic_slot(self, "_pending_redirect_lock", "_pending_redirect"):
                 return False
             self._interrupt_requested = False
+            self._preserve_running_tools_on_interrupt = False
             self._interrupt_message = self._tool_interrupt_reason = None
             getattr(self, "_hard_interrupt_requested", threading.Event()).clear()
             if not preserve_redirect:

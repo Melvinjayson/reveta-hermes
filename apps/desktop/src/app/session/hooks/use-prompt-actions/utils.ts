@@ -795,6 +795,8 @@ export function visibleUserIndexAtOrdinal(messages: readonly ChatMessage[], targ
 }
 
 export interface SubmitTextOptions {
+  /** Pipecat output recording only; never selects auxiliary.voice_chat or another model. */
+  voiceRecordingId?: string
   /** Original slash invocation: retries must not re-expand a prepared prompt. */
   retryText?: string
   /** Captured by slash dispatch before asynchronous expansion. */
