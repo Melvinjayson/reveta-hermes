@@ -70,3 +70,34 @@ def test_terminal_result_never_retains_unflushed_unheard_copy(voice_db):
     assert stored['result']['final_response'] == ''
     assert stored['result']['messages'][0]['content'] == ''
     assert raw['result']['messages'][-1]['content'] == 'Never heard.'  # no live-stream mutation
+
+
+def test_compression_cannot_restore_generated_but_unheard_text(voice_db):
+    heard(voice_db, 'Heard.')
+    copied = {'role': 'assistant', 'content': 'Generated.'}
+    voice_row(voice_db, 'a' * 32, 0, copied)
+    copied['content'] = 'Heard. Never played.'  # the live agent still owns generated text
+    assert voice_db.try_acquire_compression_lock('chat', 'voice-compression')
+    voice_db.publish_compression_child(parent_session_id='chat', child_session_id='tip', source='cli',
+        system_prompt='unchanged', messages=[{'role': 'user', 'content': 'summary'}, copied],
+        compression_lock_holder='voice-compression')
+    assert voice_db.get_messages('tip')[-1]['content'] == 'Heard.'
+    got = record_played(voice_db, principal='human', session_id='tip', turn_id='a' * 32,
+                       message_index=0, text='Heard. More.', interrupted=False)
+    assert got['text'] == 'Heard. More.'
+    assert voice_db.get_messages('tip')[-1]['content'] == got['text']
+    voice_db.create_session('branch', 'cli', parent_session_id='chat', model_config={'_branched_from': 'chat'})
+    with pytest.raises(ValueError):
+        record_played(voice_db, principal='human', session_id='branch', turn_id='a' * 32,
+                      message_index=0, text='Heard. More.', interrupted=True)
+
+
+def test_claim_after_compression_freezes_old_prefix(voice_db):
+    voice_db._execute_write(lambda conn: claim_voice_turn(conn, 'chat', 'a' * 32))
+    heard(voice_db, 'Heard.')
+    assert voice_db.try_acquire_compression_lock('chat', 'voice-compression')
+    voice_db.publish_compression_child(parent_session_id='chat', child_session_id='tip', source='cli',
+        system_prompt='unchanged', messages=[{'role': 'user', 'content': 'summary'}],
+        compression_lock_holder='voice-compression')
+    voice_db._execute_write(lambda conn: claim_voice_turn(conn, 'tip', None))
+    assert heard(voice_db, 'Heard. Too late.')['text'] == 'Heard.'
