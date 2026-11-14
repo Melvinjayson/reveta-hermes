@@ -1,0 +1,5 @@
+{
+  "//": "Lets Node tests load lib/*.js as CommonJS. Chrome ignores this file.",
+  "type": "commonjs",
+  "private": true
+}
