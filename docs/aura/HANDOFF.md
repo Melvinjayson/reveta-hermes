@@ -7,6 +7,38 @@ implement the requested continuous Pipecat voice layer. Keep the existing
 hands-free voice acceptance. No merge, Render setting, paid provider, new key,
 or production audio capture was performed.
 
+Rebased onto `b48a78c70a016f6a4f78b5052eda50783400160b`, retaining the other
+chat's startup-workspace and CI-runner changes and both handoff additions.
+
+### Official initializer follow-up
+
+Used [pipecat-ai/pipecat](https://github.com/pipecat-ai/pipecat), inspected
+upstream checkout `1bc2e37b15566cd34bb6941a335ce09c3bbbab8c`, and ran the
+**pinned 1.15.0 CLI** successfully in an isolated directory outside the checkout:
+
+```sh
+pipecat init . --no-context-hub
+pipecat init . --transport websocket --mode cascade \
+  --stt moonshine_stt --llm ollama_llm --tts piper_tts \
+  --eval --no-deploy-to-cloud --no-context-hub
+```
+
+The first invocation used the coding-agent option and generated its guides. The
+second generated a WebSocket/local-speech reference scaffold and starter evals.
+The reference manifest was then pinned to Pipecat 1.15.0. The scaffolder does not
+offer a Hermes LLM value: `ollama_llm` is an **unexecuted template placeholder**,
+not Aura's brain. This scaffold was neither run nor copied into production Aura.
+No Ollama/OpenAI/provider request, Cloud deployment, credential creation or
+Context Hub registration/index build occurred. Aura's existing `AGENTS.md` was
+not replaced. The real `HermesBridge` integration still needs implementation.
+
+Installed the official `moonshine` and `piper` extras in a separate PM environment
+and attempted to load Moonshine **tiny** and Piper **en_US-lessac-low**, with model
+caches under scratch storage. Both downloads were refused by the executor proxy
+with **HTTP 403** (`download.moonshine.ai` and Hugging Face respectively).
+Silero plus their service imports peaked at **125.234 MiB**; neither speech model
+loaded, so this is not a loaded-pair memory measurement or voice acceptance.
+
 Implemented fallback repair: each recognition run consumes a final result index
 once. Interim results only paint the live transcript. Duplicate final callbacks
 cannot submit twice, while equal words at a new result index or in a later run
@@ -27,8 +59,8 @@ stack's fitness. No STT or TTS model is loaded, and no provider call is performe
 
 Observed preflight limits:
 
-- Pipecat 1.15.0 / Silero peaked at **112.969 MiB RSS**; the synthetic frames took
-  **0.1777 s**. A separate Hermes `run_agent` + `web_server` import peaked at
+- Pipecat 1.15.0 / Silero peaked at **109.492 MiB RSS** in the final probe; the
+  synthetic frames took **0.065 s**. A separate Hermes `run_agent` + `web_server` import peaked at
   **138.871 MiB**. These are separate-process import floors, not simultaneous
   peak memory or proof of safe capacity under Render's 512 MiB limit. No STT/TTS
   model, active agent, browser tool, concurrency or container overhead was measured.
@@ -95,6 +127,53 @@ a long answer with a changed request; require playback stop in about one second,
 the new answer in the same thread, only the played prefix saved, one result for
 each started tool, and no duplicate or unapproved action. Never infer this result
 from the synthetic browser or component tests.
+
+### Verification of this preflight/fallback increment only
+
+Code under test: `22dba9c95fb09caaa8a99dbd737b8bc038e8c984`, based on
+`b48a78c70a016f6a4f78b5052eda50783400160b`. The gate JSON reports a dirty tree
+because this handoff was being updated; the only tracked edit during that run
+was documentation. Subsequent evidence commits do not alter runtime code.
+
+| Actual command | Exit | Evidence |
+|---|---:|---|
+| `python scripts/check --base b48a78c70a016f6a4f78b5052eda50783400160b` | 0 | All 14 repository checks passed |
+| `python scripts/reveta/aura_check.py` (the `just aura-check` recipe body) | 0 | All 14 checks passed: build, typecheck, lint, 230 UI tests, 398 Python tests (1 skipped), 14 Origin tests, fake HTTP provider and browser checks |
+| Focused `vitest run --project ui src/app/aura/browser-voice.test.tsx --maxWorkers=2` | 0 | Five component regressions passed; two of the initial three regressions failed against the original base |
+| Pinned interpreter running `scripts/reveta/aura_voice_probe.py` | 2 | Intentional incomplete-stack result; actual Silero processing, no STT/TTS model loaded |
+| Official `pipecat init` guide and scaffold commands above | 0 | Generated reference files only; no bot or eval LLM was run |
+| Separate full `vitest run --project ui --maxWorkers=3` sweep | Interrupted | No complete suite result; **not a pass** |
+| Post-gate `python scripts/reveta/aura_browser.py --product-only` | 0 | 390 × 844 fake-device/fake-speech flow passed after the gates |
+
+Recorded artifacts: [gate JSON](verification/pipecat-preflight-aura-gate.json),
+[preflight and evidence boundaries](verification/pipecat-preflight.json), and
+[synthetic mobile screenshot](screenshots/pipecat-preflight/fallback-voice-mobile.png).
+
+The browser checks use a real authenticated local Webapp at **390 × 844**, a
+Chromium synthetic microphone (`getUserMedia` returns one audio track), fake
+SpeechRecognition/speechSynthesis, and FakeLLMServer. The generated synthetic
+audio is **not fed through Pipecat STT**. Assertions cover listening, live partial
+text, a final in the same chat, thinking, speaking, duplicate-final rejection,
+manual Interrupt returning to listening, permission denial, and reload. They do
+not measure real speech-end/first-audio or speech-triggered barge-in latency.
+The labelled turn-based limitation remains visible.
+
+Reproduce the resource probe without changing the core environment:
+
+```sh
+HERMES_HOME="$PWD/work/probe-home" HERMES_RUNTIME_DIR="$PWD/work/probe-tools" python - <<'PY'
+from pathlib import Path
+import subprocess
+from pm.operations import ensure_environment
+python = ensure_environment("aura-voice-probe", ["pipecat-ai[silero]==1.15.0"],
+                            root=Path("work/probe-env").resolve(), explicit=True)
+subprocess.run([str(python), "scripts/reveta/aura_voice_probe.py"], check=False)
+PY
+```
+
+The probe's exit 2 is not a passing capacity gate. The official service-load
+attempt additionally used `MOONSHINE_VOICE_CACHE` and Piper's `download_dir`
+under scratch storage. These are local probe settings, not new Render variables.
 
 # Startup workspace and fork runners — 13 November 2026
 
