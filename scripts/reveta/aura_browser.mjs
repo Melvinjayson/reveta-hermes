@@ -52,7 +52,7 @@ try {
     for (const mode of ['light', 'dark']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
       await page.screenshot({ path: `${output}/no-model-${mode}.png` })
     }
@@ -76,7 +76,7 @@ try {
       await expect(page.getByRole('dialog', { name: 'Aura menu' })).toBeVisible()
 
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.screenshot({ path: `${output}/settings-${mode}.png` })
       await page.getByRole('dialog').getByRole('button', { name: 'Conversations', exact: true }).click()
       await page.screenshot({ path: `${output}/navigation-${mode}.png` })
@@ -112,7 +112,7 @@ try {
     for (const mode of ['dark', 'light']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu' }).click()
       await page.screenshot({ path: `${output}/conversation-${mode}.png` })
       await page.setViewportSize({ width: 390, height: 500 })
@@ -159,7 +159,7 @@ try {
     for (const mode of ['light', 'dark']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
       await page.locator('[data-aura-card=goal]').screenshot({ path: `${output}/goal-${mode}.png` })
       await page.locator('[data-aura-card=resume]').screenshot({ path: `${output}/resume-${mode}.png` })
@@ -172,7 +172,7 @@ try {
     }
     await page.getByRole('button', { name: 'Open menu', exact: true }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-    await page.getByRole('dialog').getByRole('combobox').selectOption('light')
+    await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption('light')
     await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
     const actionCount = () => JSON.parse(readFileSync(launch.target, 'utf8'))
     await editor.fill('Synthetic approval exercise: ask before the loopback mock action.')
@@ -193,7 +193,7 @@ try {
     for (const mode of ['dark', 'light']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
       await approval.screenshot({ path: `${output}/approval-${mode}.png` })
     }
@@ -220,7 +220,7 @@ try {
     for (const mode of ['light', 'dark']) {
       await page.getByRole('button', { name: 'Open menu', exact: true }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Settings', exact: true }).click()
-      await page.getByRole('dialog').getByRole('combobox').selectOption(mode)
+      await page.getByRole('dialog').getByRole('combobox', { name: /Appearance/ }).selectOption(mode)
       await page.getByRole('dialog').getByRole('button', { name: 'Close menu', exact: true }).click()
       await page.locator('.aura-context-body').evaluate(node => (node.scrollTop = node.scrollHeight))
       await page.screenshot({ path: `${output}/steps-${mode}.png` })
