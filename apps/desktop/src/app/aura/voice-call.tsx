@@ -101,6 +101,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
   const [heard, setHeard] = useState('')
   const [error, setError] = useState('')
   const [queue, setQueue] = useState<string[]>([])
+
   const call = useRef<{
     ws: WebSocket
     context: AudioContext
@@ -109,6 +110,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
     playing: Set<AudioBufferSourceNode>
     playAt: number
   } | null>(null)
+
   const wanted = useRef(false)
   const reconnects = useRef(0)
   const lastSpoken = useRef('')
@@ -255,15 +257,18 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           setStatus('Listening')
 
           break
+
         case 'user_speaking':
           setStatus('Hearing you')
 
           break
+
         case 'interrupt':
           stopPlayback()
           setStatus('Hearing you')
 
           break
+
         case 'transcript':
           if (message.text.trim()) {
             setHeard(message.text)
@@ -271,14 +276,17 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           }
 
           break
+
         case 'bot_speaking':
           setStatus('Speaking')
 
           break
+
         case 'bot_idle':
           setStatus('Listening')
 
           break
+
         case 'error':
           setError(message.message)
 
