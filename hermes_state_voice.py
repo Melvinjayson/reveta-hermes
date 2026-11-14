@@ -28,12 +28,23 @@ def _put(conn, turn_id, value):
                  (PREFIX + turn_id, json.dumps(value, ensure_ascii=True)))
 
 
+def _lineage(conn, session_id):
+    """Reuse the chat store's owned segments and compression edges, excluding forks."""
+    from hermes_state_local import owned_lineage_ids
+    from hermes_state_sessions import _LINEAGE_CTE_SQL
+    ids = set()
+    for segment in owned_lineage_ids(conn, session_id):
+        ids.update(row[0] for row in conn.execute(_LINEAGE_CTE_SQL + ' SELECT id FROM lineage',
+                                                 (segment, segment)))
+    return ids
+
+
 def bind_voice_turn(db, turn_id, session_id, principal):
     validate_turn_id(turn_id)
 
     def write(conn):
         old = _read(conn, turn_id)
-        if old and (old["session_id"], old["principal"]) != (session_id, principal):
+        if old and (old["principal"] != principal or session_id not in _lineage(conn, old["session_id"])):
             raise ValueError("Voice turn belongs to another conversation")
         if not old:
             _put(conn, turn_id, {"session_id": session_id, "principal": principal, "frozen": False, "messages": {}})
@@ -42,18 +53,18 @@ def bind_voice_turn(db, turn_id, session_id, principal):
 
 def claim_voice_turn(conn, session_id, voice_turn_id):
     """Freeze the previous prefix before a new claim reads it into model context."""
-    row = conn.execute("SELECT value FROM state_meta WHERE key=?", (ACTIVE + session_id,)).fetchone()
-    previous = row[0] if row else None
-    if previous and previous != voice_turn_id:
-        old = _read(conn, previous)
-        if old:
-            old["frozen"] = True
-            _put(conn, previous, old)
+    for segment in _lineage(conn, session_id):
+        row = conn.execute("SELECT value FROM state_meta WHERE key=?", (ACTIVE + segment,)).fetchone()
+        previous = row[0] if row else None
+        if previous and previous != voice_turn_id:
+            old = _read(conn, previous)
+            if old:
+                old["frozen"] = True
+                _put(conn, previous, old)
+        conn.execute("DELETE FROM state_meta WHERE key=?", (ACTIVE + segment,))
     if voice_turn_id:
         conn.execute("INSERT INTO state_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                      (ACTIVE + session_id, voice_turn_id))
-    else:
-        conn.execute("DELETE FROM state_meta WHERE key=?", (ACTIVE + session_id,))
 
 
 def voice_row(db, turn_id, message_index, row):
@@ -71,16 +82,17 @@ def voice_row(db, turn_id, message_index, row):
 
 
 def _sync_rows(conn, session_id, turn_id, receipt):
-    rows = conn.execute("SELECT id,display_metadata FROM messages WHERE session_id=? AND role='assistant' "
-                        "AND active=1 AND json_extract(display_metadata,'$.voice_turn_id')=? "
-                        "AND json_type(display_metadata,'$.voice_message_index')='integer'",
-                        (session_id, turn_id)).fetchall()
-    for row_id, metadata in rows:
-        metadata = json.loads(metadata)
-        heard = receipt["messages"].get(str(metadata["voice_message_index"]), {})
-        metadata["interrupted"] = bool(heard.get("interrupted"))
-        conn.execute("UPDATE messages SET content=?,api_content=NULL,display_metadata=? WHERE id=? AND session_id=?",
-                     (heard.get("text", ""), json.dumps(metadata), row_id, session_id))
+    for segment in _lineage(conn, session_id):
+        rows = conn.execute("SELECT id,display_metadata FROM messages WHERE session_id=? AND role='assistant' "
+                            "AND (active=1 OR compacted=1) AND json_extract(display_metadata,'$.voice_turn_id')=? "
+                            "AND json_type(display_metadata,'$.voice_message_index')='integer'",
+                            (segment, turn_id)).fetchall()
+        for row_id, metadata in rows:
+            metadata = json.loads(metadata)
+            heard = receipt["messages"].get(str(metadata["voice_message_index"]), {})
+            metadata["interrupted"] = bool(heard.get("interrupted"))
+            conn.execute("UPDATE messages SET content=?,api_content=NULL,display_metadata=? WHERE id=? AND session_id=?",
+                         (heard.get("text", ""), json.dumps(metadata), row_id, segment))
 
 
 def record_played(db, *, principal, session_id, turn_id, message_index, text, interrupted):
@@ -90,7 +102,7 @@ def record_played(db, *, principal, session_id, turn_id, message_index, text, in
 
     def write(conn):
         receipt = _read(conn, turn_id)
-        if not receipt or (receipt["session_id"], receipt["principal"]) != (session_id, principal):
+        if not receipt or receipt["principal"] != principal or session_id not in _lineage(conn, receipt["session_id"]):
             raise ValueError("Voice turn is not owned by this caller")
         key = str(message_index)
         old = receipt["messages"].get(key, {"text": "", "interrupted": False})
@@ -99,7 +111,7 @@ def record_played(db, *, principal, session_id, turn_id, message_index, text, in
                 old = {**old, "interrupted": True}
                 receipt["messages"][key] = old
                 _put(conn, turn_id, receipt)
-                _sync_rows(conn, session_id, turn_id, receipt)
+                _sync_rows(conn, receipt["session_id"], turn_id, receipt)
             return old
         if not text.startswith(old["text"]):
             raise ValueError("Played-text receipts must extend the acknowledged prefix")
@@ -108,7 +120,7 @@ def record_played(db, *, principal, session_id, turn_id, message_index, text, in
         if interrupted:
             receipt["frozen"] = True
         _put(conn, turn_id, receipt)
-        _sync_rows(conn, session_id, turn_id, receipt)
+        _sync_rows(conn, receipt["session_id"], turn_id, receipt)
         return heard
     return db._execute_write(write)
 
@@ -118,8 +130,10 @@ def sync_appended_voice_rows(conn, session_id, messages):
     for turn_id in {m.get("display_metadata", {}).get("voice_turn_id") for m in messages
                     if isinstance(m.get("display_metadata"), dict)} - {None}:
         receipt = _read(conn, turn_id)
-        if receipt and receipt["session_id"] == session_id:
-            _sync_rows(conn, session_id, turn_id, receipt)
+        if receipt and session_id in _lineage(conn, receipt["session_id"]):
+            _sync_rows(conn, receipt["session_id"], turn_id, receipt)
+            from agent.transcript_repair import stamp_inserted_row_snapshots
+            stamp_inserted_row_snapshots(conn, session_id, messages)
 
 
 def compact_voice_result(conn, payload_json, result):

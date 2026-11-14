@@ -478,6 +478,8 @@ class SessionCompressionMixin:
         stamp_compression_ancestors(conn, child_session_id)
         from hermes_state_local_lineage import advance_local_target
         advance_local_target(conn, parent_session_id, child_session_id)
+        from hermes_state_voice import sync_appended_voice_rows
+        sync_appended_voice_rows(conn, child_session_id, messages)
         if parent["archived"]:
             # A live continuation under an idle-sweep archive re-activates the chat; after the
             # closure above the child is linked into the lineage walk (#117713).
