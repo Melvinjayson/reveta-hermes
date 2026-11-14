@@ -22,7 +22,8 @@ it('keeps a goal annotation across navigation without rewriting stored messages'
   ]
 
   $messages.set(messages)
-  const { rerender } = render(<AuraConversationCards resumed={false} />)
+  const { container, rerender } = render(<AuraConversationCards resumed={false} />)
+  fireEvent.click(container.querySelector('.aura-context-panel > summary')!)
   fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }))
   fireEvent.change(screen.getByLabelText('Your goal'), { target: { value: 'A clearer goal' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save goal' }))
@@ -31,4 +32,16 @@ it('keeps a goal annotation across navigation without rewriting stored messages'
   act(() => $messages.set(messages))
   rerender(<AuraConversationCards resumed />)
   expect(screen.getByRole('region', { name: /resume:/ }).textContent).toContain('A clearer goal')
+})
+
+it('starts with compact goal context and omits empty sources', () => {
+  $messages.set([{ id: 'compact-goal', role: 'user', parts: [{ type: 'text', text: 'Plan a clear next step' }] }])
+  const { container, rerender } = render(<AuraConversationCards resumed={false} />)
+  const panel = container.querySelector('details.aura-context-panel')!
+  expect(panel.hasAttribute('open')).toBe(false)
+  expect(panel.querySelector(':scope > summary')?.textContent).toContain('Goal')
+  expect(panel.querySelector('.aura-context-goal')?.textContent).toBe('Plan a clear next step')
+  expect(container.querySelector('.aura-context-sources')).toBeNull()
+  rerender(<AuraConversationCards resumed />)
+  expect(panel.querySelector(':scope > summary')?.textContent).toContain('Pick up where you left off')
 })

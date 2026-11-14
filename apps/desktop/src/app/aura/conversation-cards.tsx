@@ -1,4 +1,5 @@
 import { useStore } from '@nanostores/react'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import { requestComposerFocus } from '@/app/chat/composer/focus'
@@ -86,41 +87,55 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   }
 
   const goalText = goals[goal.id] ?? chatMessageText(goal)
+  const steps = auraSteps(messages)
+  const running = steps.filter(step => step.status === 'Running').length
 
   return (
     <div className="aura-context">
-      <GoalCard key={goal.id} onSave={text => setGoals(current => ({ ...current, [goal.id]: text }))} text={goalText} />
-      {resumed && (
-        <AuraCard kind="resume" onResume={() => requestComposerFocus()} title="Pick up where you left off">
-          <p>
-            <strong>Goal:</strong> {goalText.slice(0, 160)}
-          </p>
-          <p>
-            <strong>Last step:</strong> {lastReply ? chatMessageText(lastReply).slice(0, 180) : 'No reply yet.'}
-          </p>
-          <p>
-            <strong>Next step:</strong> Tell Aura what you’d like to continue or change.
-          </p>
-        </AuraCard>
-      )}
-      <details>
-        <summary>Sources in this conversation</summary>
-        {sources.map(([url, label]) => (
-          <AuraCard key={url} kind="source" title={label}>
-            <p>{new URL(url).hostname} · Date not provided</p>
-            <p>Referenced in Aura’s reply. Open the source to check the original.</p>
-            <a href={url} rel="noreferrer" target="_blank">
-              {new URL(url).hostname}
-            </a>
-          </AuraCard>
-        ))}
+      <details className="aura-context-panel">
+        <summary>
+          <span>{resumed ? 'Pick up where you left off' : 'Goal'}</span>
+          <span className="aura-context-goal">{goalText}</span>
+          <span className="aura-context-counts">
+            {steps.length} {steps.length === 1 ? 'step' : 'steps'}, {running} running · {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+          </span>
+          <ChevronDown aria-hidden="true" size={16} />
+        </summary>
+        <div className="aura-context-body">
+          <GoalCard key={goal.id} onSave={text => setGoals(current => ({ ...current, [goal.id]: text }))} text={goalText} />
+          {resumed && (
+            <AuraCard kind="resume" onResume={() => requestComposerFocus()} title="Pick up where you left off">
+              <p>
+                <strong>Goal:</strong> {goalText.slice(0, 160)}
+              </p>
+              <p>
+                <strong>Last step:</strong> {lastReply ? chatMessageText(lastReply).slice(0, 180) : 'No reply yet.'}
+              </p>
+              <p>
+                <strong>Next step:</strong> Tell Aura what you’d like to continue or change.
+              </p>
+            </AuraCard>
+          )}
+          {sources.length > 0 && <details className="aura-context-sources">
+            <summary>Sources in this conversation</summary>
+            {sources.map(([url, label]) => (
+              <AuraCard key={url} kind="source" title={label}>
+                <p>{new URL(url).hostname} · Date not provided</p>
+                <p>Referenced in Aura’s reply. Open the source to check the original.</p>
+                <a href={url} rel="noreferrer" target="_blank">
+                  {new URL(url).hostname}
+                </a>
+              </AuraCard>
+            ))}
+          </details>}
+          <AuraSteps steps={steps} />
+        </div>
       </details>
-      <AuraSteps steps={auraSteps(messages)} />
       <AuraFiles messages={messages} />
       {busy && (
-        <div aria-live="polite" role="status">
-          <p>Waiting for Aura’s response. You can stop it below.</p>
-        </div>
+        <p aria-live="polite" className="aura-context-status" role="status">
+          Waiting for Aura’s response. You can stop it below.
+        </p>
       )}
     </div>
   )
