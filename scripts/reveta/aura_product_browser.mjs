@@ -1,5 +1,6 @@
 /* global window */
 import { readFileSync } from 'node:fs'
+import { installVoiceFixture, continuousVoiceFlow } from './aura_pipecat_browser.mjs'
 
 async function openPanel(page, tab) {
   if (!(await page.locator('.aura-panel-tabs').isVisible().catch(() => false))) {
@@ -33,6 +34,7 @@ export async function productFlow(page, expect, output) {
       state
     }
   })
+  const fixture = await installVoiceFixture(page)
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
   await editor.fill('Research HTTP client requests and give me a one-page brief')

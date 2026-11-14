@@ -272,6 +272,7 @@ export async function fileEndpointUrl(
  * proxies keep. Each maps to its name in `POST /api/webapp/socket-ticket?socket=`.
  */
 const TICKET_SOCKETS = {
+  '/api/audio/pipecat': 'pipecat',
   '/api/audio/speak-stream': 'speak-stream',
   '/api/audio/transcribe-stream': 'transcribe-stream',
   '/api/audio/voice-call': 'voice-call',
@@ -280,7 +281,7 @@ const TICKET_SOCKETS = {
 } as const
 
 export type TicketSocketPath = keyof typeof TICKET_SOCKETS
-export type AudioSocketPath = '/api/audio/speak-stream' | '/api/audio/transcribe-stream' | '/api/audio/voice-call'
+export type AudioSocketPath = '/api/audio/speak-stream' | '/api/audio/transcribe-stream' | '/api/audio/voice-call' | '/api/audio/pipecat'
 
 /**
  * Socket *path*'s URL for one dial, carrying a ticket minted for it alone; a failed mint is the

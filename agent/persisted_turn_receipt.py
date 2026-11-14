@@ -62,4 +62,6 @@ def persisted_turn_receipt(
         and len(row_ids) == len(tail)
         and sum(message.get("role") == "user" for message in tail) == 1
         and "final_assistant_row_id" in receipt)
+    if any((m.get("display_metadata") or {}).get("voice_turn_id") for m in tail):
+        receipt["complete"] = False
     return receipt

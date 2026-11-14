@@ -884,7 +884,7 @@ def _poll_sequential_future(agent, future, function_name: str, deadline: float |
             # A settled future never unsettles — re-waiting spun until the deadline (forever if None); propagate.
             if future.done():
                 return "done", future.result()
-            if agent._interrupt_requested:
+            if agent._interrupt_requested and getattr(agent, "_preserve_running_tools_on_interrupt", False) is not True:
                 return "interrupted", None
             elapsed = int(time.monotonic() - started)
             if elapsed - _last_heartbeat >= 30:
@@ -1463,7 +1463,7 @@ class _ConcurrentBatch:
                     len(self.timed_out_indices),
                     ", ".join(self._running_names(not_done, future_to_index)[:5]),
                 )
-            elif agent._interrupt_requested:
+            elif agent._interrupt_requested and getattr(agent, "_preserve_running_tools_on_interrupt", False) is not True:
                 # Tools without interrupt checks (web_search, read_file) run to
                 # completion; cancel unstarted futures so we don't block on them.
                 agent._vprint(
