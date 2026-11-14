@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 from importlib.metadata import version
 import json
-import resource
 import sys
 import time
 
@@ -20,6 +19,8 @@ PIPECAT_VERSION = "1.15.0"
 
 def peak_mib() -> float:
     """Linux ru_maxrss is KiB; macOS reports bytes."""
+    import resource
+
     scale = 1024 * 1024 if sys.platform == "darwin" else 1024
     return round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / scale, 3)
 

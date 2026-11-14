@@ -66,6 +66,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
   }, [])
 
   // Re-home only when leaving a real conversation, not when its first voice turn adopts an id.
+  // eslint-disable-next-line no-restricted-syntax -- ownership latch, not an atom mirror
   useEffect(() => {
     if (owner.current && owner.current !== sessionId) { stop() }
     owner.current = sessionId
@@ -149,6 +150,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     listen()
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- in-flight submit latch, not an atom mirror
   useEffect(() => {
     if (!active || !pending || busy || submitting.current) { return }
     submitting.current = true
@@ -163,6 +165,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     }).finally(() => { submitting.current = false })
   }, [active, busy, pending])
 
+  // eslint-disable-next-line no-restricted-syntax -- consumed speech epoch, not an atom mirror
   useEffect(() => {
     if (!active || busy || pending) { return }
     const last = messages.findLast(message => message.role === 'assistant' && !message.pending)
