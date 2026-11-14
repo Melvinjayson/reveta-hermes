@@ -68,6 +68,21 @@ async def _proxy(ws, process, replay):
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
+async def _stop_speech(process):
+    if process is None or process.returncode is not None:
+        return
+    try:
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError, TimeoutError):
+            process.stdin.write(b'{"type":"close"}\n')
+            await asyncio.wait_for(process.stdin.drain(), timeout=1)
+            await asyncio.wait_for(process.wait(), timeout=2)
+    finally:
+        if process.returncode is None:
+            # Only the speech child, which owns no agent/tool work, is stopped.
+            process.kill()
+            await asyncio.wait_for(process.wait(), timeout=3)
+
+
 @router.websocket('/api/audio/pipecat')
 async def voice_ws(ws: WebSocket):
     global _active
@@ -80,7 +95,11 @@ async def voice_ws(ws: WebSocket):
     await ws.accept(subprotocol=getattr(ws, '_hermes_ws_subprotocol', None))
     python = await asyncio.to_thread(runtime_python)
     ffmpeg = await asyncio.to_thread(locate_command, 'ffmpeg')
-    if _active or python is None or not ffmpeg.found:
+    if _active:
+        await ws.send_json({'type': 'busy'})
+        await ws.close()
+        return
+    if python is None or not ffmpeg.found:
         await ws.send_json({'type': 'unavailable', 'message': 'Continuous voice unavailable; use labelled turn-based voice.'})
         await ws.close()
         return
@@ -120,17 +139,7 @@ async def voice_ws(ws: WebSocket):
     except (WebSocketDisconnect, RuntimeError, ValueError, TimeoutError, OSError):
         pass
     finally:
-        if process and process.returncode is None:
-            with contextlib.suppress(BrokenPipeError, ConnectionResetError, TimeoutError):
-                process.stdin.write(b'{"type":"close"}\n')
-                await asyncio.wait_for(process.stdin.drain(), timeout=1)
-                await asyncio.wait_for(process.wait(), timeout=2)
-        if process and process.returncode is None:
-            # Only the speech process, which owns no agent/tool work, is stopped.
-            process.terminate()
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(process.wait(), timeout=3)
-            if process.returncode is None:
-                process.kill()
-                await asyncio.wait_for(process.wait(), timeout=3)
-        _active = False
+        try:
+            await _stop_speech(process)
+        finally:
+            _active = False
