@@ -53,3 +53,18 @@ it('flushes on barge-in, preserves tools, records only played words and waits fo
   view.rerender(<AuraPipecatVoice {...props} busy={false} />)
   await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
 })
+
+it('leaving a speaking conversation interrupts its owner and never the newly opened chat', async () => {
+  const oldRequest = vi.fn().mockResolvedValue({}), newRequest = vi.fn().mockResolvedValue({})
+  const onSubmit = vi.fn().mockResolvedValue(true)
+  const view = render(<AuraPipecatVoice busy={false} disabled={false} gateway={{ request: oldRequest }} onSubmit={onSubmit} sessionId="old-chat" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Voice' }))
+  act(() => emit({ type: 'final', turn_id: 'a'.repeat(32), text: 'old request' }))
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+  view.rerender(<AuraPipecatVoice busy disabled={false} gateway={{ request: oldRequest }} onSubmit={onSubmit} sessionId="old-chat" />)
+  act(() => emit({ type: 'played', turn_id: 'a'.repeat(32), message_index: 0, text: 'Heard.' }))
+  view.rerender(<AuraPipecatVoice busy disabled={false} gateway={{ request: newRequest }} onSubmit={onSubmit} sessionId="new-chat" />)
+  expect(oldRequest).toHaveBeenCalledWith('session.interrupt', { session_id: 'old-chat', preserve_running_tools: true })
+  expect(oldRequest).toHaveBeenCalledWith('session.voice.record', expect.objectContaining({ session_id: 'old-chat', interrupted: true }))
+  expect(newRequest).not.toHaveBeenCalled()
+})
