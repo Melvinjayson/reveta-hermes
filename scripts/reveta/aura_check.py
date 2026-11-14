@@ -112,7 +112,7 @@ def main() -> int:
             ("Webapp unit contracts", pnpm + ["exec", "vitest", "run", "--project", "ui",
                 "src/store/interface-mode.test.ts", "src/lib/browser-desktop-bridge.test.ts",
                 "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts",
-                "src/app/aura", "src/store/browser-tab-title.test.ts",
+                "src/app/aura", "src/lib/pipecat-voice.test.ts", "src/app/session/hooks/use-message-stream/voice-playback.test.tsx", "src/store/browser-tab-title.test.ts",
                 "src/components/assistant-ui/tool/approval.test.tsx",
                 "src/components/assistant-ui/thread/assistant-message.test.tsx",
                 "src/store/browser-tab-attention.test.ts", "src/store/profile-rail-prefs.test.tsx",
@@ -124,6 +124,8 @@ def main() -> int:
                 "tests/tools/test_aura_free_only.py",
                 "tests/tools/test_aura_product.py",
                 "tests/agent/test_aura_model_retirement.py",
+                "tests/agent/test_voice_interrupt.py", "tests/hermes_state/test_voice_recording.py",
+                "tests/gateway/test_voice_chat_contract.py", "tests/hermes_cli/test_pipecat_voice_auth.py",
                 "tests/agent/test_error_classifier.py", "tests/agent/test_error_surface.py",
                 "tests/agent/test_gemini_native_adapter.py", "tests/hermes_cli/test_dashboard_auth_prefix.py",
                 "tests/tools/test_approval_gateway_wait_late_choice.py",
@@ -134,7 +136,7 @@ def main() -> int:
                 "declared_public_url or without_public_url"]),
             ("fake provider HTTP integration", [sys.executable, __file__, "--fake-provider-check"]),
             ("browser Simple-mode acceptance", [sys.executable, "scripts/reveta/aura_browser.py"]),
-            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs", "scripts/reveta/aura_product_browser.mjs"]),
+            ("browser ESLint", ["pnpm", "exec", "eslint", "-c", "apps/desktop/eslint.config.mjs", "scripts/reveta/aura_browser.mjs", "scripts/reveta/aura_product_browser.mjs", "scripts/reveta/aura_pipecat_browser.mjs"]),
             ("runner Ruff", [sys.executable, "-m", "ruff", "check", __file__, "scripts/reveta/aura_browser.py", "scripts/reveta/aura_config.py", "tools/aura_dispatch_policy.py", "tests/tools/test_aura_dispatch_gate.py", "tools/aura_free_only.py", "tests/tools/test_aura_free_only.py", "tests/fakes/aura_price_policy.py", "tools/aura_product.py", "tools/aura_spend.py", "tests/tools/test_aura_product.py", "tools/browser_use_cli.py", "tests/scripts/test_aura_config.py"]),
         ]:
             checks.append(execute(name, command, env))

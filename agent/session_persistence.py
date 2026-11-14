@@ -357,6 +357,8 @@ def _db_flush_collect(agent, messages: list[dict], conversation_history: Optiona
             row[RESTORED_FROM_STORE] = True
         batch_rows.append(row)
         batch_msgs.append(msg)
+    from agent.voice_recording import project_voice_rows
+    project_voice_rows(agent, messages, ov_idx, batch_msgs, batch_rows)
     return batch_rows, batch_msgs
 
 

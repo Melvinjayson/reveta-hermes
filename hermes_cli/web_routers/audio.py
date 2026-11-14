@@ -783,3 +783,7 @@ async def speak_stream_ws(ws: WebSocket) -> None:
         pump.cancel()
         with contextlib.suppress(Exception):
             await ws.close()
+
+
+from hermes_cli.web_routers.pipecat_voice import router as _pipecat_router
+router.include_router(_pipecat_router)

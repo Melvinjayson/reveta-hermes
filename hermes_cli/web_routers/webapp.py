@@ -218,6 +218,7 @@ def _socket_ticket_response(request: Request, identity: dict, socket: str, sessi
 #: its profile is gone there rather than from a socket that keeps closing.
 SOCKET_TICKETS: dict[str, tuple[str, bool]] = {
     GATEWAY_SOCKET: ("gateway_ticket", True),
+    "pipecat": ("gateway_ticket", False),
     HOST_TERMINAL_SOCKET: ("host_terminal", False),
     SPEAK_STREAM_SOCKET: ("gateway_ticket", False),
     TRANSCRIBE_STREAM_SOCKET: ("gateway_ticket", False),
