@@ -17,8 +17,9 @@ MARKER = "AURA_FREE_ONLY_REFUSED"
 
 
 class FreeOnlyRefused(PermissionError):
-    def __init__(self):
-        super().__init__(f"{MARKER}: {REFUSAL}")
+    def __init__(self, user_message=REFUSAL):
+        self.user_message = user_message
+        super().__init__(f"{MARKER}: {user_message}")
 
 
 def settings():
@@ -150,9 +151,30 @@ def _without_routing_overrides(provider, request):
     }
 
 
-def require_model(provider, endpoint, request, *, api_mode="chat_completions"):
+def _paid_route_request(config, provider, endpoint, request, chat):
+    """The owner's capped paid route (tools/aura_provider.py), or None when *request* is not it."""
+    from tools.aura_provider import SpendCapReached, check, matches, route
+
+    try:
+        paid = route({"aura": config})
+    except ValueError:
+        return None
+    if not matches(paid, provider, endpoint, request.get("model")):
+        return None
+    try:
+        check(paid, chat)
+    except SpendCapReached as exc:
+        raise FreeOnlyRefused(str(exc)) from exc
+    return {**request}
+
+
+def require_model(provider, endpoint, request, *, api_mode="chat_completions", chat=None):
     """Check the final SDK payload; return a copy with provider fallbacks disabled."""
     config = settings()
+    if isinstance(request, dict) and api_mode in {"chat_completions", "codex_responses", "anthropic_messages"}:
+        paid = _paid_route_request(config, provider, endpoint, request, chat)
+        if paid is not None:
+            return paid
     try:
         model, endpoint = _model_identity(provider, endpoint, request, api_mode)
         matches = [
@@ -170,7 +192,8 @@ def require_model(provider, endpoint, request, *, api_mode="chat_completions"):
 
 def require_agent_model(agent, request):
     return require_model(
-        agent.provider, agent.base_url, request, api_mode=agent.api_mode
+        agent.provider, agent.base_url, request, api_mode=agent.api_mode,
+        chat=getattr(agent, "session_id", None),
     )
 
 

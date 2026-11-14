@@ -44,6 +44,14 @@ _STT_PROMPT = ("Transcribe this speech verbatim in the language spoken. Reply wi
 _calls = asyncio.Semaphore(max(1, int(os.environ.get("AURA_VOICE_MAX_CALLS", "1") or 1)))
 
 
+# OpenAI speech, used when the owner saved an OpenAI key in Aura Settings. Prices from
+# platform.openai.com/docs/pricing (Nov 2026): transcribe $0.003/min; TTS charged here at
+# $1.08/hour of audio, a little above OpenAI's ~$0.015/min estimate.
+OPENAI_STT_MODEL, OPENAI_TTS_MODEL, OPENAI_VOICE = "gpt-4o-mini-transcribe", "gpt-4o-mini-tts", "coral"
+OPENAI_STT_USD_PER_SECOND, OPENAI_TTS_USD_PER_SECOND = 0.003 / 60, 1.08 / 3600
+OPENAI_TTS_STYLE = "Speak naturally and warmly at a relaxed conversational pace, like a thoughtful colleague."
+
+
 def _key(env: dict[str, str]) -> str:
     return (env.get("GEMINI_API_KEY") or env.get("GOOGLE_API_KEY") or "").strip()
 
@@ -57,22 +65,100 @@ def _model(env: dict[str, str], name: str, default: str) -> Optional[str]:
     return value if confirmed else None
 
 
+def _paid_voice(env: dict[str, str]) -> Optional[dict]:
+    """OpenAI speech when the owner saved an OpenAI key and set caps in Aura Settings, else None."""
+    if not (env.get("OPENAI_API_KEY") or "").strip():
+        return None
+    try:
+        from tools.aura_provider import route
+        return route()
+    except Exception:
+        return None
+
+
 def settings(env: Optional[dict[str, str]] = None) -> dict[str, Any]:
     """What a call would use, and why it cannot start when it cannot (no secrets in it)."""
-    env = dict(os.environ if env is None else env)
-    stt, tts = _model(env, "STT", DEFAULT_STT_MODEL), _model(env, "TTS", DEFAULT_TTS_MODEL)
+    env = _env(env)
+    paid = _paid_voice(env)
+    if paid:
+        stt, tts, voice, backend = OPENAI_STT_MODEL, OPENAI_TTS_MODEL, OPENAI_VOICE, "openai"
+    else:
+        stt, tts = _model(env, "STT", DEFAULT_STT_MODEL), _model(env, "TTS", DEFAULT_TTS_MODEL)
+        voice, backend = (env.get("AURA_VOICE_NAME") or "").strip() or DEFAULT_VOICE, "gemini"
     reason = None
     if (env.get("AURA_VOICE_PIPECAT") or "").strip().lower() in {"0", "false", "off"}:
         reason = "disabled by AURA_VOICE_PIPECAT"
     elif importlib.util.find_spec("pipecat") is None:
         reason = "Pipecat is not installed on this server"
-    elif not _key(env):
-        reason = "no Gemini key on this server"
+    elif not paid and not _key(env):
+        reason = "no voice key on this server: add an OpenAI key in Aura Settings"
     elif stt is None or tts is None:
         reason = "voice model override is not confirmed free"
-    return {"available": reason is None, "reason": reason, "stt_model": stt, "tts_model": tts,
-            "voice": (env.get("AURA_VOICE_NAME") or "").strip() or DEFAULT_VOICE,
-            "in_rate": IN_RATE, "out_rate": OUT_RATE}
+    return {"available": reason is None, "reason": reason, "backend": backend, "stt_model": stt,
+            "tts_model": tts, "voice": voice, "in_rate": IN_RATE, "out_rate": OUT_RATE}
+
+
+def _env(env: Optional[dict[str, str]]) -> dict[str, str]:
+    """Process env plus keys saved from Aura Settings (``.env``), which a running server may not have loaded."""
+    if env is not None:
+        return dict(env)
+    from hermes_cli.config import load_env
+    return {**load_env(), **{k: v for k, v in os.environ.items() if v}}
+
+
+class GeminiSpeech:
+    def __init__(self, client, key: str, config: dict):
+        self._client, self._key, self._config = client, key, config
+
+    async def transcribe(self, wav: bytes) -> str:
+        return await transcribe(self._client, self._key, self._config["stt_model"], wav)
+
+    async def synthesize(self, text: str) -> bytes:
+        return await synthesize(self._client, self._key, self._config["tts_model"], self._config["voice"], text)
+
+
+class OpenAISpeech:
+    """OpenAI STT/TTS, metered into the Aura Settings daily cap (tools/aura_provider.py)."""
+
+    def __init__(self, client, key: str, config: dict):
+        self._client, self._config = client, config
+        self._headers = {"Authorization": f"Bearer {key}"}
+
+    @staticmethod
+    def _gate() -> None:
+        from tools.aura_provider import check, route
+        check(route())
+
+    @staticmethod
+    def _charge(usd: float) -> None:
+        from tools.aura_provider import charge
+        charge("voice", "openai", "voice", usd)
+
+    async def _post(self, path: str, **kwargs):
+        response = await self._client.post(f"https://api.openai.com/v1/{path}", headers=self._headers, **kwargs)
+        if response.status_code >= 400:
+            try:
+                message = response.json().get("error", {}).get("message", "")
+            except ValueError:
+                message = response.text
+            raise RuntimeError(f"OpenAI HTTP {response.status_code}: {message[:200]}")
+        return response
+
+    async def transcribe(self, wav: bytes) -> str:
+        self._gate()
+        response = await self._post("audio/transcriptions", data={"model": self._config["stt_model"]},
+                                    files={"file": ("speech.wav", wav, "audio/wav")})
+        self._charge(max(0, len(wav) - 44) / (IN_RATE * 2) * OPENAI_STT_USD_PER_SECOND)
+        return str(response.json().get("text") or "").strip()
+
+    async def synthesize(self, text: str) -> bytes:
+        self._gate()
+        response = await self._post("audio/speech", json={
+            "model": self._config["tts_model"], "voice": self._config["voice"], "input": text[:4000],
+            "response_format": "pcm", "instructions": OPENAI_TTS_STYLE})
+        pcm = response.content
+        self._charge(len(pcm) / (OUT_RATE * 2) * OPENAI_TTS_USD_PER_SECOND)
+        return pcm
 
 
 async def _gemini(client, key: str, model: str, body: dict) -> dict:
@@ -144,13 +230,13 @@ def _pipeline_classes():
             return None
 
     class GeminiSTT(SegmentedSTTService):
-        def __init__(self, *, client, key: str, model: str, **kwargs):
+        def __init__(self, *, speech, model: str, **kwargs):
             super().__init__(sample_rate=IN_RATE, settings=STTSettings(model=model, language=None), **kwargs)
-            self._client, self._key, self._stt_model = client, key, model
+            self._speech_api = speech
 
         async def run_stt(self, audio: bytes):
             try:
-                text = await transcribe(self._client, self._key, self._stt_model, audio)
+                text = await self._speech_api.transcribe(audio)
             except Exception as exc:  # a failed segment is reported, the call goes on
                 yield ErrorFrame(error=f"Speech recognition failed: {exc}")
                 return
@@ -160,9 +246,9 @@ def _pipeline_classes():
     class Conversation(FrameProcessor):
         """Turn and barge-in state between the ear and the mouth; tells the client what happens."""
 
-        def __init__(self, *, client, key: str, model: str, voice: str, **kwargs):
+        def __init__(self, *, speech, **kwargs):
             super().__init__(**kwargs)
-            self._client, self._key, self._tts_model, self._voice = client, key, model, voice
+            self._speech_api = speech
             self._bot_speaking = False
             self._speech: asyncio.Queue[str] = asyncio.Queue()
             self._epoch = 0
@@ -182,7 +268,7 @@ def _pipeline_classes():
                 text = await self._speech.get()
                 epoch = self._epoch
                 try:
-                    pcm = await synthesize(self._client, self._key, self._tts_model, self._voice, text)
+                    pcm = await self._speech_api.synthesize(text)
                 except Exception as exc:
                     await self._tell({"type": "error", "message": f"Speech synthesis failed: {exc}"})
                     continue
@@ -242,7 +328,7 @@ def _pipeline_classes():
 
 async def run_call(ws, env: Optional[dict[str, str]] = None) -> None:
     """Run one voice call on an accepted WebSocket until the client hangs up."""
-    env = dict(os.environ if env is None else env)
+    env = _env(env)
     config = settings(env)
     if not config["available"]:
         await ws.send_json({"type": "error", "message": f"Voice call unavailable: {config['reason']}"})
@@ -260,16 +346,19 @@ async def run_call(ws, env: Optional[dict[str, str]] = None) -> None:
         from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams, FastAPIWebsocketTransport
 
         Serializer, GeminiSTT, Conversation, VADProcessor, SileroVADAnalyzer, VADParams = _pipeline_classes()
-        key = _key(env)
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
+            if config["backend"] == "openai":
+                speech = OpenAISpeech(client, env["OPENAI_API_KEY"].strip(), config)
+            else:
+                speech = GeminiSpeech(client, _key(env), config)
             transport = FastAPIWebsocketTransport(ws, FastAPIWebsocketParams(
                 audio_in_enabled=True, audio_out_enabled=True, audio_in_sample_rate=IN_RATE,
                 audio_out_sample_rate=OUT_RATE, add_wav_header=False, serializer=Serializer()))
             pipeline = Pipeline([
                 transport.input(),
                 VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.7))),
-                GeminiSTT(client=client, key=key, model=config["stt_model"]),
-                Conversation(client=client, key=key, model=config["tts_model"], voice=config["voice"]),
+                GeminiSTT(speech=speech, model=config["stt_model"]),
+                Conversation(speech=speech),
                 transport.output(),
             ])
             task = PipelineTask(pipeline, enable_rtvi=False, params=PipelineParams(

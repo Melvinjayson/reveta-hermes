@@ -295,7 +295,24 @@
   color: var(--aura-muted);
   line-height: 1.6;
 }
+.aura-model-settings label {
+  display: block;
+  font-size: 13px;
+  color: var(--aura-muted);
+}
+.aura-model-settings button {
+  min-height: 44px;
+  border: 1px solid var(--aura-line);
+  border-radius: 10px;
+  padding: 0 16px;
+  margin: 4px 8px 8px 0;
+  background: var(--aura-surface);
+}
+.aura-model-settings button:disabled {
+  opacity: 0.5;
+}
 .aura-conversations input,
+.aura-settings input,
 .aura-settings select {
   width: 100%;
   border: 1px solid var(--aura-line);
