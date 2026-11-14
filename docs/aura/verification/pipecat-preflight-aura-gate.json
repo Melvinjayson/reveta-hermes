@@ -1,0 +1,302 @@
+{
+  "commit_sha": "22dba9c95fb09caaa8a99dbd737b8bc038e8c984",
+  "working_tree_dirty": true,
+  "surface": "A: Aura chat on Hermes Webapp (Simple mode)",
+  "environment": {
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "python": "3.14.9 (main, Oct 21 2026, 17:48:02) [Clang 23.1.3 ]",
+    "python_executable": "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+    "node_heap_mb": 4096,
+    "tools": {
+      "node version": "v26.12.1",
+      "pnpm version": "12.15.0",
+      "python version": "Python 3.14.9",
+      "ruff version": "ruff 0.15.22"
+    }
+  },
+  "commands_executed": [
+    {
+      "name": "node version",
+      "command": [
+        "node",
+        "--version"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "v26.12.1",
+      "duration_seconds": 0.007
+    },
+    {
+      "name": "pnpm version",
+      "command": [
+        "pnpm",
+        "--version"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "12.15.0",
+      "duration_seconds": 0.023
+    },
+    {
+      "name": "python version",
+      "command": [
+        "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+        "--version"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "Python 3.14.9",
+      "duration_seconds": 0.002
+    },
+    {
+      "name": "ruff version",
+      "command": [
+        "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+        "-m",
+        "ruff",
+        "--version"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "ruff 0.15.22",
+      "duration_seconds": 0.038
+    },
+    {
+      "name": "Webapp build",
+      "command": [
+        "pnpm",
+        "--dir",
+        "apps/desktop",
+        "run",
+        "build:webapp"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 48.346
+    },
+    {
+      "name": "TypeScript typecheck",
+      "command": [
+        "pnpm",
+        "--dir",
+        "apps/desktop",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 58.782
+    },
+    {
+      "name": "desktop ESLint",
+      "command": [
+        "pnpm",
+        "--dir",
+        "apps/desktop",
+        "run",
+        "lint"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 60.701
+    },
+    {
+      "name": "Webapp unit contracts",
+      "command": [
+        "pnpm",
+        "--dir",
+        "apps/desktop",
+        "exec",
+        "vitest",
+        "run",
+        "--project",
+        "ui",
+        "src/store/interface-mode.test.ts",
+        "src/lib/browser-desktop-bridge.test.ts",
+        "src/app/session/hooks/use-session-actions/restore-pending-clarify.test.ts",
+        "src/app/aura",
+        "src/store/browser-tab-title.test.ts",
+        "src/components/assistant-ui/tool/approval.test.tsx",
+        "src/components/assistant-ui/thread/assistant-message.test.tsx",
+        "src/store/browser-tab-attention.test.ts",
+        "src/store/profile-rail-prefs.test.tsx",
+        "src/store/updates.test.ts",
+        "src/components/ui/__tests__/no-native-title.test.ts"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 73.071
+    },
+    {
+      "name": "Reveta isolated Python tests",
+      "command": [
+        "bash",
+        "scripts/run_tests.sh",
+        "tests/test_reveta_foundation.py",
+        "tests/test_reveta_container_entrypoint.py",
+        "tests/skills/test_reveta_ecosystem_skill.py",
+        "tests/scripts/test_aura_check.py",
+        "tests/scripts/test_aura_config.py",
+        "tests/tools/test_aura_dispatch_gate.py",
+        "tests/tools/test_aura_free_only.py",
+        "tests/tools/test_aura_product.py",
+        "tests/agent/test_aura_model_retirement.py",
+        "tests/agent/test_error_classifier.py",
+        "tests/agent/test_error_surface.py",
+        "tests/agent/test_gemini_native_adapter.py",
+        "tests/hermes_cli/test_dashboard_auth_prefix.py",
+        "tests/tools/test_approval_gateway_wait_late_choice.py",
+        "tests/tools/test_approval_gateway_wait_coalesce_race.py",
+        "--noconftest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 22.89
+    },
+    {
+      "name": "dashboard public Origin contracts",
+      "command": [
+        "bash",
+        "scripts/run_tests.sh",
+        "tests/hermes_cli/test_web_server_host_header.py",
+        "--noconftest",
+        "-q",
+        "-k",
+        "declared_public_url or without_public_url"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 1.121
+    },
+    {
+      "name": "fake provider HTTP integration",
+      "command": [
+        "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+        "/workspace/reveta-hermes/scripts/reveta/aura_check.py",
+        "--fake-provider-check"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 1.869
+    },
+    {
+      "name": "browser Simple-mode acceptance",
+      "command": [
+        "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+        "scripts/reveta/aura_browser.py"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 115.771
+    },
+    {
+      "name": "browser ESLint",
+      "command": [
+        "pnpm",
+        "exec",
+        "eslint",
+        "-c",
+        "apps/desktop/eslint.config.mjs",
+        "scripts/reveta/aura_browser.mjs",
+        "scripts/reveta/aura_product_browser.mjs"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 1.226
+    },
+    {
+      "name": "runner Ruff",
+      "command": [
+        "/workspace/reveta-hermes/work/hermes-test-env/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "/workspace/reveta-hermes/scripts/reveta/aura_check.py",
+        "scripts/reveta/aura_browser.py",
+        "scripts/reveta/aura_config.py",
+        "tools/aura_dispatch_policy.py",
+        "tests/tools/test_aura_dispatch_gate.py",
+        "tools/aura_free_only.py",
+        "tests/tools/test_aura_free_only.py",
+        "tests/fakes/aura_price_policy.py",
+        "tools/aura_product.py",
+        "tools/aura_spend.py",
+        "tests/tools/test_aura_product.py",
+        "tools/browser_use_cli.py",
+        "tests/scripts/test_aura_config.py"
+      ],
+      "exit_code": 0,
+      "status": "passed",
+      "detail": "",
+      "duration_seconds": 0.065
+    }
+  ],
+  "passed_checks": [
+    "node version",
+    "pnpm version",
+    "python version",
+    "ruff version",
+    "Webapp build",
+    "TypeScript typecheck",
+    "desktop ESLint",
+    "Webapp unit contracts",
+    "Reveta isolated Python tests",
+    "dashboard public Origin contracts",
+    "fake provider HTTP integration",
+    "browser Simple-mode acceptance",
+    "browser ESLint",
+    "runner Ruff"
+  ],
+  "failed_checks": [],
+  "skipped_checks": [
+    {
+      "name": "complete mobile light/dark accessibility",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "logout/login history",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "local restart persistence",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "provider retry without duplicates",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "interrupt streaming",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "anonymous session boundary",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "dashboard browser smoke",
+      "reason": "G1 acceptance suite not implemented in this foundation checkpoint"
+    },
+    {
+      "name": "full desktop unit and Electron E2E suites",
+      "reason": "This gate selects relevant Webapp unit contracts"
+    },
+    {
+      "name": "live provider verification",
+      "reason": "Run separately with an existing signed-in deployment session; no credentials are inherited by this fake-model gate"
+    }
+  ],
+  "real_model_calls": false,
+  "model_call_statement": "No real-model calls occurred; provider checks use FakeLLMServer only.",
+  "duration_seconds": 383.967
+}
