@@ -304,6 +304,16 @@ RUN python3 -m pm.build_env --source /opt/hermes --python /usr/local/bin/python3
     --extra all --extra messaging --extra otlp --extra anthropic --extra bedrock \
     --extra azure-identity --extra matrix --extra google-chat --extra fal --extra documents
 
+# Aura's continuous voice call (tools/aura_voice_call.py) needs Pipecat. It is kept out of the
+# sealed venv and uv.lock (soundfile clashes with the kittentts extra, and relocking with a
+# conflicts entry fails on an unrelated android split): a --target dir that the voice module
+# appends to the END of sys.path, so the venv's own packages always win.
+RUN "$(python3 -c 'from pm.install import uv_launcher; print(uv_launcher("uv"))')" \
+      pip install --no-config --exclude-newer 2026-11-12T01:00:00Z --quiet \
+      --python /usr/local/bin/python3 --target /opt/aura-voice/site \
+      "pipecat-ai[silero,websocket]==1.16.0" \
+    && test -d /opt/aura-voice/site/pipecat
+
 # Icons render on the runtime environment: Pillow and resvg-py are core
 # dependencies. A stage of its own so the frontend stage keeps building its
 # Node dependencies in parallel with the Python ones.

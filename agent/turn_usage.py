@@ -104,6 +104,11 @@ def record_response_usage(
     # OWN model rate and added as dollars below.
     aggregator_usage = canonical_usage
     _moa_client, canonical_usage, _moa_ref_cost = _fold_moa_usage(agent, canonical_usage)
+    try:
+        from tools.aura_provider import record as _record_aura_spend
+        _record_aura_spend(agent, canonical_usage)
+    except Exception:
+        logger.exception("Aura paid-route spend was not recorded")
     prompt_tokens = canonical_usage.prompt_tokens
     completion_tokens = canonical_usage.output_tokens
     total_tokens = canonical_usage.total_tokens

@@ -114,7 +114,13 @@ def main() -> int:
             config = {}
         if not isinstance(config, dict):
             raise ValueError("Existing configuration must be a mapping")
+        # Keep the owner's paid route from Aura Settings across restarts (tools/aura_provider.py).
+        paid = (config.get("aura") or {}).get("paid_route")
+        paid_model = config.get("model")
         config.update(settings)
+        if isinstance(paid, dict) and isinstance(paid_model, dict):
+            config["aura"]["paid_route"] = paid
+            config["model"] = paid_model
         args.write.parent.mkdir(parents=True, exist_ok=True)
         Path(settings['terminal']['cwd']).mkdir(parents=True, exist_ok=True)
         with args.write.open("w", encoding="utf-8") as output:

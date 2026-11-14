@@ -64,7 +64,7 @@ declare global {
       // Desktop). Absent where the gateway URL's own credential opens the stream.
       getAudioWsUrl?: (payload: {
         connectionId?: null | string
-        path: '/api/audio/speak-stream' | '/api/audio/transcribe-stream'
+        path: '/api/audio/speak-stream' | '/api/audio/transcribe-stream' | '/api/audio/voice-call'
         profile?: null | string
       }) => Promise<string>
       // Union agent roster across every registered connection.
