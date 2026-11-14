@@ -20,6 +20,7 @@ export class PipecatVoice {
   private packets = new Set<string>()
   private cancelled = new Set<string>()
   private stopped = false
+  private reconnectAttempts = 0
   private retry: ReturnType<typeof setTimeout> | null = null
   private clientId = randomUuid().replaceAll('-', '')
   private speechEnd = new Map<string, number>()
@@ -72,6 +73,12 @@ export class PipecatVoice {
 
       if (event.seq) { this.seq = event.seq }
 
+      if (event.type === 'busy') { socket.close();
+
+ return }
+
+      if (event.type === 'ready') { this.reconnectAttempts = 0 }
+
       if (event.type === 'unavailable' || event.type === 'error') {
         this.stop(); this.fail('Continuous voice unavailable. Turn-based voice is available below.');
 
@@ -96,6 +103,10 @@ export class PipecatVoice {
       this.event({ type: 'disconnected' })
 
       if (event.code === 4401 || event.code === 4403) { this.stop(); this.fail('Voice sign-in expired.');
+
+ return }
+
+      if (++this.reconnectAttempts > 6) { this.stop(); this.fail('Voice reconnect unavailable.');
 
  return }
 
