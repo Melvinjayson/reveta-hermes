@@ -1,0 +1,119 @@
+{
+  "status": "continuous_voice_not_shipped",
+  "tested_code_commit": "22dba9c95fb09caaa8a99dbd737b8bc038e8c984",
+  "rebase_base": "b48a78c70a016f6a4f78b5052eda50783400160b",
+  "repo_gate": {
+    "command": "python scripts/check --base b48a78c70a016f6a4f78b5052eda50783400160b",
+    "exit_code": 0,
+    "passed_checks": 14
+  },
+  "aura_gate": {
+    "file": "pipecat-preflight-aura-gate.json",
+    "exit_code": 0,
+    "passed_checks": 14,
+    "ui_tests_passed": 230,
+    "python_tests_passed": 398,
+    "python_tests_skipped": 1,
+    "origin_tests_passed": 14,
+    "dirty_tree_note": "Only HANDOFF.md documentation was edited during the run; runtime code remained unchanged."
+  },
+  "focused_voice_component_tests": {
+    "passed": 5,
+    "base_red_run": {
+      "initial_tests": 3,
+      "passed": 1,
+      "failed": 2
+    }
+  },
+  "broad_ui_sweep": {
+    "status": "interrupted",
+    "complete_result": false
+  },
+  "post_gate_mobile": {
+    "command": "python scripts/reveta/aura_browser.py --product-only",
+    "exit_code": 0,
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "microphone": "Chromium synthetic device; one audio track",
+    "recognition": "fake SpeechRecognition callbacks",
+    "playback": "fake speechSynthesis",
+    "hermes": "real Webapp/gateway with FakeLLMServer",
+    "observed": [
+      "one final question and one fake answer in the same thread",
+      "duplicate final did not add another user message",
+      "manual Interrupt returned to Listening",
+      "turn-based limitation stayed visible",
+      "permission denial turned voice off",
+      "reload retained the conversation"
+    ],
+    "pipecat_audio_path_exercised": false,
+    "real_speech_latencies_measured": false
+  },
+  "pipecat_init": {
+    "official_repository": "https://github.com/pipecat-ai/pipecat",
+    "inspected_upstream_sha": "1bc2e37b15566cd34bb6941a335ce09c3bbbab8c",
+    "cli_version": "1.15.0",
+    "guide_exit_code": 0,
+    "scaffold_exit_code": 0,
+    "transport": "websocket",
+    "reference_stt": "moonshine_stt",
+    "reference_tts": "piper_tts",
+    "reference_llm": "ollama_llm placeholder; never executed",
+    "evals_generated": true,
+    "bot_or_eval_run": false,
+    "scaffold_copied_to_production": false,
+    "cloud_deployed": false
+  },
+  "resource_probe": {
+    "exit_code": 2,
+    "pipecat_ai": "1.15.0",
+    "python": "3.14.9",
+    "stages": {
+      "interpreter_peak_mib": 22.758,
+      "silero_100_synthetic_frames_seconds": 0.065,
+      "pipecat_silero_peak_mib": 109.492
+    },
+    "render_limit_mib": 512,
+    "complete_voice_stack_verified": false,
+    "limits": [
+      "No TTS model loaded; no real speech or playback measured.",
+      "Import/synthetic-frame RSS is a lower bound, not a capacity guarantee.",
+      "No active Hermes session, browser, concurrent turn or container overhead measured.",
+      "This probe is not a production voice pipeline or proof that no free stack can fit."
+    ]
+  },
+  "official_local_models": {
+    "service_imports_and_silero_peak_mib": 125.234375,
+    "moonshine_tiny": {
+      "loaded": false,
+      "error": "Proxy HTTP 403 from download.moonshine.ai"
+    },
+    "piper_en_US_lessac_low": {
+      "loaded": false,
+      "error": "Proxy HTTP 403 from Hugging Face"
+    }
+  },
+  "live_evidence": {
+    "physical_phone_test": false,
+    "deployed_voice_test": false,
+    "paid_calls": false,
+    "new_production_keys": false,
+    "render_changes": false,
+    "production_raw_audio_stored": false
+  },
+  "pending": [
+    "HermesBridge production integration",
+    "continuous authenticated voice transport",
+    "sentence streaming to chat and TTS",
+    "acknowledged played-text persistence",
+    "tool-preserving generation cancellation",
+    "voice approval invalidation",
+    "durable turn idempotency and reconnect replay",
+    "six requested fake-STT/TTS/Hermes contracts",
+    "loaded free STT/TTS pair and combined memory measurement",
+    "speech-end and barge-in latency measurements",
+    "Melvin physical-phone acceptance after a separately approved merge/deploy"
+  ]
+}

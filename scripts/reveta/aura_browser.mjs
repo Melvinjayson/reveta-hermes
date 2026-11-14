@@ -12,7 +12,7 @@ mkdirSync(output, { recursive: true })
 const browser = await chromium.launch({
   executablePath: process.env.AURA_CHROMIUM || '/usr/bin/chromium',
   headless: true,
-  args: ['--no-sandbox']
+  args: ['--no-sandbox', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream']
 })
 const page = await browser.newPage({
   viewport: { width: 390, height: 844 },
