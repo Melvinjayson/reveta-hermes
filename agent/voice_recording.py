@@ -18,4 +18,3 @@ def project_voice_rows(agent, messages, start, batch_messages, rows):
         if id(message) in positions:
             voice_row(store, turn_id, positions[id(message)], row)
             message["display_metadata"] = row["display_metadata"]
-
