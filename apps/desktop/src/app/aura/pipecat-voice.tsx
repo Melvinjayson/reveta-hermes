@@ -139,7 +139,7 @@ export function AuraPipecatVoice(props: Props) {
       .finally(() => { submitting.current = false })
   }, [active, pending, props.busy])
 
-   
+
   useEffect(() => {
     const stream = reply.current
 
