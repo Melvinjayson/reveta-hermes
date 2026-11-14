@@ -31,26 +31,35 @@ export function AuraPipecatVoice(props: Props) {
   const submitting = useRef(false)
   const reply = useRef<{ turn: string; offsets: Map<number, number>; done: Set<number> } | null>(null)
   const receipts = useRef(new Map<string, VoiceEvent>())
-  const owner = useRef(props.sessionId)
+
+  const owner = useRef({ sessionId: props.sessionId, gateway: props.gateway, busy: props.busy,
+    connectionId: scope.connectionId ?? null, profile: scope.profile ?? null })
+
   const acceptedSession = useRef(props.sessionId)
 
   const record = (event: VoiceEvent) => {
-    const { gateway } = current.current
-    const sessionId = current.current.sessionId ?? acceptedSession.current
+    const { gateway } = owner.current
+    const sessionId = acceptedSession.current
 
     if (!gateway || !sessionId || !event.turn_id) { return }
     void gateway.request('session.voice.record', { session_id: sessionId, turn_id: event.turn_id,
       message_index: event.message_index ?? 0, text: event.text ?? '', interrupted: Boolean(event.type === 'interrupted' || event.interrupted)
-    }).catch(() => { setStatus('Playback receipt pending') })
+    }).catch(() => {
+      if (owner.current.gateway === gateway && acceptedSession.current === sessionId) { setStatus('Playback receipt pending') }
+    })
   }
 
-  const interrupt = () => {
-    const { gateway, busy } = current.current
-    const sessionId = current.current.sessionId ?? acceptedSession.current
+  const interrupt = (busy = current.current.busy) => {
+    const { gateway } = owner.current
+    const sessionId = acceptedSession.current
 
     if (busy && gateway && sessionId) {
       void gateway.request('session.interrupt', { session_id: sessionId, preserve_running_tools: true })
-        .catch(() => { setStatus('Safe interruption unavailable'); setPending([]) })
+        .catch(() => {
+          if (owner.current.gateway === gateway && acceptedSession.current === sessionId) {
+            setStatus('Safe interruption unavailable'); setPending([])
+          }
+        })
     }
 
     const turn = reply.current?.turn
@@ -71,8 +80,8 @@ export function AuraPipecatVoice(props: Props) {
     reply.current = null
   }
 
-  const stop = () => {
-    interrupt()
+  const stop = (busy?: boolean) => {
+    interrupt(busy)
     voice.current?.stop()
     voice.current = null
     setActive(false)
@@ -82,12 +91,19 @@ export function AuraPipecatVoice(props: Props) {
 
   // eslint-disable-next-line no-restricted-syntax -- conversation ownership, not an atom mirror
   useEffect(() => {
-    if (owner.current && owner.current !== props.sessionId) { stop() }
-    owner.current = props.sessionId
-    acceptedSession.current = props.sessionId
+    const previous = owner.current
+
+    const changed = Boolean(previous.sessionId && previous.sessionId !== props.sessionId) ||
+      previous.connectionId !== (scope.connectionId ?? null) || previous.profile !== (scope.profile ?? null)
+
+    if (changed) { stop(previous.busy) }
+    owner.current = { sessionId: props.sessionId, gateway: props.gateway, busy: props.busy,
+      connectionId: scope.connectionId ?? null, profile: scope.profile ?? null }
+
+    if (props.sessionId || changed) { acceptedSession.current = props.sessionId }
 
     if (props.sessionId) { voice.current?.adopt(props.sessionId) }
-  }, [props.sessionId])
+  }, [props.sessionId, props.gateway, props.busy, scope.connectionId, scope.profile])
   useEffect(() => () => { voice.current?.stop() }, [])
 
   const start = async () => {
@@ -114,11 +130,18 @@ export function AuraPipecatVoice(props: Props) {
       if (event.type === 'audio') { setStatus('Speaking') }
 
       if (event.type === 'listening' || event.type === 'ready') { setStatus('Listening') }
-    }, () => { interrupt(); setActive(false); setFallback(true) })
+    }, () => {
+      if (voice.current !== client) { return }
+      interrupt(); setActive(false); setFallback(true)
+    })
 
     voice.current = client
 
-    try { await client.start() } catch { client.stop(); setActive(false); setFallback(true) }
+    try { await client.start() } catch {
+      client.stop()
+
+      if (voice.current === client) { setActive(false); setFallback(true) }
+    }
   }
 
   // eslint-disable-next-line no-restricted-syntax -- single-flight final admission, not an atom mirror
