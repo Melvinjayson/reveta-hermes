@@ -15,6 +15,8 @@ import { $currentModel, $gatewayState, $sessions } from '@/store/session'
 import { useTheme } from '@/themes'
 
 import { AuraConversationCards } from './conversation-cards'
+import { AuraConversationRow } from './conversation-row'
+import { AuraModelSettings } from './model-settings'
 import { AuraContinueLater, AuraReadiness } from './readiness'
 import { auraSignOut } from './sign-out'
 
@@ -148,18 +150,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
               <option value="system">Follow device</option>
             </select>
           </label>
-          <h2>Model connection</h2>
-          <p>
-            {currentModel !== 'aura-not-connected' && inferenceStatus?.ready
-              ? 'Your workspace is ready to reply.'
-              : 'Aura can’t reply yet. A model still needs to be connected.'}
-          </p>
-          <p>
-            Your workspace operator connects OpenRouter free models first, then Gemini’s free tier, using environment
-            variables. Keys are never entered in chat.
-          </p>
-          <p>Anthropic is disabled. Enabling paid models requires an enforced spending cap.</p>
-          <p>Voice is coming soon.</p>
+          <AuraModelSettings />
           <p>Aura by Reveta</p>
         </section>
       ) : (
@@ -184,17 +175,16 @@ export function AuraShell({ actions, children }: AuraShellProps) {
                 .filter(s => conversationGroup(s.last_active || s.started_at) === group)
                 .filter(s => sessionTitle(s).toLowerCase().includes(query.toLowerCase()))
                 .map(s => (
-                  <button
+                  <AuraConversationRow
                     key={s.id}
-                    onClick={() => {
+                    onDelete={() => actions.onDeleteSession(s.id)}
+                    onOpen={() => {
                       actions.onResumeSession(s.id, s)
                       setResumed(true)
                       close()
                     }}
-                    type="button"
-                  >
-                    {sessionTitle(s)}
-                  </button>
+                    title={sessionTitle(s)}
+                  />
                 ))}
             </section>
           ))}

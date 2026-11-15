@@ -1158,6 +1158,11 @@ def _status_429(c: _Ctx) -> Verdict:
     # this handler always returns, so _by_error_code never sees the code.
     if c.code in _BILLING_ERROR_CODES:
         return _V_BILLING
+    # Google's per-day quota (free tier: a few dozen requests a day) resets
+    # hours later; retrying it only hangs the turn for minutes. Per-minute
+    # 429s from the same API stay retryable below.
+    if _is_google_daily_quota(c.body):
+        return _V_BILLING
     # Z.AI/Zhipu reuse 429 for server-wide overload: back off on the same
     # key instead of burning the pool (#14038).
     if any(p in c.msg for p in _OVERLOADED_PATTERNS):
@@ -1456,6 +1461,18 @@ def _is_codex_masked_replay_rejection(c: _Ctx) -> bool:
     return (c.code == "invalid_prompt" and body_msg == _CODEX_MASKED_REPLAY_MESSAGE) or (
         c.msg.strip() == f"invalid_prompt: {_CODEX_MASKED_REPLAY_MESSAGE}"
     )
+
+
+def _is_google_daily_quota(body: Any) -> bool:
+    """A Google ``QuotaFailure`` naming a per-day quota (``...PerDay...``)."""
+    details = _error_obj(body).get("details")
+    for detail in details if isinstance(details, list) else ():
+        if not (isinstance(detail, dict) and str(detail.get("@type", "")).endswith("google.rpc.QuotaFailure")):
+            continue
+        for v in detail.get("violations") or ():
+            if isinstance(v, dict) and "perday" in str(v.get("quotaId", "")).lower():
+                return True
+    return False
 
 
 def _error_obj(body: Any) -> dict:

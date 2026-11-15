@@ -808,6 +808,7 @@ from hermes_cli.web_routers import (
     webapp_access as _webapp_access_routes,
     ui_preferences as _ui_preferences_routes,
     reveta as _reveta_routes,
+    aura as _aura_routes,
     aura_companion as _aura_companion_routes,
 )
 
@@ -853,6 +854,7 @@ app.include_router(_dashboard_ui_routes.router)
 app.include_router(_webapp_routes.router)
 app.include_router(_shared_metrics_routes.router)
 app.include_router(_reveta_routes.router)
+app.include_router(_aura_routes.router)
 app.include_router(_aura_companion_routes.router)
 app.include_router(_delegation_routes.router)
 app.include_router(_webapp_access_routes.router, dependencies=[_Depends(_route_on("web_access"))])

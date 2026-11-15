@@ -2,7 +2,7 @@
  "counts": {
   "http": {
    "keep-host-wide": 1,
-   "undecided": 331
+   "undecided": 334
   },
   "rpc": {
    "authority": 106,
@@ -10,7 +10,7 @@
    "undecided": 181
   },
   "websocket": {
-   "undecided": 9
+   "undecided": 10
   }
  },
  "decisions": [
@@ -49,6 +49,8 @@
   {"current_path": "hermes_cli.web_routers.audio:get_elevenlabs_voices", "decision": "undecided", "handler": "GET /api/audio/elevenlabs/voices", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:get_client_voice_config", "decision": "undecided", "handler": "GET /api/audio/voice-config", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:get_voice_live_status", "decision": "undecided", "handler": "GET /api/audio/voice-live/status", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:aura_provider", "decision": "undecided", "handler": "GET /api/aura/provider", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:aura_voice", "decision": "undecided", "handler": "GET /api/aura/voice", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.dashboard_auth.routes:api_auth_me", "decision": "undecided", "handler": "GET /api/auth/me", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.dashboard_auth.routes:api_auth_providers", "decision": "undecided", "handler": "GET /api/auth/providers", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.chat_workspaces:get_chat_workspaces", "decision": "undecided", "handler": "GET /api/chat/workspaces", "kind": "http", "ref": ""},
@@ -322,6 +324,7 @@
   {"current_path": "hermes_cli.dashboard_auth.routes:auth_native_token", "decision": "undecided", "handler": "POST /auth/native/token", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.dashboard_auth.routes:auth_password_login", "decision": "undecided", "handler": "POST /auth/password-login", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.webapp:redeem_window_ticket", "decision": "undecided", "handler": "POST /webapp/window-session", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:set_aura_provider", "decision": "undecided", "handler": "PUT /api/aura/provider", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.config_env:update_config", "decision": "undecided", "handler": "PUT /api/config", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.analytics:update_config_raw", "decision": "undecided", "handler": "PUT /api/config/raw", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.cron:update_cron_job", "decision": "undecided", "handler": "PUT /api/cron/jobs/{job_id}", "kind": "http", "ref": ""},
@@ -356,6 +359,7 @@
   {"current_path": "hermes_cli.web_routers.ops:set_webhook_enabled", "decision": "undecided", "handler": "PUT /api/webhooks/{name}/enabled", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:speak_stream_ws", "decision": "undecided", "handler": "WS /api/audio/speak-stream", "kind": "websocket", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:transcribe_stream_ws", "decision": "undecided", "handler": "WS /api/audio/transcribe-stream", "kind": "websocket", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:aura_voice_call", "decision": "undecided", "handler": "WS /api/audio/voice-call", "kind": "websocket", "ref": ""},
   {"current_path": "hermes_cli.web_routers.chat_ws:console_ws", "decision": "undecided", "handler": "WS /api/console", "kind": "websocket", "ref": ""},
   {"current_path": "hermes_cli.web_routers.display:display_ws", "decision": "undecided", "handler": "WS /api/display/ws", "kind": "websocket", "ref": ""},
   {"current_path": "hermes_cli.web_routers.chat_ws:events_ws", "decision": "undecided", "handler": "WS /api/events", "kind": "websocket", "ref": ""},

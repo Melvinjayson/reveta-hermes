@@ -1,4 +1,5 @@
 import { useStore } from '@nanostores/react'
+import { Mic, MicOff, Square } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useComposerScope } from '@/app/chat/composer/scope'
@@ -201,26 +202,65 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     window.speechSynthesis.speak(utterance)
   }, [active, busy, listen, messages, pending])
 
+  const label = active ? (busy ? 'Thinking' : status) : 'Voice off'
+
   return (
-    <div className="aura-browser-voice" data-aura-voice={active ? busy ? 'Thinking' : status : 'off'}>
-      <button disabled={disabled || !supported} onClick={active ? stop : start} type="button">
-        {active ? 'Stop voice' : 'Start voice'}
+    <div aria-label="Voice" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+      <button
+        aria-describedby="aura-browser-voice-hint"
+        aria-label={active ? 'Stop voice' : 'Start voice'}
+        aria-pressed={active}
+        className="aura-voice-toggle"
+        disabled={disabled || !supported}
+        onClick={active ? stop : start}
+        title={active ? 'Stop voice' : 'Start voice'}
+        type="button"
+      >
+        {active ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
+        <span aria-hidden="true" className="aura-voice-dot" />
+        <span className="aura-voice-label">{active ? label : 'Voice'}</span>
       </button>
-      {active && <button onClick={() => {
-        const wasSpeaking = speaking.current
-        speechEpoch.current++
-        speaking.current = false
-        window.speechSynthesis.cancel()
+      {active && (
+        <button
+          aria-label="Interrupt and listen"
+          className="aura-voice-icon"
+          onClick={() => {
+            const wasSpeaking = speaking.current
+            speechEpoch.current++
+            speaking.current = false
+            window.speechSynthesis.cancel()
 
-        if (busy) { void onInterrupt() }
+            if (busy) {
+              void onInterrupt()
+            }
 
-        if (wasSpeaking) { listen() }
-      }} type="button">Interrupt and listen</button>}
-      <small>Browser voice · turn-based. Full duplex unavailable. Tap Interrupt to barge in.</small>
-      {!supported && <p>Speech recognition unavailable in this browser. You can still type.</p>}
-      <p aria-live="polite" role="status">{active ? busy ? 'Thinking' : status : 'Voice off'}</p>
-      {transcript && <p aria-label="Live transcript">{transcript}</p>}
-      {error && <p role="alert">{error}</p>}
+            if (wasSpeaking) {
+              listen()
+            }
+          }}
+          title="Interrupt and listen"
+          type="button"
+        >
+          <Square aria-hidden="true" size={16} />
+        </button>
+      )}
+      <span className="sr-only" id="aura-browser-voice-hint">
+        Browser voice, turn-based. Tap Interrupt to cut in.
+      </span>
+      {!supported && <p className="aura-voice-error">Voice isn’t available in this browser. You can still type.</p>}
+      <span aria-live="polite" className="sr-only" role="status">
+        {label}
+      </span>
+      {transcript && (
+        <p aria-label="Live transcript" className="aura-voice-heard">
+          {transcript}
+        </p>
+      )}
+      {error && (
+        <p className="aura-voice-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

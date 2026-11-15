@@ -17,8 +17,9 @@ MARKER = "AURA_FREE_ONLY_REFUSED"
 
 
 class FreeOnlyRefused(PermissionError):
-    def __init__(self):
-        super().__init__(f"{MARKER}: {REFUSAL}")
+    def __init__(self, user_message=REFUSAL):
+        self.user_message = user_message
+        super().__init__(f"{MARKER}: {user_message}")
 
 
 def settings():
@@ -71,6 +72,34 @@ def require_tool(name, args):
         return True
     except Exception as exc:
         raise FreeOnlyRefused() from exc
+
+
+def advertised_tool(name):
+    return name in advertised_tools([name])
+
+
+def advertised_tools(names):
+    """The subset of *names* Aura may offer to the model at all (config is read once).
+
+    Outside Aura (``aura.enabled`` not True) every tool is offered as before. Inside Aura,
+    a tool the free-only gate can never run (not Aura-owned, no free_tools entry) is not
+    offered: the model otherwise spends a turn on it and the user sees "This would cost
+    money" for a renderer or catalog tool that costs nothing but is not attested. Dispatch
+    still goes through require_tool; this only keeps refused-by-construction tools out.
+    """
+    from tools.aura_product import available, owned_tool
+    try:
+        aura = available()
+    except Exception:
+        aura = False  # unreadable config is not Aura mode; dispatch still fails closed there
+    if not aura:
+        return set(names)
+    try:
+        entries = settings().get("free_tools", [])
+        attested = {e.get("name") for e in entries if isinstance(e, dict)} if isinstance(entries, list) else set()
+        return {name for name in names if owned_tool(name) or name in attested}
+    except Exception:
+        return set()
 
 
 def _declared_paid_tool(name):
@@ -150,9 +179,30 @@ def _without_routing_overrides(provider, request):
     }
 
 
-def require_model(provider, endpoint, request, *, api_mode="chat_completions"):
+def _paid_route_request(config, provider, endpoint, request, chat):
+    """The owner's capped paid route (tools/aura_provider.py), or None when *request* is not it."""
+    from tools.aura_provider import SpendCapReached, check, matches, route
+
+    try:
+        paid = route({"aura": config})
+    except ValueError:
+        return None
+    if not matches(paid, provider, endpoint, request.get("model")):
+        return None
+    try:
+        check(paid, chat)
+    except SpendCapReached as exc:
+        raise FreeOnlyRefused(str(exc)) from exc
+    return {**request}
+
+
+def require_model(provider, endpoint, request, *, api_mode="chat_completions", chat=None):
     """Check the final SDK payload; return a copy with provider fallbacks disabled."""
     config = settings()
+    if isinstance(request, dict) and api_mode in {"chat_completions", "codex_responses", "anthropic_messages"}:
+        paid = _paid_route_request(config, provider, endpoint, request, chat)
+        if paid is not None:
+            return paid
     try:
         model, endpoint = _model_identity(provider, endpoint, request, api_mode)
         matches = [
@@ -170,7 +220,8 @@ def require_model(provider, endpoint, request, *, api_mode="chat_completions"):
 
 def require_agent_model(agent, request):
     return require_model(
-        agent.provider, agent.base_url, request, api_mode=agent.api_mode
+        agent.provider, agent.base_url, request, api_mode=agent.api_mode,
+        chat=getattr(agent, "session_id", None),
     )
 
 

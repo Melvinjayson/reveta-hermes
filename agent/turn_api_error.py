@@ -79,11 +79,12 @@ def handle_api_error(
     if agent.thinking_callback:
         agent.thinking_callback("")
 
-    from tools.aura_free_only import FreeOnlyRefused, REFUSAL
+    from tools.aura_free_only import FreeOnlyRefused
     if isinstance(api_error, FreeOnlyRefused):
+        refusal = api_error.user_message
         return _verdict("return", {
-            "final_response": REFUSAL, "messages": messages, "api_calls": api_call_count,
-            "completed": False, "failed": True, "error": REFUSAL,
+            "final_response": refusal, "messages": messages, "api_calls": api_call_count,
+            "completed": False, "failed": True, "error": refusal,
             "failure_reason": "aura_free_only_refused", "failure_retryable": False,
         })
 

@@ -342,7 +342,7 @@ async def companion_ask(request: Request):
         content = await asyncio.to_thread(_call_model, build_messages(body), body.page.intent)
     except PermissionError:
         return JSONResponse({"error": "Aura's free-only model policy refused this request."}, status_code=503)
-    except Exception as exc:
+    except Exception as exc:  # health: allow BLE001 -- model boundary: any provider failure becomes a 502; only the class is logged because the message can echo page text
         # Type only: the message can echo page text back into the server log.
         logger.warning("aura companion model call failed: %s", type(exc).__name__)
         return JSONResponse({"error": "Aura's model didn't answer. Try again."}, status_code=502)
