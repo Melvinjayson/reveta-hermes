@@ -34,7 +34,19 @@ Updated 14 November 2026, about 11 PM Dublin. Replace this file at the end of ev
 | Aura identity: `AURA_SOUL` written to `$HERMES_HOME/SOUL.md` on `aura_config.py --write` (replaces stock Hermes soul, keeps an owner-edited one); system prompt carries goal, file and no-internal-paths rules | `scripts/reveta/aura_config.py`, `docs/aura/ATTRIBUTION.md` | pytest: real `build_system_prompt` for a fresh agent starts "You are Aura…", contains Reveta OS/Xhunt/Venus, no "You are Hermes Agent" |
 | Workspace EACCES (phone test 11:36 PM): `aura-workspace` created by root at start → chowned to hermes each boot and pre-created as hermes | `docker/stage2-hook.sh` | pytest runs the hook's own functions with chown/find shims. **No Docker build or live check.** |
 
-Totals on this branch: Vitest 738/738 (aura + composer), pytest 26/27 in the touched suites (the 1 failure, `test_keygen_readonly_env_degrades_to_warning_not_boot_abort`, fails identically without these changes on this root VM).
+Second commit (15 Nov ~12:30 AM), from the live voice preview reports:
+
+| Change | Where | Evidence |
+| --- | --- | --- |
+| Text-to-speech gap: speech used to start only after the whole turn settled. Now each finished sentence is sent while the reply streams; the first chunk is short (120 chars) so audio starts sooner; nothing is repeated; cutting in stops the rest of a streaming reply | `voice-call.tsx` (`speakableSoFar`) | Vitest streaming + cut-in tests. Latency **not measured** live |
+| Gemini TTS `HTTP 429 exceeded your current quota` (seen live): after a quota error the server stops calling the provider for 60 s and hands each sentence back as `speech_failed`; the app speaks it with the device voice | `tools/aura_voice_call.py` | pytest `test_aura_voice_quota.py`; no live run |
+| Aura's own speech heard as the user (reported: it echoed deploy status, offered to "monitor the inspection", suggested pre-routing): transcripts that mostly repeat what Aura said in the last 30 s are dropped; device speech is cut only by a real transcript, not by any detected sound | `voice-call.tsx` (`isEchoOfAura`) | Vitest. **Cause unverified:** consistent with speaker echo reaching the mic; silence detection not proven at fault |
+| Delete conversations: trash button per row in Aura's conversation list, inline "Delete …? This can't be undone" confirm, then the app's existing `onDeleteSession` → `removeSession` → `DELETE /api/sessions/{id}` (owner-resolved, idempotent, restores the row on failure). No new endpoint | `conversation-row.tsx`, `shell.tsx` | Vitest with synthetic rows only; **no real conversation deleted** |
+| Progress steps: refused steps now say why (server policy text) and "Nothing was charged." for the free-only block; the "Inputs and result content are hidden…" filler is gone; the busy line names the running step | `steps.ts`, `step-history.tsx`, `conversation-cards.tsx` | Vitest |
+
+Totals on this branch: Vitest 745/745 (107 files, aura + composer); pytest 13/13 in the Aura suites touched (`test_aura_config`, `test_aura_workspace_ownership`, `test_aura_voice_quota`). Earlier: `test_keygen_readonly_env_degrades_to_warning_not_boot_abort` fails identically without these changes on this root VM.
+
+**Merge conflict to resolve at integration:** PR #11 (`aura/pipecat-voice`) also edits `browser-voice.tsx`; `git merge-tree` shows a content conflict there. Nothing else overlaps.
 
 **Overlap warning:** while this ran, tasks "Fix Aura quota hangs, model selection and identity" and "Prioritize Aura empathic conversational intelligence" were also running and may touch `aura_config.py` prompts and goal behaviour. Merge one at a time and re-run the tests above after each.
 
@@ -42,7 +54,12 @@ Totals on this branch: Vitest 738/738 (aura + composer), pytest 26/27 in the tou
 
 - **Uploaded PDFs are not reachable by Aura's tools.** Uploads are staged to the profile `attachments/` dir, but Aura's toolsets are only `aura` + `todo`, `aura_file` reads only `aura-workspace/<conversation>/`, and the image has no `pdftotext`. Local extraction already exists (`tools/read_extract.py`, anydoc + pypdf in the image). Fix: stage Aura uploads into the conversation workspace (or let `aura_file read` open this conversation's own attachments, never another user's), then phone-test. Until then the prompt tells Aura to say plainly it can't open uploads yet, never "paid service".
 - Goals are per device (localStorage), not synced across devices.
-- Voice settle delay (1.2 s) and device-voice fallback are untested on a real phone.
+- Voice settle delay (1.2 s), streamed speech, echo filter and device-voice fallback are untested on a real phone.
+- **Why tools were refused ("This would cost money"):** `tools/aura_free_only.py` blocks any non-Aura tool and paid routes while the free-only policy is on, so workspace commands outside `aura_*` are refused by design. Whether that should change is a model/policy decision for the quota/model task, not this UI branch.
+- **Status parroting / role confusion** in replies is the conversational-intelligence task's prompt work; this branch only stops echoed speech being sent as a user turn.
+- **Composer text box and voice input feel unintuitive (user, 15 Nov):** only the voice pill was reworked here; the text box itself is unchanged and still needs a pass.
+- **"The two users are failing"** (user, unclear). A later message suggests it meant the two refused steps in the progress list; not confirmed.
+- Integrated release: this branch, quota/model/identity task and conversational-intelligence task should land as one release candidate on `aura/working-product-20261111` with one combined test run, then one deploy.
 
 ## Not in this deploy (next, in order)
 
