@@ -97,6 +97,7 @@
     "@hermes/shared": "workspace:*",
     "@icons-pack/react-simple-icons": "13.15.1",
     "@lezer/highlight": "1.2.5",
+    "@mlc-ai/web-llm": "0.2.87",
     "@nanostores/react": "1.1.0",
     "@novnc/novnc": "1.7.0",
     "@nous-research/ui": "0.19.1",

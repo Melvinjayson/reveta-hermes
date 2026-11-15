@@ -1,0 +1,23 @@
+/* On-device conversation prototype; only rendered when ?aura-local=1 opted this browser in. */
+.aura-local { display: flex; flex-direction: column; gap: 6px; font-size: 13px; min-width: 0; }
+.aura-local button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 12px; border: 1px solid var(--aura-line); border-radius: 999px; background: transparent; color: var(--aura-ink); touch-action: manipulation; }
+.aura-local button:focus-visible, .aura-local input:focus-visible, .aura-local textarea:focus-visible { outline: 2px solid var(--aura-link); outline-offset: 2px; }
+.aura-local button:disabled { opacity: 0.5; cursor: default; }
+.aura-local .aura-local-toggle { align-self: flex-start; }
+.aura-local .aura-local-toggle[aria-pressed='true'] { border-color: var(--aura-link); }
+.aura-local-panel { display: flex; flex-direction: column; gap: 8px; max-height: 55vh; overflow-y: auto; padding: 12px; border: 1px solid var(--aura-line); border-radius: 16px; }
+.aura-local-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aura-local-panel p { margin: 0; overflow-wrap: anywhere; }
+.aura-local-panel div { display: flex; flex-wrap: wrap; gap: 6px; }
+.aura-local-consent, .aura-local-loading, .aura-local-handoff { flex-direction: column; }
+.aura-local-loading progress { width: 100%; }
+.aura-local-turns { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.aura-local-turns li { max-width: 88%; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--aura-line); white-space: pre-wrap; overflow-wrap: anywhere; }
+.aura-local-turns li[data-role='user'] { align-self: flex-end; }
+.aura-local-panel form { display: flex; gap: 6px; }
+.aura-local-panel input, .aura-local-panel textarea { flex: 1; min-height: 44px; min-width: 0; padding: 8px 12px; border: 1px solid var(--aura-line); border-radius: 12px; background: transparent; color: var(--aura-ink); font: inherit; }
+.aura-local-turns li .aura-origin { display: block; width: fit-content; margin-top: 4px; }
+.aura-local-warnings { margin: 0; padding-left: 18px; }
+.aura-origin { display: inline-block; padding: 1px 8px; border: 1px solid var(--aura-line); border-radius: 999px; font-size: 11px; line-height: 16px; color: var(--aura-ink); opacity: 0.75; }
+.aura-origin[data-origin='paid'] { border-color: var(--aura-link); opacity: 1; }
+.aura-local-handoff label { display: flex; flex-direction: column; gap: 4px; }

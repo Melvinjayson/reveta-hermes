@@ -15,6 +15,7 @@ import { useInRouterContext, useNavigate } from 'react-router'
 
 import { AuraMessageSources } from '@/app/aura/message-sources'
 import { AuraContinueLater } from '@/app/aura/readiness'
+import { AuraServerReplyOrigin } from '@/app/aura/reply-origin'
 import {
   type ComposerTarget,
   requestComposerInsert,
@@ -349,6 +350,11 @@ const AssistantMessageBody: FC<AssistantMessageProps & { collapsedNotice?: null 
             </MessagePrimitive.Error>
           </div>
           {isBrowserHostedDesktop() && <AuraMessageSources />}
+          {isBrowserHostedDesktop() && (
+            <div className="px-(--message-text-indent) pt-0.5">
+              <AuraServerReplyOrigin />
+            </div>
+          )}
           <MessageTimelineTimestamp className="px-(--message-text-indent) pt-0.5" suppressIfDuplicatePart />
           {/* Sealed interims skip the footer so a tool-heavy turn doesn't grow a
               copy bar per paragraph (72dd01c553) — EXCEPT when the interim is the
