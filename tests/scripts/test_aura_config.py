@@ -135,3 +135,11 @@ def test_fresh_conversation_prompt_is_aura_with_reveta_context(tmp_path, monkeyp
         assert context in prompt
     assert "Proposed goal: <one sentence outcome>" in prompt
     assert 'paid service' in prompt and 'Never show the user server paths' in prompt
+
+
+def test_aura_skips_the_python_toolchain_probe_that_delays_the_first_turn():
+    """Live: ~13 s before the first model call of a new chat. The probe's pip/python subprocesses
+    take ~9 s even on an 8-core VM, and the first prompt build waits up to 10 s for them."""
+    from scripts.reveta.aura_config import aura_settings
+
+    assert aura_settings({'HERMES_HOME': '/tmp/aura'})['agent']['environment_probe'] is False

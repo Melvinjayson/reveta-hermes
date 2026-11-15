@@ -151,6 +151,12 @@ def legacy_bot_chat_launch(row, params, api_mode, config):
     return {**params, 'follow_profile_config': True}, api_mode
 
 
+def aura_chats_follow(config):
+    """Aura deployments (``aura.enabled``): every chat follows the model chosen in Aura Settings."""
+    aura = config.get('aura') if isinstance(config, dict) else None
+    return isinstance(aura, dict) and aura.get('enabled') is True
+
+
 def follow_bot_chat(authority, session_id, policy, live, picked=()):
     """*policy* following its profile when the session is a Bot Chat an earlier build committed
     frozen (its delivery door, a CLI titled create, an adoption), else *policy* itself.
@@ -170,7 +176,7 @@ def follow_bot_chat(authority, session_id, policy, live, picked=()):
         return policy
     db = authority.db
     owner = db.get_session(session_id) or {}
-    if not bot_chat_row(owner):
+    if not bot_chat_row(owner) and not aura_chats_follow(live):
         # Compression can carry the canonical title to a later segment of the same conversation.
         titled = db.get_session_by_title('Bot Chat')
         if titled is None:
