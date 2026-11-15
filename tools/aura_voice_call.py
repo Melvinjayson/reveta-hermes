@@ -332,7 +332,10 @@ def _pipeline_classes():
                 try:
                     pcm = await self._speech_api.synthesize(text)
                 except Exception as exc:
-                    await self._tell({"type": "error", "message": f"Speech synthesis failed: {exc}"})
+                    # Hand the text back so the app can say it with the device's own voice (free quota runs out fast).
+                    if epoch == self._epoch:
+                        await self._tell({"type": "speech_failed", "text": text,
+                                          "message": f"Speech synthesis failed: {exc}"[:300]})
                     continue
                 if epoch != self._epoch or not pcm:
                     continue  # interrupted while synthesizing: never speak a stale reply

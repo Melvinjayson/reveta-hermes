@@ -88,3 +88,50 @@ def test_write_creates_configured_workspace_in_fresh_home(tmp_path, monkeypatch,
     brief.write_text('# Existing brief', encoding='utf-8')
     assert aura_config.main() == 0
     assert brief.read_text(encoding='utf-8-sig') == '# Existing brief'
+    assert (home / 'SOUL.md').read_text(encoding='utf-8') == aura_config.AURA_SOUL
+
+
+def test_soul_replaces_stock_hermes_identity_but_keeps_an_owner_soul(tmp_path):
+    from hermes_cli.default_soul import DEFAULT_SOUL_MD
+    from scripts.reveta.aura_config import AURA_SOUL, write_soul
+
+    soul = tmp_path / 'SOUL.md'
+    soul.write_text(DEFAULT_SOUL_MD, encoding='utf-8')  # what the image seeds on first boot
+    assert write_soul(tmp_path) is True
+    assert soul.read_text(encoding='utf-8') == AURA_SOUL
+    assert write_soul(tmp_path) is True  # idempotent on every boot
+    soul.write_text('You are Melvin\'s custom operator.', encoding='utf-8')
+    assert write_soul(tmp_path) is False
+    assert soul.read_text(encoding='utf-8') == 'You are Melvin\'s custom operator.'
+
+
+def test_fresh_conversation_prompt_is_aura_with_reveta_context(tmp_path, monkeypatch):
+    """Build the real system prompt for a brand-new agent the way a fresh chat does."""
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    from agent import prompt_builder
+    from agent.system_prompt import build_system_prompt
+    from hermes_cli.default_soul import DEFAULT_SOUL_MD
+    from scripts.reveta.aura_config import AURA_SYSTEM_PROMPT, write_soul
+
+    home = tmp_path / 'data'
+    home.mkdir()
+    (home / 'SOUL.md').write_text(DEFAULT_SOUL_MD, encoding='utf-8')
+    write_soul(home)
+    monkeypatch.setenv('HERMES_HOME', str(home))
+    prompt_builder.clear_skills_system_prompt_cache(clear_snapshot=False)
+    agent = SimpleNamespace(
+        load_soul_identity=True, skip_context_files=True, valid_tool_names=[], _task_completion_guidance=False,
+        _tool_use_enforcement=False, _environment_probe=False, _kanban_worker_guidance='', _memory_store=None,
+        _memory_manager=None, model='gemini-3.8-flash', provider='gemini', platform='', pass_session_id=False,
+        session_id='', _session_db=SimpleNamespace(db_path=home / 'state.db'))
+    with patch('agent.prompt_builder.build_environment_hints', return_value=''):
+        prompt = build_system_prompt(agent, system_message=AURA_SYSTEM_PROMPT)
+
+    assert prompt.startswith('You are Aura, the voice-first operator in Reveta')
+    assert 'You are Hermes Agent' not in prompt
+    for context in ('Reveta OS', 'Xhunt', 'Venus', 'founders'):
+        assert context in prompt
+    assert "Proposed goal: <one sentence outcome>" in prompt
+    assert 'paid service' in prompt and 'Never show the user server paths' in prompt

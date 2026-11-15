@@ -285,6 +285,13 @@ if [ -d "$HERMES_HOME/cron" ] && tree_has_non_hermes_owner "$HERMES_HOME/cron"; 
     chown_hermes_tree "$HERMES_HOME/cron"
 fi
 
+# Aura Zero: the Render start command runs scripts/reveta/aura_config.py as root before this hook, so it
+# creates $HERMES_HOME/aura-workspace root-owned and every per-conversation workspace mkdir then fails with
+# EACCES for the unprivileged runtime. Hand it to hermes on every boot (same warm-boot gate as cron/).
+if [ -d "$HERMES_HOME/aura-workspace" ] && tree_has_non_hermes_owner "$HERMES_HOME/aura-workspace"; then
+    chown_hermes_tree "$HERMES_HOME/aura-workspace"
+fi
+
 # Always ensure logs/gateways is hermes-owned (#45258). Formerly healed by
 # restartable gateway log/run chown — removed due to symlink TOCTOU
 # (CWE-59/367). The targeted data-volume chown above only runs when the
@@ -380,6 +387,7 @@ as_hermes mkdir -p \
     "$HERMES_HOME/skins" \
     "$HERMES_HOME/plans" \
     "$HERMES_HOME/workspace" \
+    "$HERMES_HOME/aura-workspace" \
     "$HERMES_HOME/home" \
     "$HERMES_HOME/pairing" \
     "$HERMES_HOME/platforms/pairing"
