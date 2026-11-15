@@ -59,3 +59,17 @@ Prompt size measured locally with the Aura config: system prompt ~9–10k chars 
 Tests: 328 passed in the touched and neighbouring suites (error classifier, follow-profile gateway suites, aura config, aura tools). `tests/agent/test_fallback_429_after_timeout.py::...after_timeout_recovery` fails here and on the base commit alike (pre-existing).
 
 Gemini **speech** 429 ("gemini-3.8-flash-lite text-to-speech HTTP 429") is handled on `aura/goal-intent-voice-ui` (cooldown + device voice), not here.
+
+### CI on PR #13 (00:45 AM)
+- Python lints fail **only on code from the #12 base** (commit 22dbc621de): `scripts/reveta/aura_config.py:66` (`read_text` encoding), `scripts/reveta/aura_voice_call_live.py` (UP031, `open()` without encoding), `tests/test_aura_workspace_ownership.py` (FURB167). None of the files this branch changes fail lint (ruff clean locally).
+- Repository guards fail on contributor attribution: unmapped emails `chineduogbalu@gmail.com`, `melvinjayson@users.noreply.github.com`, `noreply@sprites.dev` from earlier commits. The fix is `python3 scripts/audit_pr_attribution.py --fix`, committed once on the integration branch. Same failure as #9/#10.
+- Python test shards were still pending when this was written.
+
+### Next step for this lane (not started): configurable Aura model profiles
+User said "proceed" on the WebLLM findings (Reveta OS ledger A-018, commit 185ee01). Replace the hardcoded `PROVIDERS[...]["models"]` lists in `tools/aura_provider.py` (OpenAI: gpt-5.6-luna/terra/sol, gpt-4.1-mini; Anthropic: claude-sonnet-5, claude-haiku-4-5, claude-sonnet-4-6, claude-opus-5) with configurable **model profiles**. Each profile records role, provider, model, spending caps and last-validated date. Show them in `apps/desktop/src/app/aura/model-settings.tsx`.
+- A profile changes only after a recorded quality, latency, cost and tool-use check. There is no automatic upgrade to whichever model is called the best.
+- Keep the server-side caps (`MAX_CAP_USD`, per-user daily caps) and the existing-chat routing from this PR (Aura chats follow the Settings model).
+- Too large for this increment, which is already in review for the batched release. Do it on its own branch after #12/#13 merge.
+
+### Unclear report
+The user said "the two users are failing". It has not been interpreted or investigated, and no fix is claimed for it. Ask the user what it refers to.
