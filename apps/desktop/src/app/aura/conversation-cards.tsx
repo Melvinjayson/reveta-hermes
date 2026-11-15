@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
 import { requestComposerFocus } from '@/app/chat/composer/focus'
-import { chatMessageText } from '@/lib/chat-messages'
+import { type ChatMessage, chatMessageText } from '@/lib/chat-messages'
 import { $busy, $messages } from '@/store/session'
 
 import { AuraCard } from './card'
@@ -11,7 +11,7 @@ import { AuraFiles } from './files'
 import { $auraDismissedGoals, $auraGoalKey, $auraGoals, auraGoalProposal, dismissAuraGoal, saveAuraGoal } from './goals'
 import { auraSources } from './sources'
 import { AuraSteps } from './step-history'
-import { auraSteps } from './steps'
+import { type AuraStep, auraSteps } from './steps'
 
 interface AuraConversationCardsProps {
   resumed: boolean
@@ -44,6 +44,111 @@ function GoalEditor({ initial, onDone }: { initial: string; onDone: (text: null 
   )
 }
 
+function GoalProposal({ goalKey, proposal, onEdit }: { goalKey: string; proposal: string; onEdit: () => void }) {
+  return (
+    <div aria-label="Proposed goal" className="aura-goal-proposal" role="group">
+      <span className="aura-goal-proposal-label">Save as goal?</span>
+      <span className="aura-goal-proposal-text">{proposal}</span>
+      <button onClick={() => saveAuraGoal(goalKey, proposal)} type="button">
+        Save
+      </button>
+      <button onClick={onEdit} type="button">
+        Edit
+      </button>
+      <button aria-label="Not now" onClick={() => dismissAuraGoal(goalKey, proposal)} type="button">
+        Not now
+      </button>
+    </div>
+  )
+}
+
+function GoalRow({ goal, goalKey, onEdit }: { goal?: string; goalKey: null | string; onEdit: () => void }) {
+  return (
+    <div className="aura-goal-row">
+      <p>{goal ?? 'No goal saved. Aura will suggest one once your intent is clear, or you can set it yourself.'}</p>
+      {goalKey && (
+        <button onClick={onEdit} type="button">
+          {goal ? 'Edit goal' : 'Set a goal'}
+        </button>
+      )}
+      {goal && goalKey && (
+        <button onClick={() => saveAuraGoal(goalKey, '')} type="button">
+          Clear
+        </button>
+      )}
+    </div>
+  )
+}
+
+function ResumeCard({ goal, messages }: { goal?: string; messages: ChatMessage[] }) {
+  const lastReply = [...messages].reverse().find(message => message.role === 'assistant' && chatMessageText(message))
+
+  return (
+    <AuraCard kind="resume" onResume={() => requestComposerFocus()} title="Pick up where you left off">
+      {goal && (
+        <p>
+          <strong>Goal:</strong> {goal.slice(0, 160)}
+        </p>
+      )}
+      <p>
+        <strong>Last step:</strong> {lastReply ? chatMessageText(lastReply).slice(0, 180) : 'No reply yet.'}
+      </p>
+      <p>
+        <strong>Next step:</strong> Tell Aura what you’d like to continue or change.
+      </p>
+    </AuraCard>
+  )
+}
+
+function SourceList({ sources }: { sources: ReturnType<typeof auraSources> }) {
+  return (
+    <details className="aura-context-sources">
+      <summary>Sources in this conversation</summary>
+      {sources.map(([url, label]) => (
+        <AuraCard key={url} kind="source" title={label}>
+          <p>{new URL(url).hostname} · Date not provided</p>
+          <p>Referenced in Aura’s reply. Open the source to check the original.</p>
+          <a href={url} rel="noreferrer" target="_blank">
+            {new URL(url).hostname}
+          </a>
+        </AuraCard>
+      ))}
+    </details>
+  )
+}
+
+function contextCounts(steps: AuraStep[], sourceCount: number) {
+  const running = steps.filter(step => step.status === 'Running').length
+
+  return [
+    steps.length > 0 && `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}${running ? `, ${running} running` : ''}`,
+    sourceCount > 0 && `${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`
+  ].filter(Boolean)
+}
+
+function BusyStatus({ steps }: { steps: AuraStep[] }) {
+  return (
+    <p aria-live="polite" className="aura-context-status" role="status">
+      {steps.findLast(step => step.status === 'Running')?.label.concat('…') ?? 'Waiting for Aura’s response.'} You can
+      stop it below.
+    </p>
+  )
+}
+
+function panelTitle(resumed: boolean, goal?: string) {
+  if (resumed) {
+    return 'Pick up where you left off'
+  }
+
+  return goal ? 'Goal' : 'This chat'
+}
+
+function visibleProposal(messages: ChatMessage[], key: null | string, goal: string | undefined, dismissed: Record<string, string>) {
+  const candidate = auraGoalProposal(messages)
+
+  return key && !goal && candidate && dismissed[key] !== candidate ? candidate : null
+}
+
 export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   const messages = useStore($messages)
   const busy = useStore($busy)
@@ -58,19 +163,12 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   }
 
   const goal = key ? goals[key] : undefined
-  const candidate = auraGoalProposal(messages)
-  const proposal = key && !goal && candidate && dismissed[key] !== candidate ? candidate : null
+  const proposal = visibleProposal(messages, key, goal, dismissed)
   const sources = auraSources(messages.filter(message => message.role === 'assistant').map(chatMessageText).join('\n'))
   const steps = auraSteps(messages)
-  const running = steps.filter(step => step.status === 'Running').length
-  const lastReply = [...messages].reverse().find(message => message.role === 'assistant' && chatMessageText(message))
-
-  const counts = [
-    steps.length > 0 && `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}${running ? `, ${running} running` : ''}`,
-    sources.length > 0 && `${sources.length} ${sources.length === 1 ? 'source' : 'sources'}`
-  ].filter(Boolean)
-
+  const counts = contextCounts(steps, sources.length)
   const showPanel = Boolean(goal || steps.length || sources.length || resumed || editing)
+  const edit = () => setEditing(true)
 
   const finishEdit = (text: null | string) => {
     if (text && key) {
@@ -82,25 +180,11 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
 
   return (
     <div className="aura-context">
-      {proposal && !editing && (
-        <div aria-label="Proposed goal" className="aura-goal-proposal" role="group">
-          <span className="aura-goal-proposal-label">Save as goal?</span>
-          <span className="aura-goal-proposal-text">{proposal}</span>
-          <button onClick={() => saveAuraGoal(key!, proposal)} type="button">
-            Save
-          </button>
-          <button onClick={() => setEditing(true)} type="button">
-            Edit
-          </button>
-          <button aria-label="Not now" onClick={() => dismissAuraGoal(key!, proposal)} type="button">
-            Not now
-          </button>
-        </div>
-      )}
+      {proposal && key && !editing && <GoalProposal goalKey={key} onEdit={edit} proposal={proposal} />}
       {showPanel && (
         <details className="aura-context-panel" open={editing || undefined}>
           <summary>
-            <span>{resumed ? 'Pick up where you left off' : goal ? 'Goal' : 'This chat'}</span>
+            <span>{panelTitle(resumed, goal)}</span>
             {goal && <span className="aura-context-goal">{goal}</span>}
             {counts.length > 0 && <span className="aura-context-counts">{counts.join(' · ')}</span>}
             <ChevronDown aria-hidden="true" size={16} />
@@ -109,60 +193,16 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
             {editing ? (
               <GoalEditor initial={goal ?? proposal ?? ''} onDone={finishEdit} />
             ) : (
-              <div className="aura-goal-row">
-                <p>{goal ?? 'No goal saved. Aura will suggest one once your intent is clear, or you can set it yourself.'}</p>
-                {key && (
-                  <button onClick={() => setEditing(true)} type="button">
-                    {goal ? 'Edit goal' : 'Set a goal'}
-                  </button>
-                )}
-                {goal && key && (
-                  <button onClick={() => saveAuraGoal(key, '')} type="button">
-                    Clear
-                  </button>
-                )}
-              </div>
+              <GoalRow goal={goal} goalKey={key} onEdit={edit} />
             )}
-            {resumed && (
-              <AuraCard kind="resume" onResume={() => requestComposerFocus()} title="Pick up where you left off">
-                {goal && (
-                  <p>
-                    <strong>Goal:</strong> {goal.slice(0, 160)}
-                  </p>
-                )}
-                <p>
-                  <strong>Last step:</strong> {lastReply ? chatMessageText(lastReply).slice(0, 180) : 'No reply yet.'}
-                </p>
-                <p>
-                  <strong>Next step:</strong> Tell Aura what you’d like to continue or change.
-                </p>
-              </AuraCard>
-            )}
-            {sources.length > 0 && (
-              <details className="aura-context-sources">
-                <summary>Sources in this conversation</summary>
-                {sources.map(([url, label]) => (
-                  <AuraCard key={url} kind="source" title={label}>
-                    <p>{new URL(url).hostname} · Date not provided</p>
-                    <p>Referenced in Aura’s reply. Open the source to check the original.</p>
-                    <a href={url} rel="noreferrer" target="_blank">
-                      {new URL(url).hostname}
-                    </a>
-                  </AuraCard>
-                ))}
-              </details>
-            )}
+            {resumed && <ResumeCard goal={goal} messages={messages} />}
+            {sources.length > 0 && <SourceList sources={sources} />}
             <AuraSteps steps={steps} />
           </div>
         </details>
       )}
       <AuraFiles messages={messages} />
-      {busy && (
-        <p aria-live="polite" className="aura-context-status" role="status">
-          {steps.findLast(step => step.status === 'Running')?.label.concat('…') ?? 'Waiting for Aura’s response.'} You can
-          stop it below.
-        </p>
-      )}
+      {busy && <BusyStatus steps={steps} />}
     </div>
   )
 }

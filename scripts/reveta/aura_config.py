@@ -63,7 +63,7 @@ def write_soul(home: Path) -> bool:
     if soul.is_symlink():
         return False
     if soul.exists():
-        current = soul.read_text(encoding="utf-8", errors="replace").strip()
+        current = soul.read_text(encoding="utf-8-sig", errors="replace").strip()
         if current and current != AURA_SOUL.strip() and not current.startswith("You are Hermes Agent"):
             return False  # a customised soul is the owner's, not ours to replace
     soul.write_text(AURA_SOUL, encoding="utf-8")
