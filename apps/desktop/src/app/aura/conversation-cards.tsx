@@ -2,13 +2,21 @@ import { useStore } from '@nanostores/react'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 
-import { requestComposerFocus } from '@/app/chat/composer/focus'
+import { requestComposerFocus, requestComposerInsert, requestComposerSubmit } from '@/app/chat/composer/focus'
 import { chatMessageText } from '@/lib/chat-messages'
 import { $busy, $messages } from '@/store/session'
 
 import { AuraCard } from './card'
 import { AuraFiles } from './files'
-import { $auraDismissedGoals, $auraGoalKey, $auraGoals, auraGoalProposal, dismissAuraGoal, saveAuraGoal } from './goals'
+import {
+  $auraDismissedGoals,
+  $auraGoalKey,
+  $auraGoals,
+  auraGoalProposal,
+  auraReplyHints,
+  dismissAuraGoal,
+  saveAuraGoal
+} from './goals'
 import { auraSources } from './sources'
 import { AuraSteps } from './step-history'
 import { auraSteps } from './steps'
@@ -64,6 +72,15 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   const steps = auraSteps(messages)
   const running = steps.filter(step => step.status === 'Running').length
   const lastReply = [...messages].reverse().find(message => message.role === 'assistant' && chatMessageText(message))
+  const hints = auraReplyHints(messages, busy)
+
+  const sendReply = (text: string) => {
+    // Sends like a typed reply; if no composer is visible to take it, it is left in the text box instead.
+    if (!requestComposerSubmit(text)) {
+      requestComposerInsert(text, { mode: 'block' })
+      requestComposerFocus()
+    }
+  }
 
   const counts = [
     steps.length > 0 && `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}${running ? `, ${running} running` : ''}`,
@@ -95,6 +112,19 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
           <button aria-label="Not now" onClick={() => dismissAuraGoal(key!, proposal)} type="button">
             Not now
           </button>
+        </div>
+      )}
+      {hints.tag && (
+        <div aria-label="Quick replies" className="aura-quick-replies" role="group">
+          <span className="aura-ai-tag" title="Inferred from Aura’s reply">
+            <span aria-hidden="true">AI</span>
+            <span className="sr-only">Aura’s reply, inferred:</span> {hints.tag}
+          </span>
+          {hints.replies.map(reply => (
+            <button key={reply} onClick={() => sendReply(reply)} type="button">
+              {reply}
+            </button>
+          ))}
         </div>
       )}
       {showPanel && (
