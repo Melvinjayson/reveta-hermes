@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from tests.gateway.test_bot_chat_follows_profile import _frozen_bot_chat, _open, home  # noqa: F401
+from tests.gateway.test_bot_chat_follows_profile import _frozen_bot_chat, _open, home
 from tests.gateway.test_session_follow_profile_config import _owner, _route
 
 _AURA = {'aura': {'enabled': True}}
@@ -27,7 +27,7 @@ def _history(authority, session_id):
 
 
 @pytest.mark.asyncio
-async def test_new_aura_chat_follows_the_settings_model(home):  # noqa: F811
+async def test_new_aura_chat_follows_the_settings_model(home):
     _profile(home, 'gemini-model', 1, 'gemini-key')
     store, runner, authority, owner = _owner(home)
     runner._peek_session_state = lambda key: None
@@ -43,7 +43,7 @@ async def test_new_aura_chat_follows_the_settings_model(home):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_existing_aura_chat_moves_to_the_settings_model_on_open_and_keeps_history(home):  # noqa: F811
+async def test_existing_aura_chat_moves_to_the_settings_model_on_open_and_keeps_history(home):
     # An earlier build froze this chat on Gemini (created before aura.enabled marked new chats).
     _profile(home, 'gemini-model', 1, 'gemini-key', aura=False)
     store, runner, authority, owner = _owner(home)
@@ -65,7 +65,7 @@ async def test_existing_aura_chat_moves_to_the_settings_model_on_open_and_keeps_
 
 
 @pytest.mark.asyncio
-async def test_without_aura_an_ordinary_chat_keeps_its_model(home):  # noqa: F811
+async def test_without_aura_an_ordinary_chat_keeps_its_model(home):
     _profile(home, 'old-model', 1, 'old-key', aura=False)
     store, runner, authority, owner = _owner(home)
     runner._peek_session_state = lambda key: None
@@ -81,7 +81,7 @@ async def test_without_aura_an_ordinary_chat_keeps_its_model(home):  # noqa: F81
 
 
 @pytest.mark.asyncio
-async def test_an_explicit_frozen_choice_stays_frozen_under_aura(home):  # noqa: F811
+async def test_an_explicit_frozen_choice_stays_frozen_under_aura(home):
     _profile(home, 'old-model', 1, 'old-key')
     store, runner, authority, owner = _owner(home)
     runner._peek_session_state = lambda key: None
