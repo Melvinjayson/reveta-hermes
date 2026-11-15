@@ -13,6 +13,7 @@ from gateway.config import Platform, PlatformConfig
 from gateway.platforms.base import BasePlatformAdapter, SendResult
 from gateway.session import SessionSource
 from gateway.session_contract import CANONICAL_GATEWAY_PROTOCOL
+from gateway.session_local_migration import aura_chats_follow
 from hermes_state_runtime import RuntimeStoreError
 
 logger = logging.getLogger(__name__)
@@ -313,6 +314,9 @@ def stage_local_session(authority, actor, params, *, trusted_policy=None, truste
                 {**json.loads(policy.request_json), 'model_requested': raw_model, 'route_derived': derived},
                 sort_keys=True))
         marks = {LOCAL_DESKTOP_CHAT: True} if desktop_local and policy.source == 'gui' else {}
+        if aura_chats_follow(config) and 'follow_profile_config' not in sent:
+            # Aura: the model picked in Aura Settings runs every chat, including ones made before the pick.
+            marks[FOLLOW_ADOPTED] = True
         if policy.model is None:
             from hermes_cli.anon_auth import GUEST_MODEL
             policy = replace(policy, model=_resolve_gateway_model(policy.config()) or None)
