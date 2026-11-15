@@ -53,6 +53,19 @@ it('uses generic unknown names and never exposes arbitrary credential-bearing pa
   expect(screen.getByText('Success has not been confirmed.')).toBeTruthy()
 })
 
+it('shows why a policy refused a step and that nothing was charged, without a hidden-content filler', () => {
+  const cost = auraSteps(messages({ status: 'refused', error: "This would cost money, so I didn't run it.", aura_policy: true }))
+  expect(cost[0].facts).toContain('Nothing was charged.')
+
+  const approval = auraSteps(messages({ status: 'refused', aura_policy: true,
+    error: 'This action did not receive a valid single-use approval, so it did not run.' }))
+
+  const { container } = render(<AuraSteps steps={[...cost, ...approval]} />)
+  expect(container.textContent).toContain('did not receive a valid single-use approval')
+  expect(container.textContent).not.toContain('hidden to protect private information')
+  expect(auraSteps(messages({ status: 'refused', error: 'SECRET tool output' }))[0].facts).not.toContain('SECRET tool output')
+})
+
 it('does not manufacture steps from assistant prose or hidden content', () => {
   expect(auraSteps([{ id: 'x', role: 'assistant', parts: [{ type: 'text', text: 'I did it' }] }])).toEqual([])
   expect(auraSteps(messages({ exit_code: 0 }).map(message => ({ ...message, hidden: true })))).toEqual([])

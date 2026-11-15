@@ -159,7 +159,8 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
       <AuraFiles messages={messages} />
       {busy && (
         <p aria-live="polite" className="aura-context-status" role="status">
-          Waiting for Aura’s response. You can stop it below.
+          {steps.findLast(step => step.status === 'Running')?.label.concat('…') ?? 'Waiting for Aura’s response.'} You can
+          stop it below.
         </p>
       )}
     </div>

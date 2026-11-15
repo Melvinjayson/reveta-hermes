@@ -29,9 +29,22 @@ import json
 import logging
 import os
 import sys
+import time
 from typing import Any, Optional
 
 _log = logging.getLogger(__name__)
+
+# Seen live (14 Nov): "gemini-3.8-flash-lite text-to-speech HTTP 429 ... exceeded your current quota".
+SPEECH_QUOTA_COOLDOWN_S = 60.0
+
+
+class SpeechQuotaCooldown(RuntimeError):
+    pass
+
+
+def is_quota_error(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return "http 429" in text or "resource_exhausted" in text or "exceeded your current quota" in text
 
 # The Docker image installs Pipecat outside the sealed venv (see Dockerfile); append it LAST so
 # every package the venv already has wins over the copy pulled in for Pipecat.
@@ -326,13 +339,19 @@ def _pipeline_classes():
             await self.broadcast_interruption()
 
         async def _speak_loop(self):
+            cooldown_until = 0.0
             while True:
                 text = await self._speech.get()
                 epoch = self._epoch
                 try:
+                    if time.monotonic() < cooldown_until:
+                        raise SpeechQuotaCooldown("server voice is resting after a quota limit")
                     pcm = await self._speech_api.synthesize(text)
                 except Exception as exc:
-                    # Hand the text back so the app can say it with the device's own voice (free quota runs out fast).
+                    # Hand the text back so the app says it with the device's own voice. After a quota (429)
+                    # stop calling the provider for a while instead of failing every sentence.
+                    if is_quota_error(exc):
+                        cooldown_until = time.monotonic() + SPEECH_QUOTA_COOLDOWN_S
                     if epoch == self._epoch:
                         await self._tell({"type": "speech_failed", "text": text,
                                           "message": f"Speech synthesis failed: {exc}"[:300]})

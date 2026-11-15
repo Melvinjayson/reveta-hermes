@@ -37,6 +37,32 @@ type CallMessage =
 const MAX_RECONNECTS = 3
 /** Silence after the last phrase before your turn goes to Aura (on top of the server's 0.7 s segmenting). */
 export const TURN_SETTLE_MS = 1200
+const ECHO_WINDOW_MS = 30_000
+
+const words = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}\s']/gu, ' ').split(/\s+/).filter(Boolean)
+const pairs = (list: string[]) => list.slice(1).map((word, index) => `${list[index]} ${word}`)
+
+/** True when what the mic heard is mostly Aura's own recent speech coming back through the speaker. */
+export function isEchoOfAura(heard: string, spoken: string[]): boolean {
+  const heardPairs = pairs(words(heard))
+
+  if (heardPairs.length < 2) {
+    return false // too short to tell; a real "yes" or "stop" must get through
+  }
+
+  const spokenPairs = new Set(spoken.flatMap(text => pairs(words(text))))
+  const matched = heardPairs.filter(pair => spokenPairs.has(pair)).length
+
+  return matched / heardPairs.length >= 0.6
+}
+
+/** The part of a reply still being written that ends on a finished sentence. */
+export function speakableSoFar(text: string): string {
+  const ends = [...text.matchAll(/[.!?](?=\s)|\n/g)]
+  const end = ends.at(-1)
+
+  return end?.index === undefined ? '' : text.slice(0, end.index + 1)
+}
 
 /** Speech in chunks of whole sentences so the first words play while the rest synthesize. */
 export function speechChunks(text: string, size = 280): string[] {
@@ -120,12 +146,13 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
 
   const wanted = useRef(false)
   const talking = useRef(false)
+  const recentSpeech = useRef<{ at: number; text: string }[]>([])
   const heldTurn = useRef<string[]>([])
   const settle = useRef<ReturnType<typeof setTimeout>>(undefined)
   const deviceSpeaking = useRef(0)
   const deviceNoticeShown = useRef(false)
   const reconnects = useRef(0)
-  const lastSpoken = useRef('')
+  const spoken = useRef({ closed: true, id: '', text: '', turn: -1 })
   const submitting = useRef(false)
   const owner = useRef(sessionId)
 
@@ -326,12 +353,8 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
         case 'user_speaking':
           talking.current = true
           clearTimeout(settle.current)
-
-          if (deviceSpeaking.current) {
-            stopDeviceSpeech()
-          }
-
-          setStatus('Hearing you')
+          // Device speech is not echo-cancelled everywhere, so it only stops once a real (non-echo) transcript arrives.
+          setStatus(deviceSpeaking.current ? 'Speaking' : 'Hearing you')
 
           break
 
@@ -344,12 +367,25 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
         case 'interrupt':
           stopPlayback()
           stopDeviceSpeech()
+          // You cut in: the rest of the reply that is still streaming is not spoken afterwards.
+          spoken.current = { ...spoken.current, closed: true }
           setStatus('Hearing you')
 
           break
 
         case 'transcript':
           if (message.text.trim()) {
+            const now = Date.now()
+            recentSpeech.current = recentSpeech.current.filter(item => now - item.at < ECHO_WINDOW_MS)
+
+            if (isEchoOfAura(message.text, recentSpeech.current.map(item => item.text))) {
+              break // Aura hearing itself: never send its own words back as the user's turn
+            }
+
+            if (deviceSpeaking.current) {
+              stopDeviceSpeech()
+            }
+
             // Pieces of one turn are held until you have finished, then sent to Aura together.
             heldTurn.current.push(message.text.trim())
             setHeard(heldTurn.current.join(' '))
@@ -418,8 +454,12 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
     reconnects.current = 0
     const last = messages.findLast(message => message.role === 'assistant')
     // Never speak a reply that was already on screen when the call started.
-    lastSpoken.current = JSON.stringify([messages.filter(message => message.role === 'user').length,
-      last ? sanitizeTextForSpeech(chatMessageText(last)) : ''])
+    spoken.current = {
+      closed: true,
+      id: last?.id ?? '',
+      text: last ? sanitizeTextForSpeech(chatMessageText(last)) : '',
+      turn: messages.filter(message => message.role === 'user').length
+    }
     setActive(true)
     void connect()
   }
@@ -462,29 +502,52 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
       })
   }, [active, busy, onSubmit, queue])
 
-  // eslint-disable-next-line no-restricted-syntax -- consumed reply key, not an atom mirror
+  // Speak each finished sentence while the reply is still being written, instead of waiting for the whole
+  // turn to settle (that wait was the gap between text appearing and Aura starting to talk).
+  // eslint-disable-next-line no-restricted-syntax -- consumed reply progress, not an atom mirror
   useEffect(() => {
-    if (!active || busy) {
+    const ws = call.current?.ws
+
+    if (!active || !ws || ws.readyState !== WebSocket.OPEN) {
       return
     }
 
-    const last = messages.findLast(message => message.role === 'assistant' && !message.pending)
-    const ws = call.current?.ws
+    const turn = messages.filter(message => message.role === 'user').length
+    const last = messages.findLast(message => message.role === 'assistant')
 
-    if (!last || !ws || ws.readyState !== WebSocket.OPEN) {
+    if (!last || messages.indexOf(last) < messages.findLastIndex(message => message.role === 'user')) {
       return
     }
 
     const text = sanitizeTextForSpeech(chatMessageText(last))
-    const replyKey = JSON.stringify([messages.filter(message => message.role === 'user').length, text])
+    const settled = !last.pending && !busy
+    const ready = settled ? text : speakableSoFar(text)
+    const progress = spoken.current
+    const sameBubble = progress.turn === turn && (progress.id === last.id || ready.startsWith(progress.text))
+    const already = sameBubble ? progress.text : ''
 
-    if (!text.trim() || replyKey === lastSpoken.current) {
+    if (sameBubble && progress.closed) {
       return
     }
 
-    lastSpoken.current = replyKey
+    if (!ready.startsWith(already)) {
+      // The text was rewritten mid-stream (markdown settling); never repeat what was already said.
+      spoken.current = { ...progress, closed: settled }
 
-    for (const chunk of speechChunks(text)) {
+      return
+    }
+
+    const fresh = ready.slice(already.length)
+    spoken.current = { closed: false, id: last.id, text: ready, turn }
+
+    if (!fresh.trim()) {
+      return
+    }
+
+    recentSpeech.current.push({ at: Date.now(), text: fresh })
+
+    // The first words of a reply go out alone so audio starts as soon as possible.
+    for (const chunk of speechChunks(fresh, already ? 280 : 120)) {
       ws.send(JSON.stringify({ type: 'speak', text: chunk }))
     }
   }, [active, busy, messages, status])
@@ -535,6 +598,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           onClick={() => {
             stopPlayback()
             stopDeviceSpeech()
+            spoken.current = { ...spoken.current, closed: true }
             call.current?.ws.send(JSON.stringify({ type: 'interrupt' }))
             setStatus('Interrupted')
           }}

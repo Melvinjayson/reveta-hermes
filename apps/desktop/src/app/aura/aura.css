@@ -804,6 +804,17 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 @media (prefers-reduced-motion: reduce) { .aura-voice .aura-voice-dot { animation: none !important; } }
 @media (max-width: 480px) { .aura-voice .aura-voice-toggle[aria-pressed='true'] .aura-voice-label { max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; } }
 
+/* Conversation list rows: open on the title, a quiet delete with an inline confirm. */
+.aura-conversation-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.aura-conversations .aura-conversation-row .aura-conversation-open { flex: 1; min-width: 0; min-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.aura-conversations .aura-conversation-row .aura-conversation-delete { flex: 0 0 44px; width: 44px; min-height: 44px; padding: 0; justify-content: center; color: var(--aura-muted); opacity: 0.6; }
+.aura-conversation-row:hover .aura-conversation-delete, .aura-conversation-delete:focus-visible { opacity: 1; }
+.aura-conversation-confirm { flex-wrap: wrap; padding: 8px 12px; font-size: 13px; }
+.aura-conversation-confirm span { flex-basis: 100%; overflow-wrap: anywhere; }
+.aura-conversations .aura-conversation-confirm button { width: auto; min-height: 44px; padding: 0 14px; border: 1px solid var(--aura-line); border-radius: 8px; }
+.aura-conversations .aura-conversation-confirm .aura-danger { background: #b42318; color: #fff; border-color: #b42318; }
+.aura-conversations button:focus-visible { outline: 2px solid var(--aura-link); outline-offset: -2px; }
+
 /* Goal: a one-line suggestion the user confirms; saved goals live in the collapsed context row. */
 .aura-goal-proposal { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 0; font-size: 13px; }
 .aura-goal-proposal-label { color: var(--aura-muted); font-size: 12px; }

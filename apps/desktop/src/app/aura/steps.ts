@@ -116,7 +116,9 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
       const facts = [part.result === undefined ? 'No result received.' : 'A result was received.']
 
       if (result.status === 'refused' && result.error === "This would cost money, so I didn't run it.") {
-        facts.push(result.error)
+        facts.push(result.error, 'Nothing was charged.')
+      } else if (result.status === 'refused' && result.aura_policy === true && typeof result.error === 'string') {
+        facts.push(result.error.slice(0, 200)) // fixed, server-authored policy text; never tool output
       }
 
       if (typeof result.exit_code === 'number' && Number.isFinite(result.exit_code)) {

@@ -23,6 +23,27 @@ Updated 14 November 2026, about 11 PM Dublin. Replace this file at the end of ev
 | OpenAI speech (used when an OpenAI paid route is set), metered into the daily cap | `tools/aura_voice_call.py` | code only |
 | Kokoro local speech, off unless `AURA_KOKORO_DIR` holds the model | `tools/aura_voice_call.py` | measured on one CPU core: short sentence 1.1 s, real-time factor 0.62–0.75, 365 MB alone. Does **not** fit Render free (0.1 CPU, 512 MB). |
 
+## UI + identity increment (branch `aura/goal-intent-voice-ui`, 14 Nov ~11:59 PM) — PR open, NOT merged or deployed
+
+| Change | Where | Evidence |
+| --- | --- | --- |
+| First message is never a goal. Aura proposes one only once intent is clear (`Proposed goal: …` line, prompt rule); user taps Save / Edit / Not now. Confirmed goals saved per conversation in localStorage (`aura.goals.v1`, existing `persistentAtom`), shown in a collapsed context row; no repeated cards | `app/aura/goals.ts`, `conversation-cards.tsx`, `aura.css` | Vitest: first message not saved; proposal saved only on confirm; dismissed not re-offered; edit persists per chat |
+| Voice control: compact pill (Voice / state dot + word), 44 px targets, mute (mic track off), stop-speaking, End voice; sr-only live status; reduced-motion respected | `voice-call.tsx`, `browser-voice.tsx`, `aura.css` | Vitest mute/end test; eslint clean on touched files; tsc: no errors in `app/aura` (51 pre-existing errors in `../shared` test typings) |
+| Walkie-talkie fix: transcript pieces held until 1.2 s after you stop (`TURN_SETTLE_MS`), then sent as one turn | `voice-call.tsx` | Vitest: two phrases split by a pause → one submit |
+| No voice reply when server speech fails (quota): server sends `speech_failed` with the text; app speaks it with the device voice and says so once | `tools/aura_voice_call.py`, `voice-call.tsx` | client Vitest; server side py_compile only (no Pipecat test harness) |
+| Aura identity: `AURA_SOUL` written to `$HERMES_HOME/SOUL.md` on `aura_config.py --write` (replaces stock Hermes soul, keeps an owner-edited one); system prompt carries goal, file and no-internal-paths rules | `scripts/reveta/aura_config.py`, `docs/aura/ATTRIBUTION.md` | pytest: real `build_system_prompt` for a fresh agent starts "You are Aura…", contains Reveta OS/Xhunt/Venus, no "You are Hermes Agent" |
+| Workspace EACCES (phone test 11:36 PM): `aura-workspace` created by root at start → chowned to hermes each boot and pre-created as hermes | `docker/stage2-hook.sh` | pytest runs the hook's own functions with chown/find shims. **No Docker build or live check.** |
+
+Totals on this branch: Vitest 738/738 (aura + composer), pytest 26/27 in the touched suites (the 1 failure, `test_keygen_readonly_env_degrades_to_warning_not_boot_abort`, fails identically without these changes on this root VM).
+
+**Overlap warning:** while this ran, tasks "Fix Aura quota hangs, model selection and identity" and "Prioritize Aura empathic conversational intelligence" were also running and may touch `aura_config.py` prompts and goal behaviour. Merge one at a time and re-run the tests above after each.
+
+## Next blockers from the 11:36 PM phone test
+
+- **Uploaded PDFs are not reachable by Aura's tools.** Uploads are staged to the profile `attachments/` dir, but Aura's toolsets are only `aura` + `todo`, `aura_file` reads only `aura-workspace/<conversation>/`, and the image has no `pdftotext`. Local extraction already exists (`tools/read_extract.py`, anydoc + pypdf in the image). Fix: stage Aura uploads into the conversation workspace (or let `aura_file read` open this conversation's own attachments, never another user's), then phone-test. Until then the prompt tells Aura to say plainly it can't open uploads yet, never "paid service".
+- Goals are per device (localStorage), not synced across devices.
+- Voice settle delay (1.2 s) and device-voice fallback are untested on a real phone.
+
 ## Not in this deploy (next, in order)
 
 1. PR #10 Aura Companion (merged cleanly on `aura/consolidate-20261114`; keep both `aura` and `aura_companion` router registrations in `hermes_cli/web_server.py`).

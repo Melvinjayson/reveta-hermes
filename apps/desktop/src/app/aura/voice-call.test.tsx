@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 import type { ChatMessage } from '@/lib/chat-messages'
 
-import { AuraVoice, TURN_SETTLE_MS } from './voice-call'
+import { AuraVoice, isEchoOfAura, TURN_SETTLE_MS } from './voice-call'
 
 const messages = atom<ChatMessage[]>([])
 const sockets: FakeSocket[] = []
@@ -114,16 +114,84 @@ it('joins phrases split by short pauses into one turn before sending it', async 
   expect(onSubmit).toHaveBeenCalledWith('I want to plan a launch for next month')
 })
 
-it('speaks on the device when server speech fails, and stops it when you cut in', async () => {
+it('speaks on the device when server speech fails, and stops it only for real speech', async () => {
   const { ws } = await startCall()
   act(() => ws.emit({ type: 'speech_failed', text: 'Here is the answer.', message: 'quota' }))
   expect(speak).toHaveBeenCalledTimes(1)
   expect(speak.mock.calls[0][0].text).toBe('Here is the answer.')
   expect(screen.getByRole('status').textContent).toBe('Speaking')
   expect(screen.getByRole('alert').textContent).toContain('this device')
+  const cancel = vi.mocked(window.speechSynthesis.cancel)
+  const before = cancel.mock.calls.length // the turn-based fallback cancels once when it unmounts
   act(() => ws.emit({ type: 'user_speaking' }))
-  expect(window.speechSynthesis.cancel).toHaveBeenCalled()
-  expect(screen.getByRole('status').textContent).toBe('Hearing you')
+  expect(cancel.mock.calls.length).toBe(before) // could be its own echo
+  act(() => ws.emit({ type: 'transcript', text: 'wait, actually change the plan' }))
+  expect(cancel.mock.calls.length).toBe(before + 1)
+})
+
+it('never sends Aura its own spoken reply back as the user turn', async () => {
+  const { onSubmit, ws } = await startCall()
+  const reply = 'The deploy is live on Render. Want me to monitor the inspection and help analyse it?'
+  act(() => messages.set([
+    { id: 'u1', parts: [{ text: 'status?', type: 'text' }], role: 'user' },
+    { id: 'a1', parts: [{ text: reply, type: 'text' }], role: 'assistant' }
+  ] as ChatMessage[]))
+  await vi.waitFor(() => expect(ws.sent.some(sent => sent.includes('"speak"'))).toBe(true))
+  act(() => {
+    ws.emit({ type: 'user_speaking' })
+    ws.emit({ type: 'user_stopped' })
+    ws.emit({ type: 'transcript', text: 'want me to monitor the inspection and help analyse it' })
+  })
+  await act(() => vi.advanceTimersByTimeAsync(TURN_SETTLE_MS + 100))
+  expect(onSubmit).not.toHaveBeenCalled()
+  act(() => ws.emit({ type: 'transcript', text: 'no, just tell me what broke' }))
+  await act(() => vi.advanceTimersByTimeAsync(TURN_SETTLE_MS + 100))
+  expect(onSubmit).toHaveBeenCalledWith('no, just tell me what broke')
+})
+
+it('starts speaking finished sentences while the reply is still streaming, without repeats', async () => {
+  const { ws } = await startCall()
+  const speaks = () => ws.sent.filter(sent => sent.includes('"speak"')).map(sent => JSON.parse(sent).text)
+
+  const reply = (text: string, pending: boolean) =>
+    act(() => messages.set([
+      { id: 'u1', parts: [{ text: 'plan my week', type: 'text' }], role: 'user' },
+      { id: 'a1', parts: [{ text, type: 'text' }], pending, role: 'assistant' }
+    ] as ChatMessage[]))
+
+  reply('Sure, here is a pl', true)
+  expect(speaks()).toEqual([])
+  reply('Sure, here is a plan. Monday is for', true)
+  expect(speaks()).toEqual(['Sure, here is a plan.'])
+  reply('Sure, here is a plan. Monday is for deep work. Tuesday', true)
+  reply('Sure, here is a plan. Monday is for deep work. Tuesday is meetings.', false)
+  expect(speaks()).toEqual(['Sure, here is a plan.', 'Monday is for deep work.', 'Tuesday is meetings.'])
+  reply('Sure, here is a plan. Monday is for deep work. Tuesday is meetings.', false)
+  expect(speaks()).toHaveLength(3)
+})
+
+it('does not keep speaking a streaming reply after you cut in', async () => {
+  const { ws } = await startCall()
+  const speaks = () => ws.sent.filter(sent => sent.includes('"speak"')).length
+
+  const reply = (text: string) =>
+    act(() => messages.set([
+      { id: 'u1', parts: [{ text: 'go', type: 'text' }], role: 'user' },
+      { id: 'a1', parts: [{ text, type: 'text' }], pending: true, role: 'assistant' }
+    ] as ChatMessage[]))
+
+  reply('First point. Second')
+  expect(speaks()).toBe(1)
+  act(() => ws.emit({ type: 'interrupt' }))
+  reply('First point. Second point. Third point.')
+  expect(speaks()).toBe(1)
+})
+
+it('echo check needs real overlap and lets short answers through', () => {
+  const spoken = ['I can pre-route that for you. Shall I start?']
+  expect(isEchoOfAura('I can pre route that for you', spoken)).toBe(true)
+  expect(isEchoOfAura('yes start', spoken)).toBe(false)
+  expect(isEchoOfAura('please route my calendar invites instead', spoken)).toBe(false)
 })
 
 it('mutes the microphone track and shows it, then ends the call cleanly', async () => {

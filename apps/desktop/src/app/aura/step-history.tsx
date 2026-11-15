@@ -50,12 +50,17 @@ export function AuraSteps({ steps }: AuraStepsProps) {
               {step.status === 'Refused' && step.facts.includes("This would cost money, so I didn't run it.") && (
                 <p>This would cost money, so I didn't run it.</p>
               )}
-              <details>
-                <summary>Details</summary>
-                {step.detail?.command && <pre>{step.detail.command}</pre>}
-                {step.detail?.summary ? <pre>{step.detail.summary}</pre> : <p>Inputs and result content are hidden to protect private information.</p>}
-                {step.facts.filter(fact => fact !== "This would cost money, so I didn't run it.").map(fact => <p key={fact}>{fact}</p>)}
-              </details>
+              {step.status === 'Refused' && step.facts
+                .filter(fact => fact !== "This would cost money, so I didn't run it." && fact !== 'A result was received.')
+                .map(fact => <p key={fact}>{fact}</p>)}
+              {(step.detail?.command || step.detail?.summary || step.status !== 'Refused') && (
+                <details>
+                  <summary>Details</summary>
+                  {step.detail?.command && <pre>{step.detail.command}</pre>}
+                  {step.detail?.summary && <pre>{step.detail.summary}</pre>}
+                  {step.status !== 'Refused' && step.facts.map(fact => <p key={fact}>{fact}</p>)}
+                </details>
+              )}
             </li>
           ))}
         </ol>
