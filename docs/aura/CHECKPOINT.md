@@ -27,7 +27,7 @@ The phone test must cover: a voice request → Aura uses browser or computer con
 - `aura_browser`: real headless Chromium, **read-only** (the model passes only a URL; no click, type, submit or sign-in), no approval because it changes nothing.
 - Not live: clicking/typing on sites, handing the browser to the user, the Aura Companion extension (PR #10, open, off by default), control of the user's own computer.
 - Unverified: whether the approval card shows and resolves while a voice call is running, and whether the result is spoken; whether Chromium fits Render free's 512 MB (server was at ~479 MB before this deploy).
-- Test script: re-enter a model key in Settings, start voice, say "Check the headline on example.com and then create a file called test.txt with it." Expect a read-only browse, then an approval for the file/command step, approve on the phone, hear the result.
+- Test script: re-enter a model key in Settings, start voice, say "Open example.com and tell me its heading, then run a command that counts the words in it." Expect a read-only browse (no approval), then an approval card for the `aura_computer` command; approve on the phone; hear the result spoken. (A brand-new file via `aura_file` is created without approval; only overwrites and commands ask.)
 
 ## Voice increment (previous deploy) — tested vs not
 
