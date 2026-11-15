@@ -50,13 +50,28 @@ Totals on this branch: Vitest 745/745 (107 files, aura + composer); pytest 13/13
 
 **Overlap warning:** while this ran, tasks "Fix Aura quota hangs, model selection and identity" and "Prioritize Aura empathic conversational intelligence" were also running and may touch `aura_config.py` prompts and goal behaviour. Merge one at a time and re-run the tests above after each.
 
+## Conversation-first increment (branch `aura/conversation-intent`, stacked on `aura/goal-intent-voice-ui`, 15 Nov) — NOT merged or deployed
+
+The empathic intelligence layer from the requirements, built on what exists (no framework, no new state store). The boundary is: inferred intent stays a tentative line in the conversation; it becomes a saved goal only when the user taps Save on the `Proposed goal:` card (PR #12, functional, client-side); consequential actions still need the existing approval cards; clear requests run now.
+
+| Change | Where | Evidence |
+| --- | --- | --- |
+| Prompt: classify each turn as thinking aloud / unclear / clear request / consequential. Thinking aloud → a tentative one-line reading, at most one question, no tools; a correction drops the old reading; a clear request runs without a confirm; never states the user's feelings as fact | `scripts/reveta/aura_config.py` (`AURA_SYSTEM_PROMPT`) | pytest asserts the rules are in the prompt. **Model behaviour not measured** (no paid model test run) |
+| Role confusion / status parroting (live voice preview): a user turn that repeats Aura's own recent reply is not a request; status only when asked or just changed. Complements PR #12's client echo filter (`isEchoOfAura`), which drops the transcript before it is sent | same | pytest (prompt text). Cause of the echo still **unverified** (speaker-to-mic fits; silence detection not proven) |
+| The refused steps ("This would cost money", live session `local-5cdcb7bd…`): Aura offered the model tools its own free-only gate refuses by construction (`desktop_preview` and other desktop/catalog/project tools added for the GUI surface). Aura now only offers Aura-owned tools and attested `free_tools`; dispatch is still gated by `require_tool`. Outside Aura nothing changes | `tools/aura_free_only.py` (`advertised_tools`), `model_tools.py` | pytest `test_aura_advertised_tools.py` (owned kept, refused hidden, attested kept, non-Aura unchanged, real `_compute_tool_definitions`) |
+
+| AI tag + quick-reply chips (ledger A-018, rebuilt from WebInfer's Smart Tags / Reply Suggestions idea, no code copied): a compact row beside the goal suggestion. "AI · Asking you" when Aura ends on a question; chips from the options in that question ("X, Y or Z?"), Yes / Not yet for yes-no questions. Built from Aura's own reply, no extra model call; hidden while busy, after you answer, or when the goal card asks. Tap submits like a typed reply. Wraps on desktop, scrolls sideways on phones, 44px targets | `apps/desktop/src/app/aura/goals.ts` (`auraReplyHints`), `conversation-cards.tsx`, `aura.css` | Vitest 2 new tests. Not seen on a phone |
+
+Tests: pytest 75/75 across `test_aura_advertised_tools`, `test_aura_free_only`, `test_aura_product`, `test_aura_dispatch_gate`, `test_aura_config`, `test_aura_check`; Vitest `src/app/aura` 32/32. `tests/tools/test_registry.py` + `test_model_tools_async_bridge.py` (11 failures) and the 8 `get_tool_definitions` suites (16 failures) fail identically with and without this change on this VM.
+
 ## Next blockers from the 11:36 PM phone test
 
 - **Uploaded PDFs are not reachable by Aura's tools.** Uploads are staged to the profile `attachments/` dir, but Aura's toolsets are only `aura` + `todo`, `aura_file` reads only `aura-workspace/<conversation>/`, and the image has no `pdftotext`. Local extraction already exists (`tools/read_extract.py`, anydoc + pypdf in the image). Fix: stage Aura uploads into the conversation workspace (or let `aura_file read` open this conversation's own attachments, never another user's), then phone-test. Until then the prompt tells Aura to say plainly it can't open uploads yet, never "paid service".
 - Goals are per device (localStorage), not synced across devices.
 - Voice settle delay (1.2 s), streamed speech, echo filter and device-voice fallback are untested on a real phone.
-- **Why tools were refused ("This would cost money"):** `tools/aura_free_only.py` blocks any non-Aura tool and paid routes while the free-only policy is on, so workspace commands outside `aura_*` are refused by design. Whether that should change is a model/policy decision for the quota/model task, not this UI branch.
-- **Status parroting / role confusion** in replies is the conversational-intelligence task's prompt work; this branch only stops echoed speech being sent as a user turn.
+- **Why tools were refused ("This would cost money"):** `tools/aura_free_only.py` blocks any non-Aura tool while free-only is on. `aura/conversation-intent` stops offering those tools to the model, so the refusals should stop appearing; it does not loosen the rule. Giving Aura a live preview/canvas tool needs it added to Aura's owned set or attested in `free_tools` (user decision).
+- **Status parroting / role confusion:** prompt rule on `aura/conversation-intent` plus PR #12's echo filter.
+- **Fixed widget layout:** the user wants results to surface and render in the conversation dynamically instead of fixed widgets taking screen space. Not built yet; the desktop preview pane exists in Hermes but is not mounted in the Aura shell.
 - **Composer text box and voice input feel unintuitive (user, 15 Nov):** only the voice pill was reworked here; the text box itself is unchanged and still needs a pass.
 - **"The two users are failing"** (user, unclear). A later message suggests it meant the two refused steps in the progress list; not confirmed.
 - Integrated release: this branch, quota/model/identity task and conversational-intelligence task should land as one release candidate on `aura/working-product-20261111` with one combined test run, then one deploy.

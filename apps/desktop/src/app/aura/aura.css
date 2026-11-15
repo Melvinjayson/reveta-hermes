@@ -821,6 +821,12 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 .aura-goal-proposal-text { flex: 1 1 12em; min-width: 0; overflow-wrap: anywhere; }
 .aura-goal-proposal button, .aura-goal-row button { min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: var(--aura-ink); text-decoration: underline; }
 .aura-goal-proposal button:focus-visible, .aura-goal-row button:focus-visible { outline: 2px solid var(--aura-link); }
+.aura-quick-replies { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; font-size: 13px; }
+.aura-ai-tag { display: inline-flex; align-items: center; gap: 4px; color: var(--aura-muted); font-size: 12px; }
+.aura-ai-tag > [aria-hidden] { padding: 0 4px; border: 1px solid var(--aura-line); border-radius: 4px; font-size: 10px; letter-spacing: 0.04em; }
+.aura-quick-replies button { min-height: 44px; padding: 0 14px; border: 1px solid var(--aura-line); border-radius: 999px; background: transparent; color: var(--aura-ink); font: inherit; }
+.aura-quick-replies button:focus-visible { outline: 2px solid var(--aura-link); }
+@media (max-width: 640px) { .aura-quick-replies { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; } .aura-quick-replies button { flex: 0 0 auto; } }
 .aura-goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; font-size: 13px; }
 .aura-goal-row p { flex: 1 1 100%; margin: 0; overflow-wrap: anywhere; }
 .aura-goal-form label { display: grid; gap: 4px; font-size: 12px; color: var(--aura-muted); }

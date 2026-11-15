@@ -74,6 +74,34 @@ def require_tool(name, args):
         raise FreeOnlyRefused() from exc
 
 
+def advertised_tool(name):
+    return name in advertised_tools([name])
+
+
+def advertised_tools(names):
+    """The subset of *names* Aura may offer to the model at all (config is read once).
+
+    Outside Aura (``aura.enabled`` not True) every tool is offered as before. Inside Aura,
+    a tool the free-only gate can never run (not Aura-owned, no free_tools entry) is not
+    offered: the model otherwise spends a turn on it and the user sees "This would cost
+    money" for a renderer or catalog tool that costs nothing but is not attested. Dispatch
+    still goes through require_tool; this only keeps refused-by-construction tools out.
+    """
+    from tools.aura_product import available, owned_tool
+    try:
+        aura = available()
+    except Exception:
+        aura = False  # unreadable config is not Aura mode; dispatch still fails closed there
+    if not aura:
+        return set(names)
+    try:
+        entries = settings().get("free_tools", [])
+        attested = {e.get("name") for e in entries if isinstance(e, dict)} if isinstance(entries, list) else set()
+        return {name for name in names if owned_tool(name) or name in attested}
+    except Exception:
+        return set()
+
+
 def _declared_paid_tool(name):
     if not name.startswith("mcp_"):
         return False
