@@ -93,3 +93,20 @@ Tests: pytest 75/75 across `test_aura_advertised_tools`, `test_aura_free_only`, 
 1. Open `https://aura-zero.onrender.com` on the phone, sign in.
 2. Settings → Model → Anthropic or OpenAI, paste key, keep the caps, Save. Send one typed message; confirm a reply.
 3. In chat tap **Start voice**, allow the microphone, speak; talk over Aura mid-reply to check it stops.
+
+## Quota / model / first-turn increment (branch `aura/fix-quota-model-follow`, stacked on `aura/goal-intent-voice-ui`, 15 Nov ~12:35 AM) — draft PR, NOT merged or deployed
+
+Batched into the next single release with `aura/goal-intent-voice-ui` (UI, goals, identity, voice) and the conversational-intelligence branch. Do not deploy it alone.
+
+| Change | Where | Evidence |
+| --- | --- | --- |
+| Google **per-day** quota 429 (`QuotaFailure` quotaId `...PerDay...`) ends the turn on the first call instead of ~3 min of retries (live: 191 s and 220 s, then empty/"not processed"). Per-minute 429s are still retried. | `agent/error_classifier.py` | pytest: real `run_conversation` makes 1 call on a daily-quota 429, >1 on a per-minute 429; both fail on the base commit |
+| Every Aura chat (`aura.enabled`) follows the model in Aura Settings: new chats are marked follow-profile at creation; chats an earlier build froze move on next open (`session.resume`). History untouched. An explicit `follow_profile_config: false` stays frozen; non-Aura installs unchanged. | `gateway/session_local.py`, `gateway/session_local_migration.py` | pytest with real SessionStore/authority: new chat Gemini→Haiku on Settings change; old frozen chat moves on open with the same 2 messages; 2 guard tests. New-chat and old-chat tests fail on the base commit |
+| Python-toolchain probe off for Aura. It runs pip/python subprocesses (measured 9.0 s on this 8-core VM) and the first prompt build after each restart waits up to 10 s. Likely the ~13 s gap before the first model call seen live; **not confirmed live**. | `scripts/reveta/aura_config.py` | pytest config assertion |
+| Identity: reused `AURA_SOUL` from `aura/goal-intent-voice-ui` (no second copy). | — | its tests pass on this branch |
+
+Prompt size measured locally with the Aura config: system prompt ~9–10k chars (~2.3–2.5k tokens) + 6 tool schemas (~0.9k tokens). The live 7,521 tokens is larger than that; the rest was not traced (memory/skills/context on the live disk are the likely extra). Hermes's default guidance blocks were **not** cut: they carry tool-use and safety rules and the intelligence task owns prompt behaviour.
+
+Tests: 328 passed in the touched and neighbouring suites (error classifier, follow-profile gateway suites, aura config, aura tools). `tests/agent/test_fallback_429_after_timeout.py::...after_timeout_recovery` fails here and on the base commit alike (pre-existing).
+
+Gemini **speech** 429 ("gemini-3.8-flash-lite text-to-speech HTTP 429") is handled on `aura/goal-intent-voice-ui` (cooldown + device voice), not here.

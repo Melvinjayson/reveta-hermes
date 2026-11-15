@@ -121,7 +121,9 @@ def aura_settings(env: dict[str, str]) -> dict:
         # This compact surface needs no deferred catalog/bridge calls.
         "tools": {"tool_search": {"enabled": "off"}},
         "browser": browser_settings(env),
-        "agent": {"system_prompt": AURA_SYSTEM_PROMPT},
+        # No Python-toolchain probe: it spawns pip/python subprocesses (9 s on an 8-core VM) that the
+        # first turn after every restart waits on (up to 10 s), for a hint Aura's tools don't need.
+        "agent": {"system_prompt": AURA_SYSTEM_PROMPT, "environment_probe": False},
         "approvals": {
             "mode": "manual",
             "cron_mode": "deny",
