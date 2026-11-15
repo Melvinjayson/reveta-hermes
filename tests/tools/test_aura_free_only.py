@@ -441,3 +441,16 @@ def test_auxiliary_quota_stops_before_any_recovery_route(policy, monkeypatch):
     )
     with pytest.raises(RuntimeError, match="synthetic quota"):
         next(ladder)
+
+
+def test_continuous_voice_recording_uses_same_free_only_refusal(policy):
+    from agent.chat_completion_helpers import _dispatch_nonstreaming_api_request
+    from gateway.session_surface import arm_surface_turn, surface_turn_scope
+    agent = SimpleNamespace(provider="custom", model="unknown", base_url=URL, api_mode="chat_completions")
+    hits = []
+    with surface_turn_scope({'voice_recording_id': 'a' * 32}):
+        arm_surface_turn(agent)
+        with pytest.raises(FreeOnlyRefused, match="This would cost money"):
+            _dispatch_nonstreaming_api_request(agent, {"model": "unknown"}, make_client=lambda *args: hits.append('paid'))
+    assert hits == []
+    assert agent._voice_turn_pending is False

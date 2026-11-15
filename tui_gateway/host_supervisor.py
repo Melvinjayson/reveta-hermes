@@ -252,10 +252,11 @@ class HostSupervisor:
             raise
         return request_id
 
-    def interrupt(self, sid: str, *, request_id: str | None = None) -> None:
+    def interrupt(self, sid: str, *, request_id: str | None = None, preserve_running_tools: bool = False) -> None:
         self.start()
         self._send_frame(
-            {"type": "interrupt", "sid": sid, "request_id": request_id or uuid.uuid4().hex})
+            {"type": "interrupt", "sid": sid, "request_id": request_id or uuid.uuid4().hex,
+             **({"preserve_running_tools": True} if preserve_running_tools else {})})
 
     def has_pending_turn(self, sid: str) -> bool:
         """True when a host completion callback is still registered for ``sid``.

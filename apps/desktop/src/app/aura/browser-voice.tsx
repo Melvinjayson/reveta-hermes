@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useComposerScope } from '@/app/chat/composer/scope'
 import type { ChatBarProps } from '@/app/chat/composer/types'
+import type { HermesGateway } from '@/hermes'
 import { chatMessageText } from '@/lib/chat-messages'
 import { sanitizeTextForSpeech } from '@/lib/speech-text'
 
@@ -28,13 +29,13 @@ interface Props {
   busy: boolean
   disabled: boolean
   onSubmit: ChatBarProps['onSubmit']
-  onInterrupt: ChatBarProps['onCancel']
+  gateway?: Pick<HermesGateway, 'request'> | null
   sessionId?: string | null
 }
 
 /** Browser fallback: text and voice share onSubmit and the persisted transcript.
  * Full duplex is deliberately not claimed: recognition pauses during playback. */
-export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessionId }: Props) {
+export function AuraBrowserVoice({ busy, disabled, gateway, onSubmit, sessionId }: Props) {
   const { $messages } = useComposerScope()
   const messages = useStore($messages)
   const [active, setActive] = useState(false)
@@ -49,8 +50,8 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
   const speechEpoch = useRef(0)
   const submitting = useRef(false)
   const owner = useRef(sessionId)
-  const callbacks = useRef({ busy, onSubmit, onInterrupt })
-  callbacks.current = { busy, onSubmit, onInterrupt }
+  const callbacks = useRef({ busy, gateway, onSubmit, sessionId })
+  callbacks.current = { busy, gateway, onSubmit, sessionId }
   const ctor = (window as VoiceWindow).SpeechRecognition ?? (window as VoiceWindow).webkitSpeechRecognition
   const supported = Boolean(ctor && window.speechSynthesis && window.SpeechSynthesisUtterance)
 
@@ -91,6 +92,23 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
     }
   }, [stop])
 
+  const interruptGeneration = useCallback(async () => {
+    const { gateway: currentGateway, sessionId: currentSessionId } = callbacks.current
+
+    try {
+      if (!currentGateway || !currentSessionId) { throw new Error('Voice interruption unavailable') }
+      // Leave the chat turn attached: a running tool still owns its eventual
+      // result and step card. New voice input waits for that result to settle.
+      await currentGateway.request('session.interrupt', {
+        session_id: currentSessionId,
+        preserve_running_tools: true
+      })
+    } catch {
+      setPending('')
+      setError('Voice could not interrupt safely. Use the chat controls to continue.')
+    }
+  }, [])
+
   const start = () => {
     if (!ctor) { return }
     setError('')
@@ -123,7 +141,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
         window.speechSynthesis.cancel()
         setPending(previous => [previous, final.trim()].filter(Boolean).join(' '))
 
-        if (callbacks.current.busy) { void callbacks.current.onInterrupt() }
+        if (callbacks.current.busy) { void interruptGeneration() }
       }
     }
 
@@ -212,7 +230,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
         speaking.current = false
         window.speechSynthesis.cancel()
 
-        if (busy) { void onInterrupt() }
+        if (busy) { void interruptGeneration() }
 
         if (wasSpeaking) { listen() }
       }} type="button">Interrupt and listen</button>}

@@ -69,7 +69,8 @@ def _recover_unreachable_compute_host_turn(sid: str, session: dict, inflight_at_
 
 @method("session.interrupt")
 def _(rid, params: dict) -> dict:
-    _tts_stream_stop()  # keypress barge-in also silences streaming TTS (voice is process-global)
+    if not params.get("preserve_running_tools"):
+        _tts_stream_stop()  # ordinary Stop also silences native streaming TTS
     resume_wake = True
     try:
         session, err = _sess_nowait(params, rid)
@@ -87,15 +88,19 @@ def _(rid, params: dict) -> dict:
             with session["history_lock"]:
                 inflight_at_interrupt = session.get("inflight_turn")
             try:
-                _interrupt_session_turn(sid, session, request_id=f"interrupt-{rid}")
+                _interrupt_session_turn(sid, session, request_id=f"interrupt-{rid}", **(
+                    {"preserve_running_tools": True} if params.get("preserve_running_tools") else {}))
             except Exception as exc:  # health: allow BLE001 -- the bridge raises transport-specific errors unknown here; logged, and Stop recovers the session instead of failing
                 logger.warning("session.interrupt: compute-host interrupt failed for %s: %s", sid, exc)
+                if params.get("preserve_running_tools"):
+                    return _err(rid, 4010, "Safe voice interruption unavailable; turn remains attached")
                 _recover_unreachable_compute_host_turn(sid, session, inflight_at_interrupt)
             return _ok(rid, {"status": "interrupted", "turn_isolation": True})
         # No agent wait: a turn parked on the deferred build already honors _turn_cancel_requested. Waiting here
         # failed Stop with 5032 once the build failed or outlived 30s (and started a build for a lazy session), so
         # the Desktop, which interrupts before session.close, could not delete such a session (#133262).
-        _interrupt_session_turn(sid, session)
+        _interrupt_session_turn(sid, session, **(
+            {"preserve_running_tools": True} if params.get("preserve_running_tools") else {}))
         # Retire the crash-recovery marker NOW: until the run thread's finally, a backend exit looks like a crash
         # and session.resume auto-continues the turn the user just stopped (the extra key covers compression
         # rotating session_key mid-turn).

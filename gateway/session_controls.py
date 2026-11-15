@@ -98,7 +98,7 @@ _END_REASON = re.compile(r'[a-z][a-z_]{0,31}')
 _PROFILE_IMPLICIT = frozenset({'session.create', 'session.list', 'session.info', 'session.resume', 'session.detach',
                                'prompt.submit', 'prompt.receipt', 'prompt.cancel', 'prompt.resolve_unknown',
                                'prompt.steer_queued', 'prompt.replace_queued',
-                               'session.interrupt', 'session.events.since', 'session.mutate', 'session.stats',
+                               'session.interrupt', 'session.voice.record', 'session.events.since', 'session.mutate', 'session.stats',
                                'approval.respond', 'clarify.respond'})
 
 
@@ -279,6 +279,8 @@ class AuthorityConnection:
         handlers['session.control'] = partial(control, self)
         from gateway.session_onboarding import handlers as onboarding_handlers
         handlers.update(onboarding_handlers(self))
+        from gateway.session_voice import record as record_voice
+        handlers['session.voice.record'] = partial(record_voice, self)
         return handlers
 
     async def dispatch(self, request):
@@ -826,7 +828,7 @@ class AuthorityConnection:
         if ref.session_id not in self.subscriptions:
             raise RuntimeStoreError('permission_denied')
         forbidden = set(params) - {'session_id', 'text', 'submission_id', 'input_id', 'queued', 'attachments', 'finite', 'unattended',
-                                   'surface', 'voice_context', 'interrupted', 'voice_turn', 'display_kind', 'title_preview',
+                                   'surface', 'voice_context', 'interrupted', 'voice_turn', 'voice_recording_id', 'display_kind', 'title_preview',
                                    'turn_author', 'api_text', 'model_override', 'clarify_batch'}
         if forbidden:
             raise RuntimeStoreError('invalid_params')
@@ -837,6 +839,11 @@ class AuthorityConnection:
         from gateway.session_display import submit_display_fields
         from gateway.session_surface import submit_surface_fields
         from gateway.session_cli_turn import submit_cli_turn_fields
+        if params.get('voice_recording_id'):
+            from hermes_state_voice import bind_voice_turn
+            if params['voice_recording_id'] != request_id:
+                raise RuntimeStoreError('invalid_params')
+            bind_voice_turn(self.authority.db, request_id, ref.session_id, self.actor.subject)
         payload = {'text': params.get('text'), **admit_finite(params, submitter=(self, ref)), **submit_surface_fields(params),
                    **submit_display_fields(params), **submit_cli_turn_fields(params)}
         if 'attachments' in params:
@@ -913,9 +920,11 @@ class AuthorityConnection:
 
     async def interrupt(self, ref, params):
         from gateway.session_managed_worker import interrupt_managed
-        if interrupt_managed(self.authority, self.actor, ref, params.get('execution_generation')):
+        voice = bool(params.get('preserve_running_tools'))
+        extra = {'preserve_running_tools': True} if voice else {}
+        if interrupt_managed(self.authority, self.actor, ref, params.get('execution_generation'), **extra):
             return asdict(self.authority._handle(ref))
-        return asdict(await self.authority.interrupt(self.actor, ref, params.get('execution_generation')))
+        return asdict(await self.authority.interrupt(self.actor, ref, params.get('execution_generation'), **extra))
 
     def _resolve_response(self, frame):
         from gateway.session_server_requests import may_settle, resolve

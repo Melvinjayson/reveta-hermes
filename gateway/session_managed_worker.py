@@ -346,13 +346,16 @@ class ManagedWorker:
             self.process.stderr.close()
 
 
-def interrupt_managed(authority, actor, ref, generation):
+def interrupt_managed(authority, actor, ref, generation, *, preserve_running_tools=False):
     worker = getattr(authority, '_managed_workers', {}).get(ref.session_id)
     if worker is None:
         return False
     authority.authorize(actor, ref, 'session:control')
     authority.check_approval_generation(ref.session_id, generation)
-    worker.control({'type': 'stop'})
+    if preserve_running_tools:
+        from gateway.session_server_requests import withdraw
+        withdraw(authority.sessions[ref.session_id].event_stream, ref.session_id, 'approval')
+    worker.control({'type': 'voice_interrupt' if preserve_running_tools else 'stop'})
     return True
 
 

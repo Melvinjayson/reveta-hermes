@@ -12,7 +12,7 @@ from hermes_state_runtime import RuntimeStoreError
 
 SURFACES = frozenset({'hud', 'voice-live'})
 _VOICE_CONTEXT_LIMIT = 6000
-_SUBMIT_FIELDS = ('surface', 'voice_context', 'interrupted', 'voice_turn')
+_SUBMIT_FIELDS = ('surface', 'voice_context', 'interrupted', 'voice_turn', 'voice_recording_id')
 _surface_turn = ContextVar('surface_turn', default=None)
 
 
@@ -24,7 +24,11 @@ def submit_surface_fields(params):
 def admit_surface(params):
     """Wire ``surface`` / ``voice_context`` / ``interrupted`` / ``voice_turn`` -> committed ``surface_v1``
     (``{}`` when absent). ``voice_turn`` marks a spoken voice-mode turn: it runs on ``auxiliary.voice_chat``."""
-    surface, context, interrupted, voice_turn = (params.get(key) for key in _SUBMIT_FIELDS)
+    surface, context, interrupted, voice_turn = (params.get(key) for key in _SUBMIT_FIELDS[:4])
+    recording = params.get('voice_recording_id')
+    if recording is not None:
+        from hermes_state_voice import validate_turn_id
+        validate_turn_id(recording)
     if surface is not None and surface not in SURFACES:
         raise RuntimeStoreError('invalid_params')
     # The spoken transcript only makes sense for a live-voice delegation; anywhere else it is
@@ -42,6 +46,8 @@ def admit_surface(params):
         committed['interrupted'] = True
     if voice_turn:
         committed['voice_turn'] = True
+    if recording:
+        committed['voice_recording_id'] = recording
     return {'surface_v1': committed} if committed else {}
 
 
@@ -108,5 +114,6 @@ def arm_surface_turn(agent, notes=(), voice_turn=False):
     that ride the current user message (never the system prompt). Assigned unconditionally so a
     reused agent never replays a stale note or route."""
     agent._voice_turn_pending = bool(voice_turn) or surface_voice_turn()
+    agent._voice_turn_recording_id = (_surface_turn.get() or {}).get('voice_recording_id')
     agent._gateway_turn_context_notes = '\n\n'.join(
         note for note in (*notes, surface_turn_note(agent)) if note)
