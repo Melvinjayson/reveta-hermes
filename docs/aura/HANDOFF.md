@@ -1,7 +1,7 @@
-# Pipecat continuous voice — 14 November 2026 — draft, not deployed
+# Pipecat continuous voice — 15 November 2026 — draft, not deployed
 
-Branch `aura/pipecat-voice`, implementation draft (the earlier preflight PR #8 was merged externally), targets
-`aura/working-product-20261111`. Rebased onto `42a9ef428bb5c2b2b36d9efc2c4fad2b4243d4a1`;
+Branch `aura/pipecat-voice`, draft PR [#11](https://github.com/Melvinjayson/reveta-hermes/pull/11) (preflight PR #8 was merged externally), targets
+`aura/working-product-20261111`. Rebased onto `12c8f57e9fa444f1d9d78de301a6b40e7f1c953e`;
 workspace, chat layout and fork-runner changes remain owned by their existing work.
 Merging and the deployment decision remain Melvin's. No Render setting, secret,
 paid speech provider, production audio capture or deployment was changed.
@@ -44,7 +44,7 @@ Pipecat's sentence aggregator releases immutable turn/index packets to TTS.
 - Speech events carry an `epoch` and monotonically increasing `seq`. Reconnect
   retains the same random client identity and last sequence. Authenticated,
   principal/profile/client-scoped replay retains the last 128 final/played frames
-  for five minutes (up to eight clients). PCM is never replayed or retained.
+  for five minutes from the last dial (up to eight clients). PCM is never replayed or retained.
   The browser also deduplicates packet IDs and finals. After process restart or
   replay expiry, history/admission recovery is the existing chat protocol; lost
   unsubmitted speech is not reconstructed from audio.
@@ -58,6 +58,10 @@ Pipecat's sentence aggregator releases immutable turn/index packets to TTS.
   generated/unplayed text, including managed-worker writes. Tool calls/results
   are preserved. Terminal receipt storage drops an unheard full-response copy.
   The next admitted turn freezes the previous prefix before reading model history.
+  Compression copies are re-projected in the same transaction, using the existing
+  owned-lineage and compression-edge rules; a branch cannot submit the original
+  conversation's receipts. Switching conversations stops the old owner, never the
+  newly opened chat or profile.
 - On speech start, browser playback stops and its queue flushes immediately.
   `session.interrupt {preserve_running_tools:true}` cancels generation, skips
   unstarted tools and withdraws old approvals. Started sequential/concurrent tools
@@ -70,7 +74,9 @@ Pipecat's sentence aggregator releases immutable turn/index packets to TTS.
   retaining late tool events. Ordinary Stop behavior remains separate. One mic
   toggle exposes Listening / Thinking / Speaking / Interrupted. Console metrics
   `[aura-voice] speech-end-first-audio` and `barge-in-stop` contain turn IDs and
-  milliseconds, never audio.
+  milliseconds, never audio. These client-clock metrics start when the
+  `speech_end` / `speech_start` control arrives; they exclude uplink and VAD
+  detection delay and do not measure physical speaker latency.
 
 No raw audio is written to disk by the app. Decoder/preroll, socket PCM and queued
 playback are in RAM. Flite uses a short-lived **text** file because its `textfile`
@@ -91,7 +97,12 @@ python scripts/reveta/aura_pipecat_probe.py --python .voice-runtime/bin/python
 This requires FFmpeg built with the `flite` filter (Debian's FFmpeg used here).
 Missing runtime, denied microphone, failed speech process, or an occupied decoder
 falls back to the explicitly labelled **Browser voice · turn-based** control.
-There is at most one active server speech worker per instance.
+There is at most one active worker for this route per instance. Utterances are
+capped at 30 seconds; played-prefix receipts are bounded at 64,000 characters.
+The separately merged `/api/audio/voice-call` provider route and model settings
+are retained, but the active composer selects this PR's free speech route. Its
+legacy provider environment variables are not required or read here. Mixed legacy
+and new clients were not capacity-tested.
 
 Local real graph evidence: synthesis of “Change the request and tell me the
 time.” returned first PCM in **164.7 ms**. Feeding that synthetic PCM through real
@@ -109,8 +120,32 @@ production host has passed a load test. No paid fallback is selected.
 Evidence distinguishes fake speech/Hermes tests from the real local speech graph.
 The phone-sized browser test uses a synthetic microphone and explicitly fake
 STT/TTS events against the real app, authenticated gateway and fake model. It is
-not Melvin's phone or a deployed microphone test. Gate and browser results are
-recorded below when complete.
+not Melvin's phone or a deployed microphone test. Verified source: `e0980da8c7cb36666b5b1f0b3d85bd46db285573`. Required local repository checks: **14 passed**;
+Aura gate: **14 passed**, including **238 UI tests**, **417 Python tests
+(one skip)**, 14 public-Origin contracts and the browser acceptance suite. The
+phone product flow was then run again after gates, at 390×844: the microphone
+remained on, partials stayed out of history, a duplicated final made one user
+message, a fully played packet was acknowledged, barge-in flushed the remaining
+playback, and the changed request answered in the same thread. Reload retained
+only the acknowledged old prefix and the acknowledged new reply. This is fake
+speech/model evidence, not a real phone or model call.
+
+Two separate speech-contract tests passed under the isolated speech interpreter.
+The real WebSocket factory also started the actual Pipecat child, acknowledged
+only the first of two synthesized sentences, froze that prefix on interruption,
+and reconnected at sequence 6 in the same epoch without replaying PCM. That
+factory smoke used fake accepted auth; real credential/Origin rejection and
+cancelled-cleanup cases are covered separately.
+
+An additional compatibility sweep passed 17 tests; two pre-existing managed-worker
+flag tests failed identically on the untouched `12c8f57e9f` base at their
+`target.exists()` assertions. They are recorded as failures, not hidden or counted
+as passes. The full repository/Electron E2E suites, Docker image build and GitHub
+CI completion are not claimed.
+
+See [machine-readable evidence](verification/pipecat-voice.json),
+[raw Aura gate](verification/pipecat-voice-aura-gate.json), and
+[phone screenshot](screenshots/pipecat-voice/same-thread-interruption-mobile.png).
 
 The official initializer was run outside the app in isolated scratch storage:
 
