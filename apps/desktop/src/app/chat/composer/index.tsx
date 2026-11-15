@@ -2,6 +2,7 @@ import { ComposerPrimitive } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { AuraLocalTalk } from '@/app/aura/local-talk'
 import { AuraVoice } from '@/app/aura/voice-call'
 import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
@@ -1497,6 +1498,7 @@ export function ChatBar({
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
                   {isBrowserHostedDesktop() && <AuraVoice busy={busy} disabled={disabled} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
+                  {isBrowserHostedDesktop() && <AuraLocalTalk busy={busy} disabled={disabled} onSubmit={onSubmit} />}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
                   <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))}>
