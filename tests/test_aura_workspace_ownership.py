@@ -19,8 +19,8 @@ HOOK = Path(__file__).resolve().parents[1] / "docker" / "stage2-hook.sh"
 def _hook_parts() -> tuple[str, str]:
     text = HOOK.read_text(encoding="utf-8")
     functions = re.search(r"^path_has_symlink_component\(\) \{.*?^tree_has_non_hermes_owner\(\) \{.*?^\}\n",
-                          text, re.S | re.M)
-    block = re.search(r'^if \[ -d "\$HERMES_HOME/aura-workspace" \].*?^fi\n', text, re.S | re.M)
+                          text, re.DOTALL | re.MULTILINE)
+    block = re.search(r'^if \[ -d "\$HERMES_HOME/aura-workspace" \].*?^fi\n', text, re.DOTALL | re.MULTILINE)
     assert functions and block, "stage2 hook lost the aura-workspace ownership repair"
     return functions.group(0), block.group(0)
 

@@ -1,4 +1,6 @@
-# Hermes Agent Security Policy
+# Aura Zero Security Policy
+
+Aura Zero is Reveta's product built on Hermes Agent. Report vulnerabilities in Aura Zero (this repository or the aura-zero deployment) privately to the repository owner, @Melvinjayson; do not open a public issue. Vulnerabilities in the upstream Hermes Agent runtime go to Nous Research as described below. The trust model that follows is the runtime's and applies to Aura.
 
 This document describes Hermes Agent's trust model, names the one
 security boundary the project treats as load-bearing, and defines the

@@ -1,6 +1,6 @@
-# Hermes Agent — Web UI
+# Aura Zero — Web UI
 
-Browser-based dashboard for managing Hermes Agent configuration, API keys, and monitoring active sessions.
+Browser-based dashboard for managing the agent runtime's configuration, API keys, and monitoring active sessions.
 
 ## Stack
 

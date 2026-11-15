@@ -1,6 +1,8 @@
-# Contributing to Hermes Agent
+# Contributing to Aura Zero
 
-Thank you for contributing to Hermes Agent! This guide covers everything you need: setting up your dev environment, understanding the architecture, deciding what to build, and getting your PR merged.
+Aura Zero is Reveta's product, built on the Hermes Agent runtime by Nous Research. Open pull requests against `aura/working-product-20261111`. The rest of this guide is the upstream runtime guide and still applies to the code underneath Aura.
+
+Thank you for contributing! This guide covers everything you need: setting up your dev environment, understanding the architecture, deciding what to build, and getting your PR merged.
 
 ---
 

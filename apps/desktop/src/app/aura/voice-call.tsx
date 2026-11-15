@@ -86,6 +86,52 @@ export function speechChunks(text: string, size = 280): string[] {
   return chunks
 }
 
+function voiceLabel(active: boolean, muted: boolean, busy: boolean, status: string): string {
+  if (!active) {
+    return 'Voice off'
+  }
+
+  if (muted && (status === 'Listening' || status === 'Hearing you')) {
+    return 'Muted'
+  }
+
+  return busy && status === 'Listening' ? 'Thinking' : status
+}
+
+const hasDeviceVoice = () => typeof window !== 'undefined' && 'speechSynthesis' in window
+
+/** Device-voice fallback: `counter` holds how many device utterances are queued. */
+function cancelDeviceSpeech(counter: { current: number }) {
+  if (counter.current && hasDeviceVoice()) {
+    window.speechSynthesis.cancel()
+  }
+
+  counter.current = 0
+}
+
+/** Returns false when the device cannot speak `text`; calls onStart before speaking and onIdle once the last queued utterance ends. */
+function speakWithDevice(text: string, counter: { current: number }, onStart: () => void, onIdle: () => void): boolean {
+  if (!text.trim() || !hasDeviceVoice()) {
+    return false
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text)
+  counter.current++
+  onStart()
+
+  utterance.onend = utterance.onerror = () => {
+    counter.current = Math.max(0, counter.current - 1)
+
+    if (counter.current === 0) {
+      onIdle()
+    }
+  }
+
+  window.speechSynthesis.speak(utterance)
+
+  return true
+}
+
 function toPcm16(input: Float32Array, fromRate: number, toRate: number): ArrayBuffer {
   const ratio = fromRate / toRate
   const out = new Int16Array(Math.floor(input.length / ratio))
@@ -186,34 +232,15 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
     }, TURN_SETTLE_MS)
   }, [])
 
-  const stopDeviceSpeech = useCallback(() => {
-    if (deviceSpeaking.current && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel()
-    }
-
-    deviceSpeaking.current = 0
-  }, [])
+  const stopDeviceSpeech = useCallback(() => cancelDeviceSpeech(deviceSpeaking), [])
 
   const speakOnDevice = useCallback((text: string) => {
-    if (!text.trim() || typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    const onStart = () => setStatus('Speaking')
+    const onIdle = () => call.current && setStatus('Listening')
+
+    if (!speakWithDevice(text, deviceSpeaking, onStart, onIdle)) {
       setError('Aura’s reply could not be spoken. It is shown in the chat.')
-
-      return
     }
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    deviceSpeaking.current++
-    setStatus('Speaking')
-
-    utterance.onend = utterance.onerror = () => {
-      deviceSpeaking.current = Math.max(0, deviceSpeaking.current - 1)
-
-      if (deviceSpeaking.current === 0 && call.current) {
-        setStatus('Listening')
-      }
-    }
-
-    window.speechSynthesis.speak(utterance)
   }, [])
 
   const teardown = useCallback(() => {
@@ -222,11 +249,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
     clearTimeout(settle.current)
     heldTurn.current = []
     talking.current = false
-
-    if (deviceSpeaking.current) {
-      window.speechSynthesis.cancel()
-      deviceSpeaking.current = 0
-    }
+    cancelDeviceSpeech(deviceSpeaking)
 
     if (!current) {
       return
@@ -560,8 +583,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
     setMuted(next)
   }
 
-  const listening = status === 'Listening' || status === 'Hearing you'
-  const label = !active ? 'Voice off' : muted && listening ? 'Muted' : busy && status === 'Listening' ? 'Thinking' : status
+  const label = voiceLabel(active, muted, busy, status)
 
   return (
     <div aria-label="Voice" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">

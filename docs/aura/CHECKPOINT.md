@@ -11,7 +11,25 @@ Updated 14 November 2026, about 11 PM Dublin. Replace this file at the end of ev
 - **Upstream attribution:** Hermes Agent (MIT, Nous Research). Keep `LICENSE` and notices.
 - **Rollback:** integration head before the voice increment was `42a9ef428b` (PR #8 merge).
 
-## Voice increment (this deploy) — tested vs not
+## Release 15 Nov, about 12:50 AM — live commit `e2e7c1ac1843`
+
+- **Live:** `/api/health` reports `deploy_commit: e2e7c1ac1843` (= `origin/aura/working-product-20261111`). It holds PR #12's goal/voice/delete/steps/identity/workspace commits, PR #13's quota fail-fast, chats-follow-Settings and probe skip, and `aura/conversation-intent` (turn rules, echo drop, quick-reply chips). Merged by the conversation-intent task, not via the PR buttons, so PRs #12/#13 still show open.
+- **Rollback:** `12c8f57e9fa4` (previous live head).
+- **Checked live, signed in, no message sent:** app connects; Voice control shows; Settings shows "Replying with Google Gemini's free tier" (the saved Anthropic key was lost by the redeploy, as the blocker below says); conversation list empty after the redeploy.
+- **Tests on PR #12 + #13 combined (agent VM):** Vitest `src/app/aura` + `src/app/chat/composer` 105 files / 732 tests pass; pytest Aura config, workspace ownership, voice quota, Gemini daily quota, chats-follow, bot-chat follow, error classifier, `tests/tools/test_aura_*` 375 pass; ruff clean on changed Python.
+- **Left on PR #12 (not live, CI hygiene only):** code-health split of `voice-call.tsx`, BOM-tolerant SOUL.md read, ruff fix in the ownership test, contributor email mappings for the repo guard. Land with the next deploy; do not redeploy for these alone (a redeploy wipes Settings keys and chats on Render free).
+
+## Phone acceptance test (user, 15 Nov): end-to-end agentic loop
+
+The phone test must cover: a voice request → Aura uses browser or computer control → an approval handoff → a spoken result. What the live build can do toward it:
+
+- `aura_computer`: terminal command or code in the conversation workspace on the server; **every command needs a single-use approval** (`tools/aura_dispatch_policy.py`). This is the only path that exercises the approval handoff today.
+- `aura_browser`: real headless Chromium, **read-only** (the model passes only a URL; no click, type, submit or sign-in), no approval because it changes nothing.
+- Not live: clicking/typing on sites, handing the browser to the user, the Aura Companion extension (PR #10, open, off by default), control of the user's own computer.
+- Unverified: whether the approval card shows and resolves while a voice call is running, and whether the result is spoken; whether Chromium fits Render free's 512 MB (server was at ~479 MB before this deploy).
+- Test script: re-enter a model key in Settings, start voice, say "Open example.com and tell me its heading, then run a command that counts the words in it." Expect a read-only browse (no approval), then an approval card for the `aura_computer` command; approve on the phone; hear the result spoken. (A brand-new file via `aura_file` is created without approval; only overwrites and commands ask.)
+
+## Voice increment (previous deploy) — tested vs not
 
 | Piece | Where | Evidence |
 | --- | --- | --- |
@@ -112,3 +130,17 @@ Prompt size measured locally with the Aura config: system prompt ~9–10k chars 
 Tests: 328 passed in the touched and neighbouring suites (error classifier, follow-profile gateway suites, aura config, aura tools). `tests/agent/test_fallback_429_after_timeout.py::...after_timeout_recovery` fails here and on the base commit alike (pre-existing).
 
 Gemini **speech** 429 ("gemini-3.8-flash-lite text-to-speech HTTP 429") is handled on `aura/goal-intent-voice-ui` (cooldown + device voice), not here.
+
+### CI on PR #13 (00:45 AM)
+- Python lints fail **only on code from the #12 base** (commit 22dbc621de): `scripts/reveta/aura_config.py:66` (`read_text` encoding), `scripts/reveta/aura_voice_call_live.py` (UP031, `open()` without encoding), `tests/test_aura_workspace_ownership.py` (FURB167). None of the files this branch changes fail lint (ruff clean locally).
+- Repository guards fail on contributor attribution: unmapped emails `chineduogbalu@gmail.com`, `melvinjayson@users.noreply.github.com`, `noreply@sprites.dev` from earlier commits. The fix is `python3 scripts/audit_pr_attribution.py --fix`, committed once on the integration branch. Same failure as #9/#10.
+- Python test shards were still pending when this was written.
+
+### Next step for this lane (not started): configurable Aura model profiles
+User said "proceed" on the WebLLM findings (Reveta OS ledger A-018, commit 185ee01). Replace the hardcoded `PROVIDERS[...]["models"]` lists in `tools/aura_provider.py` (OpenAI: gpt-5.6-luna/terra/sol, gpt-4.1-mini; Anthropic: claude-sonnet-5, claude-haiku-4-5, claude-sonnet-4-6, claude-opus-5) with configurable **model profiles**. Each profile records role, provider, model, spending caps and last-validated date. Show them in `apps/desktop/src/app/aura/model-settings.tsx`.
+- A profile changes only after a recorded quality, latency, cost and tool-use check. There is no automatic upgrade to whichever model is called the best.
+- Keep the server-side caps (`MAX_CAP_USD`, per-user daily caps) and the existing-chat routing from this PR (Aura chats follow the Settings model).
+- Too large for this increment, which is already in review for the batched release. Do it on its own branch after #12/#13 merge.
+
+### Unclear report
+The user said "the two users are failing". It has not been interpreted or investigated, and no fix is claimed for it. Ask the user what it refers to.
