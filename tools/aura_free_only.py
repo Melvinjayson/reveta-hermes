@@ -2,6 +2,11 @@
 
 Default allowlists are empty. A tool attestation binds its exact arguments;
 open-world commands cannot acquire a blanket zero-price declaration.
+
+``aura.free_only: false`` (the boolean, nothing else) turns the rule off: every
+model and tool may run, the owner's capped paid route keeps its caps, and the
+single-use approval gate in ``tools.aura_dispatch_policy`` still applies. Any other
+value that is not ``true`` fails closed.
 """
 
 from __future__ import annotations
@@ -25,7 +30,8 @@ class FreeOnlyRefused(PermissionError):
 def settings():
     try:
         value = _config().get("aura", {})
-        if not isinstance(value, dict) or value.get("free_only", True) is not True:
+        # Only a real boolean is an owner decision; "false", 0 and None fail closed.
+        if not isinstance(value, dict) or type(value.get("free_only", True)) is not bool:
             raise FreeOnlyRefused()
         return value
     except Exception as exc:
@@ -33,8 +39,8 @@ def settings():
 
 
 def enabled():
-    settings()  # paid mode is unsupported until a separate spending-cap slice
-    return True
+    """True while the free-only rule is on; False only for an explicit ``free_only: false``."""
+    return settings().get("free_only", True) is True
 
 
 def argument_hash(args):
@@ -54,7 +60,10 @@ def _entries(config, key):
 
 
 def require_tool(name, args):
+    """True when the action is confirmed zero-price; False when the rule is off (price unverified)."""
     config = settings()
+    if config.get("free_only", True) is False:
+        return False
     try:
         if _declared_paid_tool(name):
             raise FreeOnlyRefused()
@@ -95,9 +104,14 @@ def advertised_tools(names):
     if not aura:
         return set(names)
     try:
-        entries = settings().get("free_tools", [])
+        config = settings()
+        # With the rule off, the owner's configured MCP servers (e.g. Composio) are offered too;
+        # the curated surface still hides the desktop/catalog GUI tools Aura's web app can't use.
+        mcp = config.get("free_only", True) is False
+        entries = config.get("free_tools", [])
         attested = {e.get("name") for e in entries if isinstance(e, dict)} if isinstance(entries, list) else set()
-        return {name for name in names if owned_tool(name) or name in attested}
+        return {name for name in names
+                if owned_tool(name) or name in attested or (mcp and name.startswith("mcp_"))}
     except Exception:
         return set()
 
@@ -203,6 +217,8 @@ def require_model(provider, endpoint, request, *, api_mode="chat_completions", c
         paid = _paid_route_request(config, provider, endpoint, request, chat)
         if paid is not None:
             return paid
+    if config.get("free_only", True) is False:
+        return request
     try:
         model, endpoint = _model_identity(provider, endpoint, request, api_mode)
         matches = [

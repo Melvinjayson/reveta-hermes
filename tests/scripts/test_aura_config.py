@@ -44,6 +44,21 @@ def test_google_alias_and_router_key_alone_cannot_select_an_automatic_route():
     assert aura_settings({"OPENROUTER_API_KEY": "synthetic"})["aura"]["free_models"] == []
 
 
+def test_composio_mcp_only_with_key_and_key_value_never_serialized():
+    assert 'mcp_servers' not in aura_settings({})
+    assert aura_settings({})['platform_toolsets']['api_server'] == ['aura', 'todo']
+    config = aura_settings({'COMPOSIO_API_KEY': 'ck_synthetic-consumer-key'})
+    server = config['mcp_servers']['composio']
+    assert server['url'] == 'https://connect.composio.dev/mcp'
+    assert server['headers'] == {'x-consumer-api-key': '${COMPOSIO_API_KEY}'}
+    assert set(server['tools']['exclude']) == {'COMPOSIO_REMOTE_WORKBENCH', 'COMPOSIO_REMOTE_BASH_TOOL'}
+    assert 'synthetic' not in json.dumps(config)
+    from hermes_cli.tools_config import _get_platform_tools
+    for platform in ('cli', 'api_server'):
+        assert config['platform_toolsets'][platform] == ['aura', 'todo', 'composio']
+        assert 'composio' in _get_platform_tools(config, platform)
+
+
 def test_browser_proxy_config_never_serializes_proxy_credentials():
     browser = aura_settings({'HTTPS_PROXY': 'http://proxy.example:8080'})['browser']
     assert browser['chromium_args'] == ['--proxy-server=http://proxy.example:8080']
@@ -58,7 +73,7 @@ def test_override_only_attests_an_owner_confirmed_exact_free_model():
     entry, = config['aura']['free_models']
     assert entry['model'] == config['model']['default'] == env['AURA_GEMINI_MODEL']
     assert entry['confirmed_free'] is True and entry['cost_usd'] == 0
-    assert config['fallback_model'] == [] and config['aura']['free_only'] is True
+    assert config['fallback_model'] == [] and config['aura']['free_only'] is False
     with pytest.raises(ValueError, match='exact Gemini model ID'):
         aura_settings({**env, 'AURA_GEMINI_MODEL': 'gemini-flash-latest'})
 

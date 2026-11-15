@@ -85,6 +85,7 @@ def test_gemini_native_route_and_async_sealing(home):
     root, cfg, write = home
     settings = aura_settings({'GOOGLE_API_KEY': 'synthetic'})
     cfg['aura'].update(settings['aura'])
+    cfg['aura']['free_only'] = True  # the rule is off by default now; this pins its behaviour when on
     write()
     route = settings['model']
     requests = []

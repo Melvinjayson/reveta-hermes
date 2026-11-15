@@ -53,6 +53,12 @@ def test_model_tool_definitions_apply_the_filter(home):
     assert "todo_list" in names
     assert not names & {"desktop_preview", "manage_catalog", "desktop_project", "set_theme"}
 
+    home({"aura": {"enabled": True, "free_only": False, "free_tools": []}})
+    names = {t["function"]["name"] for t in model_tools._compute_tool_definitions(
+        ["aura", "todo", "desktop_ui", "catalog", "project"], quiet_mode=True, skip_tool_search_assembly=True)}
+    assert "todo_list" in names  # rule off: curated surface unchanged
+    assert not names & {"desktop_preview", "manage_catalog", "desktop_project", "set_theme"}
+
 
 def test_aura_prompt_keeps_exploration_in_conversation_and_ignores_its_own_echo():
     from scripts.reveta.aura_config import AURA_SYSTEM_PROMPT as prompt

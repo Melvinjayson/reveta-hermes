@@ -80,7 +80,30 @@ def write_soul(home: Path) -> bool:
     return True
 
 
+COMPOSIO_MCP_URL = "https://connect.composio.dev/mcp"
+# Composio's remote sandboxes run open-ended code off-box; Aura has its own workspace tool.
+COMPOSIO_EXCLUDED_TOOLS = ["COMPOSIO_REMOTE_WORKBENCH", "COMPOSIO_REMOTE_BASH_TOOL"]
+
+
+def mcp_settings(env: dict[str, str]) -> dict:
+    """Composio Connect only when its consumer key is in the environment (a Render secret).
+
+    The key is referenced as ``${COMPOSIO_API_KEY}`` and resolved at connect time, so its
+    value is never written to config.yaml.
+    """
+    if not env.get("COMPOSIO_API_KEY", "").strip():
+        return {}
+    return {
+        "composio": {
+            "url": COMPOSIO_MCP_URL,
+            "headers": {"x-consumer-api-key": "${COMPOSIO_API_KEY}"},
+            "tools": {"exclude": list(COMPOSIO_EXCLUDED_TOOLS)},
+        }
+    }
+
+
 def aura_settings(env: dict[str, str]) -> dict:
+    mcp = mcp_settings(env)
     # Exact native ID/endpoint: website/docs/guides/google-gemini.md.
     # Use an AI Studio FREE-TIER project; a billing-enabled key can incur charges.
     endpoint = "https://generativelanguage.googleapis.com/v1beta"
@@ -107,7 +130,9 @@ def aura_settings(env: dict[str, str]) -> dict:
         "fallback_model": [],
         "aura": {
             "enabled": True,
-            "free_only": True,
+            # Owner decision 15 Nov 2026: the free-only rule is off. Paid-route caps in Aura
+            # Settings and the single-use approval gate stay (tools/aura_free_only.py).
+            "free_only": False,
             "free_models": free_models,
             "free_tools": [],
             "anthropic": {
@@ -117,7 +142,8 @@ def aura_settings(env: dict[str, str]) -> dict:
             },
         },
         "terminal": {"backend": "local", "cwd": str(Path(env.get("HERMES_HOME", ".")) / "aura-workspace")},
-        "platform_toolsets": {"cli": ["aura", "todo"], "api_server": ["aura", "todo"]},
+        "platform_toolsets": {platform: ["aura", "todo", *mcp] for platform in ("cli", "api_server")},
+        **({"mcp_servers": mcp} if mcp else {}),
         # This compact surface needs no deferred catalog/bridge calls.
         "tools": {"tool_search": {"enabled": "off"}},
         "browser": browser_settings(env),
@@ -184,6 +210,8 @@ def main() -> int:
         paid = (config.get("aura") or {}).get("paid_route")
         paid_model = config.get("model")
         config.update(settings)
+        if "mcp_servers" not in settings and isinstance(config.get("mcp_servers"), dict):
+            config["mcp_servers"].pop("composio", None)  # key removed from the environment
         if isinstance(paid, dict) and isinstance(paid_model, dict):
             config["aura"]["paid_route"] = paid
             config["model"] = paid_model

@@ -406,14 +406,68 @@ def test_redirect_cannot_escape_confirmed_endpoint(policy):
     assert urls == [URL + "/chat/completions"]
 
 
-@pytest.mark.parametrize("flag", [False, "false", 0, None])
-def test_disabling_or_malformed_mode_cannot_enable_paid_calls(policy, flag):
+@pytest.mark.parametrize("flag", ["false", 0, None, 1, "true"])
+def test_malformed_mode_cannot_enable_paid_calls(policy, flag):
     home, _ = policy
     (home / "config.yaml").write_text(
         json.dumps({"aura": {"free_only": flag, "free_models": [MODEL]}})
     )
     with pytest.raises(FreeOnlyRefused):
         require_model("custom", URL, {"model": "fixture-model"})
+
+
+def test_explicit_false_turns_rule_off_but_keeps_single_use_approval(policy):
+    from tools import aura_free_only
+
+    home, _ = policy
+    (home / "config.yaml").write_text(
+        json.dumps({"aura": {"enabled": True, "free_only": False, "free_models": []}})
+    )
+    assert aura_free_only.enabled() is False
+    request = {"model": "unlisted-paid-model"}
+    assert require_model("custom", "https://api.example.test/v1", request) is request
+    assert aura_free_only.require_tool("paid_addon", {}) is False  # runs, price unverified
+    composio = "mcp__composio__COMPOSIO_SEARCH_TOOLS"
+    assert aura_free_only.advertised_tools(["paid_addon", "desktop_preview", composio]) == {composio}
+    hits, prompts = [], []
+    registry = ToolRegistry()
+    registry.register(
+        name="paid_addon",
+        toolset="fixture",
+        schema={"name": "paid_addon"},
+        handler=lambda args: hits.append(1) or '{"success":true}',
+    )
+
+    def deny(data):
+        prompts.append(data)
+        approval.resolve_gateway_approval(
+            "free-fixture", "deny", request_id=data["request_id"]
+        )
+
+    approval.register_gateway_notify("free-fixture", deny)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        result = json.loads(
+            pool.submit(copy_context().run, registry.dispatch, "paid_addon", {}).result(timeout=5)
+        )
+    assert result["status"] == "refused" and result["error"] != REFUSAL
+    assert hits == [] and len(prompts) == 1
+    assert "Cost is not verified" in prompts[0]["description"]
+
+
+def test_paid_route_cap_still_refuses_with_rule_off(policy, monkeypatch):
+    from tools import aura_free_only, aura_provider
+
+    home, _ = policy
+    (home / "config.yaml").write_text(json.dumps({"aura": {"free_only": False}}))
+    monkeypatch.setattr(aura_provider, "route", lambda *a: {"model": "m"})
+    monkeypatch.setattr(aura_provider, "matches", lambda *a: True)
+
+    def capped(*a):
+        raise aura_provider.SpendCapReached("cap")
+
+    monkeypatch.setattr(aura_provider, "check", capped)
+    with pytest.raises(FreeOnlyRefused):
+        aura_free_only.require_model("anthropic", "https://api.anthropic.com", {"model": "m"})
 
 
 def test_auxiliary_quota_stops_before_any_recovery_route(policy, monkeypatch):
