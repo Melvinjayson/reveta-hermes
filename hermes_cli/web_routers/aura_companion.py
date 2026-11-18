@@ -297,7 +297,10 @@ def _call_model(messages: list[dict], intent: str) -> str:
     from agent.auxiliary_client import call_llm
     from tools.aura_free_only import enabled as free_only
 
-    free_only()  # raises unless this home is in Aura's free-only mode: the companion never spends
+    # The companion never spends. ``enabled()`` returns False under the owner's free_only: false
+    # (15 Nov) instead of raising, so refuse explicitly; using the capped paid route is Melvin's call.
+    if not free_only():
+        raise PermissionError("The companion runs only while Aura's free-only rule is on.")
     resp = call_llm(task="aura_companion", messages=messages, temperature=0.2,
                     max_tokens=700 if intent == "takeover" else 900, timeout=60)
     return resp.choices[0].message.content or ""
