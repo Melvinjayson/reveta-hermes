@@ -1,4 +1,46 @@
-# Branch map and recovery record
+# Aura Zero branch map and recovery record
+
+## Consolidation status — 18 November 2026
+
+Checked against GitHub on 18 Nov 2026 around 23:30 GMT (`git ls-remote`, `gh pr list`, `gh pr checks`).
+Nothing below was merged, deleted, closed or deployed by this record.
+
+### Open branches and pull requests
+
+| Branch | Head | Base | PR | Ahead / behind live | State |
+|---|---|---|---|---|---|
+| `aura/working-product-20261111` | `e78821386a54` | — | — | live line | Render (`https://aura-zero.onrender.com`) deploys every push |
+| `main` | `a776809ad81e` | — | — | 0 / 103 | Upstream Hermes Agent baseline, never pushed to |
+| `claude/aura-redesign-v1` | `edcdeaaf249c` | live | #17 draft | 19 / 0 | Mergeable; GitHub checks failing (decision G) |
+| `claude/aura-persistence-notes` | `b2e5a5af08db` | #17 | #18 draft | 23 / 0 | Mergeable; GitHub checks failing |
+| `claude/aura-handoff-20261118` | `ea7b4916d759` | #18 | none | 24 / 0 | Handoff doc only |
+| `claude/aura-pipecat-voice-v2-3p4qpx` | `816cd981dd24` | live | #16 draft | 16 / 0 | Mergeable alone; conflicts with #17 in 3 browser-test scripts |
+| `aura/browser-companion` | `7ddaa8e1714850` | live | #10 open | 2 / 13 | One feature commit `f58e8cbf` (Melvin Jayson); no file overlap with #16, #17 or #18 |
+| `aura/pipecat-voice` | `db19b9a98315` | live | #11 draft | 8 / 24 | Conflicting. Superseded: all 8 commits are cherry-picked with `-x` into #16; only its Dockerfile hunks were dropped on purpose |
+| `aura-zero/consolidation-20261118` | this branch | live | draft | stack + docs | Release carrier for the stack; report titles say Aura Zero |
+
+File overlap measured from each branch's merge base: #16 and the #17/#18 stack share only
+`scripts/reveta/aura_browser.mjs`, `scripts/reveta/aura_browser.py` and
+`scripts/reveta/aura_product_browser.mjs`. A trial merge of #16 onto the stack stops on exactly those
+three files: #17 rewrote the theme, panel and voice steps for the new shell, and #16 added a voice-mode
+scenario and moved the product flow's voice steps to `continuousVoiceFlow`. Resolving them is a test
+rewrite, so it belongs with decision B. A trial merge of #10 onto the stack had no conflicts.
+
+### One release line
+
+1. Decision G names #17's failing checks against base `e7882138`. Only checks that fail on the stack and
+   not on the base block the release.
+2. Decision D (`aura_config.py` carry-over and configurable public address) lands next, so settings
+   survive the restart that every deploy causes.
+3. Decisions F, A and B land as their own draft PRs stacked on the redesign: A carries PR #10's
+   `f58e8cbf` with Melvin's authorship, B carries PR #16 and resolves the three test files.
+4. Each approved slice is merged into this branch with a merge commit (never a squash), so every
+   commit and author is kept. Decisions E and C follow the same path when ready.
+5. Then #10, #11 and #16 can be closed as carried, and their branches kept or tagged as in the
+   table below. PR #11 needs Melvin's word before it is closed.
+6. Deploy = merging this branch into `aura/working-product-20261111` with a merge commit, after the
+   checks above pass with no new failures against the base. On Render free the redeploy wipes the
+   saved key and chat history, and full duplex voice cannot run there (memory), so it stays off.
 
 Consolidated 15 November 2026. Live preview then: `e2e7c1ac1843` on `aura/working-product-20261111`.
 
