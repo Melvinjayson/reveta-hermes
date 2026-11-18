@@ -156,3 +156,26 @@ async def set_aura_project_membership(body: ProjectMembership, request: Request)
     from tools.aura_projects import assign
 
     return await _projects(assign, body.session_id, body.project_id)
+
+
+_MEMORY_NOTES = (("memory", "MEMORY.md"), ("user", "USER.md"))
+_MEMORY_READ_CAP = 20_000
+
+
+def _read_memory_notes() -> dict:
+    from hermes_constants import get_hermes_home
+
+    root = get_hermes_home() / "memories"
+    notes = {}
+    for key, name in _MEMORY_NOTES:
+        path = root / name
+        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        notes[key] = {"text": text[:_MEMORY_READ_CAP], "truncated": len(text) > _MEMORY_READ_CAP}
+    return notes
+
+
+@router.get("/api/aura/memory")
+async def aura_memory(request: Request):
+    """Read-only view of the built-in memory notes for the signed-in owner (reset: /api/memory/reset)."""
+    _require_token(request)
+    return await asyncio.to_thread(_read_memory_notes)

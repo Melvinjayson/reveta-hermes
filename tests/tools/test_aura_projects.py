@@ -70,3 +70,4 @@ def test_invalid_names_are_refused(home):
         aura_projects.create("x" * 81)
     with pytest.raises(LookupError):
         aura_projects.update("p_missing", name="X")
+
