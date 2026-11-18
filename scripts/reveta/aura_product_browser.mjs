@@ -23,6 +23,8 @@ export async function productFlow(page, expect, output) {
       state
     }
   })
+  // Full duplex is off by default (PR #16); this flow opts in the way the server would report it.
+  await page.route('**/api/aura/voice/mode**', route => route.fulfill({ json: { full_duplex: true, enabled: true, runtime: true } }))
   const fixture = await installVoiceFixture(page)
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
