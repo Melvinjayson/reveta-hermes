@@ -200,15 +200,17 @@ export function AuraShell({ actions, children }: AuraShellProps) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (isSearchShortcut(event)) {
+        // Capture phase: the shared app binds this chord too; inside Aura it opens Aura's search.
         event.preventDefault()
+        event.stopImmediatePropagation()
         setDrawer(false)
         setSearching(true)
       }
     }
 
-    window.addEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
 
-    return () => window.removeEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [])
 
   useEffect(() => {
