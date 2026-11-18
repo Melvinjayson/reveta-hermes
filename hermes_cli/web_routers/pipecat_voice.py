@@ -9,9 +9,10 @@ from pathlib import Path
 import time
 import uuid
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
 from hermes_cli.web_server_chat import _ws_auth_ok, _ws_request_is_allowed
+from hermes_cli.web_deps import late
 from hermes_platform.resolver import locate_command
 
 ROOT = str(Path(__file__).resolve().parents[2])
@@ -20,6 +21,25 @@ router = APIRouter()
 _active = False
 _replays = {}
 MAX_FRAME = 1024 * 1024
+
+
+_require_token = late("_require_token")
+
+
+def full_duplex_enabled() -> bool:
+    """``aura.voice.full_duplex`` in config.yaml; off unless set to true."""
+    from hermes_cli.config import load_config_readonly
+
+    aura = load_config_readonly().get('aura')
+    voice = aura.get('voice') if isinstance(aura, dict) else None
+    return isinstance(voice, dict) and voice.get('full_duplex') is True
+
+
+def voice_mode() -> dict:
+    """Which voice the composer shows. Full duplex needs the setting AND the separate speech runtime."""
+    enabled = full_duplex_enabled()
+    runtime = enabled and runtime_python() is not None and locate_command('ffmpeg').found
+    return {'full_duplex': bool(runtime), 'enabled': enabled, 'runtime': bool(runtime)}
 
 
 def runtime_python():
@@ -83,6 +103,12 @@ async def _stop_speech(process):
             await asyncio.wait_for(process.wait(), timeout=3)
 
 
+@router.get('/api/aura/voice/mode')
+async def aura_voice_mode(request: Request):
+    _require_token(request)
+    return await asyncio.to_thread(voice_mode)
+
+
 @router.websocket('/api/audio/pipecat')
 async def voice_ws(ws: WebSocket):
     global _active
@@ -93,6 +119,10 @@ async def voice_ws(ws: WebSocket):
         await ws.close(code=4403)
         return
     await ws.accept(subprotocol=getattr(ws, '_hermes_ws_subprotocol', None))
+    if not await asyncio.to_thread(full_duplex_enabled):
+        await ws.send_json({'type': 'unavailable', 'message': 'Full-duplex voice is off in Settings.'})
+        await ws.close()
+        return
     python = await asyncio.to_thread(runtime_python)
     ffmpeg = await asyncio.to_thread(locate_command, 'ffmpeg')
     if _active:
