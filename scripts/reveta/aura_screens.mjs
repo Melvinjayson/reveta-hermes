@@ -27,6 +27,7 @@ async function send(page, text) {
 }
 
 async function settle(page) {
+  await expect(page.locator('.aura-empty, [data-role]').first()).toBeVisible({ timeout: 60000 })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(400)
 }

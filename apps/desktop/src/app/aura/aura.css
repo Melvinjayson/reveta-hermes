@@ -46,19 +46,15 @@
   display: flex;
   flex-direction: column;
 }
-.aura-app *,
-.aura-sheet * {
+.aura-app * {
   box-sizing: border-box;
 }
 .aura-app button,
 .aura-app select,
-.aura-app input,
-.aura-sheet button,
-.aura-sheet input {
+.aura-app input {
   font: inherit;
 }
-.aura-app button,
-.aura-sheet button {
+.aura-app button {
   min-height: 44px;
   min-width: 44px;
   border-radius: 10px;
@@ -66,51 +62,9 @@
 }
 .aura-app button:focus-visible,
 .aura-app a:focus-visible,
-.aura-sheet button:focus-visible,
-.aura-sheet input:focus-visible,
 .aura-app select:focus-visible {
   outline: 2px solid var(--aura-link);
   outline-offset: 3px;
-}
-.aura-header {
-  height: 80px;
-  flex-shrink: 0;
-  padding: 16px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--aura-line);
-  background: color-mix(in srgb, var(--aura-page) 88%, transparent);
-  backdrop-filter: blur(20px);
-  z-index: 45;
-}
-.aura-header button {
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: 0;
-  color: var(--aura-ink);
-}
-.aura-wordmark {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--aura-ink);
-  text-decoration: none;
-  font-family: var(--aura-font);
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: -0.8px;
-}
-.aura-wordmark img {
-  width: 30px;
-  height: 36px;
-  object-fit: contain;
-}
-.aura-workspace {
-  display: flex;
-  min-height: 0;
-  flex: 1;
 }
 .aura-chat {
   position: relative;
@@ -185,71 +139,14 @@
   border-radius: 10px;
   padding: 12px;
 }
-.aura-rail {
-  display: none;
-}
-.aura-sheet {
-  margin: auto 0 0;
-  width: 100%;
-  max-width: none;
-  max-height: 85dvh;
-  border: 1px solid var(--aura-line);
-  border-radius: 24px 24px 0 0;
-  padding: 24px 24px max(24px, env(safe-area-inset-bottom));
-  color: var(--aura-ink);
-  background: var(--aura-surface);
-  font-family: var(--aura-font);
-}
-.aura-sheet::backdrop {
-  background: var(--aura-scrim);
-  backdrop-filter: blur(4px);
-}
-.aura-nav-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--aura-muted);
-  font-size: 13px;
-  margin-bottom: 24px;
-}
-.aura-nav-title button {
-  background: transparent;
-  border: 0;
-  color: var(--aura-ink);
-}
-.aura-rail nav,
-.aura-sheet nav {
-  display: grid;
-  gap: 8px;
-}
-.aura-rail nav button,
-.aura-sheet nav button,
-.aura-conversations button {
-  width: 100%;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  text-align: left;
-  background: transparent;
-  color: var(--aura-ink);
-  border: 0;
-}
-.aura-rail nav button[aria-current],
-.aura-sheet nav button[aria-current] {
-  background: var(--aura-accent-soft);
-}
-.aura-conversations,
 .aura-settings {
   margin: 24px 0;
 }
-.aura-conversations h2,
 .aura-settings h2 {
   font-size: 14px;
   font-weight: 600;
   margin: 0 0 16px;
 }
-.aura-conversations p,
 .aura-settings p {
   font-size: 13px;
   color: var(--aura-muted);
@@ -271,7 +168,6 @@
 .aura-model-settings button:disabled {
   opacity: 0.5;
 }
-.aura-conversations input,
 .aura-settings input,
 .aura-settings select {
   width: 100%;
@@ -282,12 +178,6 @@
   color: var(--aura-ink);
   background: var(--aura-surface);
   min-height: 44px;
-}
-.aura-signout {
-  background: transparent;
-  color: var(--aura-muted);
-  padding: 8px 12px;
-  border: 1px solid var(--aura-line);
 }
 .aura-chat [data-role='user'] {
   position: relative;
@@ -367,25 +257,6 @@
     background-color 180ms ease-out,
     transform 180ms ease-out;
 }
-@media (min-width: 900px) {
-  .aura-rail {
-    display: block;
-    width: 260px;
-    flex-shrink: 0;
-    padding: 24px;
-    border-right: 1px solid var(--aura-line);
-    overflow-y: auto;
-  }
-  .aura-app:has(.aura-sheet[open]) .aura-rail {
-    display: none;
-  }
-  .aura-header {
-    padding-inline: 28px;
-  }
-  .aura-empty {
-    padding-top: 72px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .aura-app *,
   .aura-app *::before,
@@ -400,9 +271,6 @@
   background: transparent;
   color: var(--aura-muted);
   font-size: 22px !important;
-}
-.aura-rail[data-collapsed] {
-  display: none;
 }
 .aura-chat [data-slot='tool-approval-stack'] button {
   min-height: 44px;
@@ -517,28 +385,12 @@
   font-size: 1rem;
   line-height: 1.5;
 }
-.aura-header {
-  padding-inline: 16px;
-  height: 72px;
-}
 .aura-empty {
   padding-inline: 16px;
 }
 .aura-eyebrow {
   font-size: 0.8125rem;
   letter-spacing: 0.08em;
-}
-.aura-sheet {
-  border-radius: 16px 16px 0 0;
-  padding-inline: 16px;
-}
-.aura-nav-title {
-  font-size: 0.875rem;
-}
-.aura-conversations h3 {
-  color: var(--aura-muted);
-  font-size: 0.8125rem;
-  margin: 16px 12px 4px;
 }
 .aura-context {
   padding-inline: 16px;
@@ -682,17 +534,6 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 @keyframes aura-voice-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .aura-voice .aura-voice-dot { animation: none !important; } }
 @media (max-width: 480px) { .aura-voice .aura-voice-toggle[aria-pressed='true'] .aura-voice-label { max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; } }
-
-/* Conversation list rows: open on the title, a quiet delete with an inline confirm. */
-.aura-conversation-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.aura-conversations .aura-conversation-row .aura-conversation-open { flex: 1; min-width: 0; min-height: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.aura-conversations .aura-conversation-row .aura-conversation-delete { flex: 0 0 44px; width: 44px; min-height: 44px; padding: 0; justify-content: center; color: var(--aura-muted); opacity: 0.6; }
-.aura-conversation-row:hover .aura-conversation-delete, .aura-conversation-delete:focus-visible { opacity: 1; }
-.aura-conversation-confirm { flex-wrap: wrap; padding: 8px 12px; font-size: 13px; }
-.aura-conversation-confirm span { flex-basis: 100%; overflow-wrap: anywhere; }
-.aura-conversations .aura-conversation-confirm button { width: auto; min-height: 44px; padding: 0 14px; border: 1px solid var(--aura-line); border-radius: 8px; }
-.aura-conversations .aura-conversation-confirm .aura-danger { background: var(--aura-danger); color: #fff; border-color: var(--aura-danger); }
-.aura-conversations button:focus-visible { outline: 2px solid var(--aura-link); outline-offset: -2px; }
 
 /* Goal: a one-line suggestion the user confirms; saved goals live in the collapsed context row. */
 .aura-goal-proposal { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 0; font-size: 13px; }

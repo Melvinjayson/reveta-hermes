@@ -1,0 +1,574 @@
+/* Shell: sidebar, phone drawer, top bar, dialogs. Tokens: tokens.css. */
+.aura-sheet *,
+.aura-dialog * {
+  box-sizing: border-box;
+}
+.aura-sheet,
+.aura-dialog {
+  color: var(--aura-ink);
+  font-family: var(--aura-font);
+  font-size: var(--aura-text-md);
+}
+.aura-sheet button,
+.aura-sheet input,
+.aura-sheet select,
+.aura-dialog button,
+.aura-dialog input,
+.aura-dialog select {
+  font: inherit;
+  color: inherit;
+}
+.aura-sheet button,
+.aura-dialog button {
+  min-height: var(--aura-target);
+  min-width: var(--aura-target);
+  border-radius: var(--aura-radius-control);
+  cursor: pointer;
+}
+.aura-sheet :is(button, a, input, select, summary):focus-visible,
+.aura-dialog :is(button, a, input, select, summary, [role='option']):focus-visible {
+  outline: 2px solid var(--aura-accent);
+  outline-offset: 2px;
+}
+
+/* Generic controls */
+.aura-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: var(--aura-target);
+  height: var(--aura-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--aura-radius-control);
+  background: transparent;
+  color: var(--aura-muted);
+  transition: background-color var(--aura-fast) var(--aura-ease), color var(--aura-fast) var(--aura-ease);
+}
+.aura-icon-button:hover {
+  background: var(--aura-subtle);
+  color: var(--aura-ink);
+}
+.aura-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--aura-space-2);
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-4);
+  border-radius: var(--aura-radius-control);
+  border: 1px solid transparent;
+  font-weight: 500;
+  transition: background-color var(--aura-fast) var(--aura-ease), border-color var(--aura-fast) var(--aura-ease);
+}
+.aura-button-primary {
+  background: var(--aura-accent);
+  color: var(--aura-on-accent);
+}
+.aura-button-secondary {
+  background: var(--aura-surface);
+  color: var(--aura-ink);
+  border-color: var(--aura-line);
+}
+.aura-button-secondary:hover {
+  background: var(--aura-subtle);
+}
+.aura-button-danger {
+  background: var(--aura-danger);
+  color: #ffffff;
+}
+.aura-section-label {
+  margin: var(--aura-space-4) var(--aura-space-3) var(--aura-space-1);
+  font-size: var(--aura-text-xs);
+  font-weight: 500;
+  color: var(--aura-muted);
+}
+.aura-empty-note {
+  margin: var(--aura-space-3);
+  font-size: var(--aura-text-sm);
+  color: var(--aura-muted);
+  line-height: 1.5;
+}
+.aura-muted {
+  color: var(--aura-muted);
+}
+
+/* Layout */
+.aura-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.aura-app .aura-wordmark,
+.aura-sheet .aura-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aura-space-2);
+  min-height: var(--aura-target);
+  color: var(--aura-ink);
+  text-decoration: none;
+  font-size: var(--aura-text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.aura-wordmark img {
+  width: 22px;
+  height: 26px;
+  object-fit: contain;
+}
+
+/* Top bar: phone = menu · Aura · new chat; desktop = sidebar toggle · chat title · new chat. */
+.aura-header {
+  display: grid;
+  grid-template-columns: var(--aura-target) 1fr var(--aura-target);
+  align-items: center;
+  gap: var(--aura-space-2);
+  height: 56px;
+  flex-shrink: 0;
+  padding: 0 var(--aura-space-2);
+  border-bottom: 1px solid var(--aura-line);
+  background: var(--aura-page);
+}
+.aura-header-mark {
+  justify-self: center;
+}
+.aura-header-title {
+  display: none;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--aura-text-md);
+  font-weight: 500;
+}
+.aura-header .aura-icon-button {
+  color: var(--aura-ink);
+}
+
+/* Sidebar (desktop) and drawer (phone) share .aura-nav. */
+.aura-rail {
+  display: none;
+}
+.aura-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: var(--aura-space-1);
+}
+.aura-nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--aura-space-2) var(--aura-space-2) var(--aura-space-2) var(--aura-space-3);
+}
+.aura-nav-actions {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--aura-space-2);
+}
+.aura-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-3);
+  width: 100%;
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-3);
+  border: 0;
+  border-radius: var(--aura-radius-control);
+  background: transparent;
+  color: var(--aura-ink);
+  text-align: left;
+  font-size: var(--aura-text-md);
+  transition: background-color var(--aura-fast) var(--aura-ease);
+}
+.aura-nav-item:hover {
+  background: var(--aura-subtle);
+}
+.aura-nav-item span {
+  flex: 1;
+}
+.aura-nav-item kbd {
+  font: inherit;
+  font-size: var(--aura-text-xs);
+  color: var(--aura-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--aura-line);
+  border-radius: 6px;
+}
+.aura-conversations {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--aura-space-2) var(--aura-space-4);
+}
+.aura-conversations section {
+  margin: 0;
+}
+.aura-nav-footer {
+  padding: var(--aura-space-2);
+  border-top: 1px solid var(--aura-line);
+}
+
+/* History rows */
+.aura-conversation-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-radius: var(--aura-radius-control);
+  transition: background-color var(--aura-fast) var(--aura-ease);
+}
+.aura-conversation-row:hover,
+.aura-conversation-row[data-current] {
+  background: var(--aura-subtle);
+}
+.aura-conversation-row[data-current] .aura-conversation-open {
+  font-weight: 500;
+}
+.aura-conversation-open {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--aura-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--aura-ink);
+  text-align: left;
+  font-size: var(--aura-text-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aura-conversation-delete {
+  flex: 0 0 var(--aura-target);
+  display: grid;
+  place-items: center;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--aura-muted);
+  opacity: 0;
+}
+.aura-conversation-row:hover .aura-conversation-delete,
+.aura-conversation-row[data-current] .aura-conversation-delete,
+.aura-conversation-delete:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .aura-conversation-delete {
+    opacity: 1;
+  }
+}
+.aura-conversation-confirm {
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+  padding: var(--aura-space-2) var(--aura-space-3);
+  background: var(--aura-subtle);
+  font-size: var(--aura-text-sm);
+}
+.aura-conversation-confirm span {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+.aura-conversation-confirm button {
+  min-height: 36px;
+  padding: 0 var(--aura-space-3);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-control);
+  background: var(--aura-surface);
+  color: var(--aura-ink);
+}
+.aura-conversation-confirm .aura-danger {
+  background: var(--aura-danger);
+  border-color: var(--aura-danger);
+  color: #ffffff;
+}
+.aura-conversations button:focus-visible {
+  outline: 2px solid var(--aura-accent);
+  outline-offset: -2px;
+}
+
+/* Phone drawer */
+.aura-sheet.aura-drawer {
+  margin: 0;
+  width: min(86vw, 320px);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border: 0;
+  border-right: 1px solid var(--aura-line);
+  border-radius: 0 var(--aura-radius-large) var(--aura-radius-large) 0;
+  background: var(--aura-sidebar);
+}
+.aura-sheet::backdrop,
+.aura-dialog::backdrop {
+  background: var(--aura-scrim);
+}
+.aura-drawer[open] {
+  animation: aura-drawer-in var(--aura-medium) var(--aura-ease);
+}
+@keyframes aura-drawer-in {
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+}
+
+/* Dialogs: centred modal on desktop, full sheet on phone. */
+.aura-dialog {
+  width: min(100vw, 560px);
+  max-width: 100vw;
+  max-height: min(100dvh, 720px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-large);
+  background: var(--aura-surface);
+  box-shadow: var(--aura-shadow);
+  overflow: hidden;
+}
+.aura-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: aura-dialog-in var(--aura-medium) var(--aura-ease);
+}
+@keyframes aura-dialog-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+@media (max-width: 639px) {
+  .aura-dialog {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+}
+.aura-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--aura-space-2) var(--aura-space-2) var(--aura-space-2) var(--aura-space-6);
+  border-bottom: 1px solid var(--aura-line);
+}
+.aura-dialog-header h2 {
+  margin: 0;
+  font-size: var(--aura-text-lg);
+  font-weight: 600;
+}
+
+/* Search */
+.aura-search {
+  align-self: flex-start;
+  margin-top: 12vh;
+}
+@media (max-width: 639px) {
+  .aura-search {
+    margin-top: 0;
+  }
+}
+.aura-search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-2);
+  padding: var(--aura-space-1) var(--aura-space-2) var(--aura-space-1) var(--aura-space-4);
+  border-bottom: 1px solid var(--aura-line);
+  color: var(--aura-muted);
+}
+.aura-search-field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  border: 0;
+  background: transparent;
+  color: var(--aura-ink);
+  font-size: var(--aura-text-body);
+  outline: none;
+}
+.aura-dialog .aura-search-field input:focus-visible {
+  outline: none;
+}
+.aura-search-results {
+  flex: 1;
+  min-height: 120px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 0 var(--aura-space-2) var(--aura-space-2);
+}
+@media (max-width: 639px) {
+  .aura-search-results {
+    max-height: none;
+  }
+}
+.aura-search-option {
+  display: flex;
+  align-items: center;
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-3);
+  border-radius: var(--aura-radius-control);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.aura-search-option[aria-selected='true'] {
+  background: var(--aura-subtle);
+}
+.aura-search-hint {
+  margin: 0;
+  padding: var(--aura-space-2) var(--aura-space-4);
+  border-top: 1px solid var(--aura-line);
+  font-size: var(--aura-text-xs);
+  color: var(--aura-muted);
+}
+
+/* Settings */
+.aura-dialog.aura-settings-dialog {
+  width: min(100vw, 760px);
+  height: min(100dvh, 600px);
+}
+@media (max-width: 639px) {
+  .aura-dialog.aura-settings-dialog {
+    width: 100vw;
+    height: 100dvh;
+  }
+}
+.aura-settings-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+.aura-settings-nav {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: var(--aura-space-3) var(--aura-space-2);
+  border-right: 1px solid var(--aura-line);
+}
+.aura-settings-nav button {
+  min-height: 40px;
+  padding: 0 var(--aura-space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.aura-settings-nav button:hover {
+  background: var(--aura-subtle);
+}
+.aura-settings-nav button[aria-current] {
+  background: var(--aura-subtle);
+  font-weight: 500;
+}
+.aura-settings-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--aura-space-4) var(--aura-space-6) var(--aura-space-6);
+}
+.aura-settings-body h3 {
+  margin: 0 0 var(--aura-space-4);
+  font-size: var(--aura-text-body);
+  font-weight: 600;
+}
+.aura-settings-body p {
+  margin: 0 0 var(--aura-space-3);
+  line-height: 1.5;
+}
+.aura-field {
+  display: grid;
+  gap: var(--aura-space-1);
+  max-width: 320px;
+  font-size: var(--aura-text-sm);
+  color: var(--aura-muted);
+}
+.aura-dialog select,
+.aura-dialog input:not([role='combobox']) {
+  width: 100%;
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-3);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-control);
+  background: var(--aura-surface);
+  color: var(--aura-ink);
+}
+.aura-definitions {
+  margin: 0;
+  line-height: 1.5;
+}
+.aura-definitions dt {
+  font-weight: 600;
+}
+.aura-definitions dd {
+  margin: var(--aura-space-1) 0 var(--aura-space-4);
+  color: var(--aura-muted);
+}
+.aura-dialog .aura-model-settings button {
+  border: 1px solid var(--aura-line);
+  background: var(--aura-surface);
+  padding: 0 var(--aura-space-4);
+  margin: var(--aura-space-1) var(--aura-space-2) var(--aura-space-2) 0;
+}
+.aura-dialog .aura-model-settings label {
+  display: grid;
+  gap: var(--aura-space-1);
+  margin-bottom: var(--aura-space-3);
+  font-size: var(--aura-text-sm);
+  color: var(--aura-muted);
+}
+@media (max-width: 639px) {
+  .aura-settings-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .aura-settings-nav {
+    display: flex;
+    gap: var(--aura-space-1);
+    overflow-x: auto;
+    padding: var(--aura-space-2);
+    border-right: 0;
+    border-bottom: 1px solid var(--aura-line);
+  }
+  .aura-settings-nav button {
+    flex: 0 0 auto;
+    min-height: var(--aura-target);
+  }
+  .aura-settings-body {
+    padding: var(--aura-space-4);
+  }
+}
+
+/* Desktop: persistent sidebar, collapsible. */
+@media (min-width: 900px) {
+  .aura-rail {
+    display: block;
+    width: 264px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--aura-line);
+    background: var(--aura-sidebar);
+  }
+  .aura-rail[data-collapsed] {
+    display: none;
+  }
+  .aura-header {
+    grid-template-columns: auto 1fr auto;
+    border-bottom-color: transparent;
+    padding: 0 var(--aura-space-3);
+  }
+  .aura-header-mark {
+    display: none;
+  }
+  .aura-header-title {
+    display: block;
+  }
+  /* With the sidebar open its own collapse and New chat buttons are the controls. */
+  .aura-app:not([data-aura-collapsed]) .aura-menu-button,
+  .aura-app:not([data-aura-collapsed]) .aura-header-new {
+    display: none;
+  }
+}
