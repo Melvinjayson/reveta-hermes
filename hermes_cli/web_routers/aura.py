@@ -96,3 +96,63 @@ async def set_aura_capabilities(body: CapabilityUpdate, request: Request):
         return await asyncio.to_thread(configure, body.enabled or [])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class ProjectBody(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=4000)
+
+
+class ProjectMembership(BaseModel):
+    session_id: str = Field(max_length=200)
+    project_id: Optional[str] = Field(default=None, max_length=64)
+
+
+async def _projects(call, *args):
+    try:
+        return await asyncio.to_thread(call, *args)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/aura/projects")
+async def aura_projects(request: Request):
+    _require_token(request)
+    from tools.aura_projects import list_all
+
+    return await _projects(list_all)
+
+
+@router.post("/api/aura/projects")
+async def create_aura_project(body: ProjectBody, request: Request):
+    _require_token(request)
+    from tools.aura_projects import create
+
+    return await _projects(create, body.name or "", body.description)
+
+
+@router.patch("/api/aura/projects/{project_id}")
+async def update_aura_project(project_id: str, body: ProjectBody, request: Request):
+    _require_token(request)
+    from tools.aura_projects import update
+
+    return await _projects(update, project_id, body.name, body.description)
+
+
+@router.delete("/api/aura/projects/{project_id}")
+async def delete_aura_project(project_id: str, request: Request):
+    """Deletes the project only; its conversations stay in history."""
+    _require_token(request)
+    from tools.aura_projects import remove
+
+    return await _projects(remove, project_id)
+
+
+@router.put("/api/aura/projects/membership")
+async def set_aura_project_membership(body: ProjectMembership, request: Request):
+    _require_token(request)
+    from tools.aura_projects import assign
+
+    return await _projects(assign, body.session_id, body.project_id)
