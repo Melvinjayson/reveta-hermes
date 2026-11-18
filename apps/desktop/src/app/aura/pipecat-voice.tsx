@@ -8,10 +8,10 @@ import { chatMessageText } from '@/lib/chat-messages'
 import { PipecatVoice, type VoiceEvent } from '@/lib/pipecat-voice'
 import { sanitizeTextForSpeech } from '@/lib/speech-text'
 
-import { AuraBrowserVoice } from './browser-voice'
+import { AuraVoice } from './voice-call'
 
 interface Props {
-  busy: boolean; disabled: boolean; onSubmit: ChatBarProps['onSubmit']
+  busy: boolean; disabled: boolean; onSubmit: ChatBarProps['onSubmit']; onInterrupt: ChatBarProps['onCancel']
   gateway?: Pick<HermesGateway, 'request'> | null; sessionId?: string | null
 }
 
@@ -191,7 +191,8 @@ export function AuraPipecatVoice(props: Props) {
     })
   }, [active, messages, props.busy])
 
-  if (fallback) { return <AuraBrowserVoice {...props} /> }
+  // The speech edge is down or refused: the default live voice takes over, unchanged.
+  if (fallback) { return <AuraVoice {...props} /> }
 
   return <div aria-label="Continuous voice" className="flex flex-wrap items-center gap-2 text-xs">
     <button aria-pressed={active} className="rounded-full border px-3 py-2" disabled={props.disabled && !active}
