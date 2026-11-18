@@ -50,3 +50,20 @@ it('switches a capability on for new chats and keeps key-less ones off with the 
   )
   await waitFor(() => expect((screen.getByRole('switch', { name: /Memory/ }) as HTMLInputElement).checked).toBe(true))
 })
+
+it('switching Full browser on also switches on Commands, and Commands off takes the browser with it', async () => {
+  const { toggleAuraCapability } = await import('./capabilities')
+
+  const caps = (enabled: string[]): AuraCapabilityStatus => ({
+    applies_to: 'new conversations', mode: null, modes: {},
+    capabilities: ['browser', 'terminal'].map(id => ({
+      id, label: id, description: '', enabled: enabled.includes(id), available: true, blocked: null, requires_env: [],
+      requires: id === 'browser' ? 'terminal' : null
+    }))
+  })
+
+  await toggleAuraCapability(caps([]), 'browser', true)
+  expect(api).toHaveBeenLastCalledWith({ path: '/api/aura/capabilities', method: 'PUT', body: { enabled: ['browser', 'terminal'] } })
+  await toggleAuraCapability(caps(['browser', 'terminal']), 'terminal', false)
+  expect(api).toHaveBeenLastCalledWith({ path: '/api/aura/capabilities', method: 'PUT', body: { enabled: [] } })
+})

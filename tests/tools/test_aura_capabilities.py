@@ -74,7 +74,7 @@ def test_modes_switch_only_available_toolsets(home, monkeypatch):
 
     result = aura_capabilities.set_mode("Research")
     assert result["mode"] == "Research"
-    assert set(read()["platform_toolsets"]["cli"]) == {"aura", "todo", "session_search", "memory", "clarify", "browser"}
+    assert set(read()["platform_toolsets"]["cli"]) == {"aura", "todo", "session_search", "memory", "clarify"}
     assert aura_capabilities.set_mode("Focused")["mode"] == "Focused"
     with pytest.raises(ValueError):
         aura_capabilities.set_mode("Turbo")
@@ -106,3 +106,15 @@ def test_unlocked_consequential_tools_still_need_approval(home):
     for tool in ("memory", "delegate_task", "cronjob_manage", "browser_exec", "terminal", "write_file", "skill_manage"):
         assert _classification(tool, {}, {}) == "consequential", tool
     assert _classification("session_search", {}, {}) == "read"
+
+
+def test_full_browser_needs_commands_because_hermes_only_offers_it_with_terminal(home, monkeypatch):
+    write, read = home
+    _all_ready(monkeypatch)
+    write({"aura": {"enabled": True}, "platform_toolsets": {"cli": ["aura", "todo"]}})
+    with pytest.raises(ValueError, match="needs Commands"):
+        aura_capabilities.configure(["browser"])
+    aura_capabilities.configure(["browser", "terminal"])
+    assert {"browser", "terminal"} <= set(read()["platform_toolsets"]["cli"])
+    assert aura_capabilities.set_mode("Agent")["mode"] == "Agent"
+

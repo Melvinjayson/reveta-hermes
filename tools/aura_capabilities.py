@@ -24,7 +24,8 @@ CAPABILITIES: dict[str, tuple[str, str]] = {
     "memory": ("Memory", "Aura keeps short notes about you and your work across conversations."),
     "skills": ("Skills", "Aura can read and follow its skill guides, and draft new ones with your approval."),
     "clarify": ("Clarifying questions", "Aura can ask you a multiple-choice question before acting."),
-    "browser": ("Full browser", "Aura can click, type and fill forms in a real browser. Every action asks first."),
+    "browser": ("Full browser", "Aura can click, type and fill forms in a real browser. Every action asks first. "
+                "Needs Commands and background tasks on, because it runs code on the server."),
     "file": ("Workspace files", "Aura can read, write and edit files in its workspace."),
     "code_execution": ("Run code", "Aura can run short Python scripts for calculations and data work."),
     "terminal": ("Commands and background tasks", "Aura can run shell commands and long background processes."),
@@ -38,9 +39,13 @@ CAPABILITIES: dict[str, tuple[str, str]] = {
 # Preset bundles for the composer's mode picker. "Focused" is Aura's base surface.
 MODES: dict[str, tuple[str, ...]] = {
     "Focused": (),
-    "Research": ("session_search", "memory", "clarify", "browser", "web"),
+    "Research": ("session_search", "memory", "clarify", "web"),
     "Agent": tuple(CAPABILITIES),
 }
+
+# Hermes offers browser_exec only alongside the terminal surface (model_tools._rewrite_browser_exec):
+# it runs host Python. Switching the browser on without commands would show a switch that does nothing.
+REQUIRES = {"browser": "terminal"}
 
 # Toolsets whose tools the model may be offered inside Aura once their toolset is on.
 UNLOCKABLE = frozenset(CAPABILITIES)
@@ -88,7 +93,7 @@ def status() -> dict:
              "available": ready[name]["available"],
              # A capability without its key stays switched off; the owner adds the key outside the chat.
              "blocked": None if ready[name]["available"] else "Needs a service key or package that is not set up.",
-             "requires_env": ready[name]["requires_env"]}
+             "requires_env": ready[name]["requires_env"], "requires": REQUIRES.get(name)}
             for name, (label, description) in CAPABILITIES.items()
         ],
     }
@@ -106,6 +111,9 @@ def configure(enabled: Iterable[str]) -> dict:
     blocked = sorted(name for name in set(wanted) if not ready[name]["available"])
     if blocked:
         raise ValueError(f"Not available until it is set up: {', '.join(blocked)}")
+    for name, needed in REQUIRES.items():
+        if name in wanted and needed not in wanted:
+            raise ValueError(f"{CAPABILITIES[name][0]} needs {CAPABILITIES[needed][0]} switched on too.")
     config = load_config()
     toolsets = config.setdefault("platform_toolsets", {})
     for platform in AURA_PLATFORMS:
