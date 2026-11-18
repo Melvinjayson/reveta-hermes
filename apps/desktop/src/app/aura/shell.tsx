@@ -3,9 +3,10 @@ import './aura.css'
 import './shell.css'
 import './home.css'
 import './thread.css'
+import './panel.css'
 
 import { useStore } from '@nanostores/react'
-import { Menu, SquarePen } from 'lucide-react'
+import { Menu, PanelRight, SquarePen } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
@@ -22,9 +23,11 @@ import type { SessionInfo } from '@/types/hermes'
 import { AuraConversationCards } from './conversation-cards'
 import { AuraConversationRow } from './conversation-row'
 import { groupHistory } from './history'
+import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
 import { AuraContinueLater, AuraReadiness } from './readiness'
 import { AuraSearchDialog, isSearchShortcut } from './search-dialog'
 import { AuraSettingsDialog } from './settings-dialog'
+import { AuraSidePanel } from './side-panel'
 import { auraSignOut } from './sign-out'
 import { AuraToolsDialog } from './tools-menu'
 
@@ -107,6 +110,8 @@ function AuraNav({ activeId, sessions, onClose, onCollapse, onDelete, onNewChat,
 
 export function AuraShell({ actions, children }: AuraShellProps) {
   const wide = useMediaQuery('(min-width: 900px)')
+  const roomy = useMediaQuery('(min-width: 1200px)')
+  const panel = useStore($auraPanel)
   const [collapsed, setCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -242,9 +247,20 @@ export function AuraShell({ actions, children }: AuraShellProps) {
               Aura
             </a>
             <p className="aura-header-title">{activeTitle ? sessionTitle(activeTitle) : ''}</p>
-            <button aria-label="New chat" className="aura-icon-button aura-header-new" onClick={newChat} type="button">
-              <SquarePen size={19} />
-            </button>
+            <div className="aura-header-actions">
+              <button
+                aria-expanded={Boolean(panel)}
+                aria-label={panel ? 'Close side panel' : 'Open side panel'}
+                className="aura-icon-button"
+                onClick={() => (panel ? closeAuraPanel() : openAuraPanel('work'))}
+                type="button"
+              >
+                <PanelRight size={19} />
+              </button>
+              <button aria-label="New chat" className="aura-icon-button aura-header-new" onClick={newChat} type="button">
+                <SquarePen size={19} />
+              </button>
+            </div>
           </header>
           <AuraReadiness
             value={
@@ -257,7 +273,9 @@ export function AuraShell({ actions, children }: AuraShellProps) {
             <AuraContinueLater value={showHistory}>{children}</AuraContinueLater>
           </AuraReadiness>
         </main>
+        {roomy && <AuraSidePanel theme={resolvedMode} wide />}
       </div>
+      {!roomy && <AuraSidePanel theme={resolvedMode} wide={false} />}
       <dialog
         aria-label="Aura menu"
         className="aura-sheet aura-drawer"

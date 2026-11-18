@@ -243,7 +243,7 @@ function looksBinaryBytes(bytes: Uint8Array) {
   return suspicious / Math.min(bytes.length, 4096) > 0.12
 }
 
-function dataUrlToBlob(dataUrl: string) {
+export function dataUrlToBlob(dataUrl: string) {
   const comma = dataUrl.indexOf(',')
 
   if (comma < 0 || !dataUrl.startsWith('data:')) {

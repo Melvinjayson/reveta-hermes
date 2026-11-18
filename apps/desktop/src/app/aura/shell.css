@@ -119,7 +119,7 @@
 /* Top bar: phone = menu · Aura · new chat; desktop = sidebar toggle · chat title · new chat. */
 .aura-header {
   display: grid;
-  grid-template-columns: var(--aura-target) 1fr var(--aura-target);
+  grid-template-columns: var(--aura-target) 1fr auto;
   align-items: center;
   gap: var(--aura-space-2);
   height: 56px;
@@ -653,4 +653,10 @@
 .aura-tool-list input[role='switch']:focus-visible {
   outline: 2px solid var(--aura-accent);
   outline-offset: 2px;
+}
+
+.aura-header-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
 }

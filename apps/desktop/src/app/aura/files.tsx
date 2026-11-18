@@ -1,11 +1,4 @@
-import { useStore } from '@nanostores/react'
-
-import { sessionFileOwnerScope } from '@/api/client'
 import type { ChatMessage } from '@/lib/chat-messages'
-import { downloadGatewayFileWithFeedback } from '@/lib/media'
-import { $activeSessionId, $selectedStoredSessionId } from '@/store/session'
-
-import { AuraCard } from './card'
 
 export function resultRecord(value: unknown): Record<string, unknown> {
   if (typeof value === 'string') {
@@ -25,21 +18,4 @@ export function auraFiles(messages: ChatMessage[]) {
       ? [{ path: file.path, name: file.name, bytes: file.bytes }]
       : []
   }))
-}
-
-export function AuraFiles({ messages }: { messages: ChatMessage[] }) {
-  const active = useStore($activeSessionId)
-  const stored = useStore($selectedStoredSessionId)
-  const sessionId = stored ?? active ?? undefined
-  const owner = sessionId ? sessionFileOwnerScope(sessionId) ?? undefined : undefined
-  const files = [...new Map(auraFiles(messages).map(file => [file.path, file])).values()]
-
-  return files.map(file => (
-    <AuraCard key={file.path} kind="file" title={file.name}>
-      <p>{file.bytes} bytes · Created in this conversation’s workspace</p>
-      <button onClick={() => { void downloadGatewayFileWithFeedback(file.path, { sessionId, owner, suggestedName: file.name }) }} type="button">
-        Download {file.name}
-      </button>
-    </AuraCard>
-  ))
 }

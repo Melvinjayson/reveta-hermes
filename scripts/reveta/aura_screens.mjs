@@ -72,6 +72,10 @@ try {
   await approval.scrollIntoViewIfNeeded()
   await settle(page)
   await shot(page, 'agent-mobile')
+  await page.getByRole('button', { name: 'Open side panel', exact: true }).click()
+  await settle(page)
+  await shot(page, 'panel-mobile')
+  await closeOverlays(page)
   await approval.getByRole('button', { name: /^(Change|Deny)/ }).first().click()
   await expect(page.getByText('Stub output: nothing was run.').first()).toBeVisible({ timeout: 60000 })
 
@@ -86,6 +90,12 @@ try {
   await shot(page, 'thread-desktop')
   await approval.scrollIntoViewIfNeeded().catch(() => {})
   await shot(page, 'agent-desktop')
+  if (await page.getByRole('button', { name: 'Open side panel', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Open side panel', exact: true }).click()
+    await settle(page)
+    await shot(page, 'panel-desktop')
+    await page.getByRole('button', { name: 'Close side panel', exact: true }).click()
+  }
   await openSettings(page)
   await shot(page, 'settings-desktop')
   await closeOverlays(page)
