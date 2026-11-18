@@ -594,7 +594,6 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
         className="aura-voice-toggle"
         disabled={disabled}
         onClick={active ? stop : start}
-        title={active ? 'End voice chat' : 'Start voice chat'}
         type="button"
       >
         {active ? <PhoneOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
@@ -607,7 +606,6 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           aria-pressed={muted}
           className="aura-voice-icon"
           onClick={toggleMute}
-          title={muted ? 'Unmute microphone' : 'Mute microphone'}
           type="button"
         >
           {muted ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
@@ -624,7 +622,6 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
             call.current?.ws.send(JSON.stringify({ type: 'interrupt' }))
             setStatus('Interrupted')
           }}
-          title="Stop speaking"
           type="button"
         >
           <Square aria-hidden="true" size={16} />

@@ -213,7 +213,6 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
         className="aura-voice-toggle"
         disabled={disabled || !supported}
         onClick={active ? stop : start}
-        title={active ? 'Stop voice chat' : 'Start voice chat'}
         type="button"
       >
         {active ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
@@ -238,7 +237,6 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
               listen()
             }
           }}
-          title="Interrupt and listen"
           type="button"
         >
           <Square aria-hidden="true" size={16} />

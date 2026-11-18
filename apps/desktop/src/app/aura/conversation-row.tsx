@@ -53,7 +53,6 @@ export function AuraConversationRow({ current = false, title, onOpen, onDelete }
         aria-label={`Delete conversation: ${title}`}
         className="aura-conversation-delete"
         onClick={() => setConfirming(true)}
-        title="Delete conversation"
         type="button"
       >
         <Trash2 aria-hidden="true" size={16} />
