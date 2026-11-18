@@ -28,7 +28,7 @@ import { AuraDictation } from './dictation'
 import { groupHistory } from './history'
 import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
 import { AuraProjectDialog } from './project-dialog'
-import { $auraPendingProject, $auraProjects, assignAuraProject, type AuraProject, loadAuraProjects, pendingTarget } from './projects'
+import { $auraProjects, type AuraProject, loadAuraProjects, startAuraProjectChat } from './projects'
 import { AuraContinueLater, AuraReadiness } from './readiness'
 import { AuraSearchDialog, isSearchShortcut } from './search-dialog'
 import { AuraSettingsDialog } from './settings-dialog'
@@ -143,7 +143,6 @@ export function AuraShell({ actions, children }: AuraShellProps) {
   const [error, setError] = useState('')
   const [project, setProject] = useState<null | string>(null)
   const projects = useStore($auraProjects)
-  const pendingProject = useStore($auraPendingProject)
   const sessions = useStore($sessions)
   const activeId = useStore($selectedStoredSessionId)
   const gatewayState = useStore($gatewayState)
@@ -190,15 +189,12 @@ export function AuraShell({ actions, children }: AuraShellProps) {
     void loadAuraProjects()
   }, [])
 
-  // "New chat in this project": the chat has no stored id until its first message lands.
+  // A chat filed into a project by the server (first reply) shows up in the sidebar count.
   useEffect(() => {
-    const target = pendingTarget(pendingProject, activeId)
-
-    if (target && activeId) {
-      $auraPendingProject.set(null)
-      void assignAuraProject(activeId, target)
+    if (activeId) {
+      void loadAuraProjects()
     }
-  }, [activeId, pendingProject])
+  }, [activeId])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -351,8 +347,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         onClose={() => setProject(null)}
         onNewChat={id => {
           setProject(null)
-          $auraPendingProject.set({ projectId: id, from: activeId })
-          newChat()
+          void startAuraProjectChat(id).then(newChat)
         }}
         onOpenChat={session => {
           setProject(null)

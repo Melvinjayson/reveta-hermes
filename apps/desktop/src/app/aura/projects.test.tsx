@@ -4,7 +4,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import type { SessionInfo } from '@/types/hermes'
 
 import { AuraProjectDialog } from './project-dialog'
-import { $auraProjects, type AuraProject, pendingTarget } from './projects'
+import { $auraProjects, type AuraProject, startAuraProjectChat } from './projects'
 
 const project = (over: Partial<AuraProject> = {}): AuraProject => ({
   id: 'p_1', slug: 'launch', name: 'Launch', description: '', created_at: 1, session_ids: ['a'], ...over
@@ -31,11 +31,9 @@ beforeEach(() => {
   $auraProjects.set([project()])
 })
 
-it('files a new chat only once a different chat id exists', () => {
-  expect(pendingTarget({ projectId: 'p_1', from: 'old' }, 'old')).toBeNull()
-  expect(pendingTarget({ projectId: 'p_1', from: 'old' }, null)).toBeNull()
-  expect(pendingTarget({ projectId: 'p_1', from: 'old' }, 'new')).toBe('p_1')
-  expect(pendingTarget(null, 'new')).toBeNull()
+it('a new chat in a project is announced to the server before the chat starts', async () => {
+  await startAuraProjectChat('p_1')
+  expect(api).toHaveBeenCalledWith({ path: '/api/aura/projects/next-chat', method: 'PUT', body: { project_id: 'p_1' } })
 })
 
 it('lists project chats, removes one, and deletes only after a confirm that keeps chats', async () => {

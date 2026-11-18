@@ -16,14 +16,6 @@ interface ProjectsPayload {
 /** Server truth for the profile's Aura projects; null until loaded. */
 export const $auraProjects = atom<AuraProject[] | null>(null)
 export const $auraProjectError = atom('')
-/** A project chosen for the next new chat, and the chat that was open when it was chosen.
- * Assigned once a DIFFERENT chat has a stored id, so the previous chat is never filed by mistake. */
-export const $auraPendingProject = atom<null | { projectId: string; from: null | string }>(null)
-
-export function pendingTarget(pending: null | { projectId: string; from: null | string }, activeId: null | string) {
-  return pending && activeId && activeId !== pending.from ? pending.projectId : null
-}
-
 type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT'
 
 function api(path: string, method: Method = 'GET', body?: unknown) {
@@ -68,6 +60,10 @@ export const updateAuraProject = (id: string, fields: { name?: string; descripti
   apply(api(`/${encodeURIComponent(id)}`, 'PATCH', fields))
 
 export const deleteAuraProject = (id: string) => apply(api(`/${encodeURIComponent(id)}`, 'DELETE'))
+
+/** The next new chat starts in this project; the server files it and adds the notes when its agent is built. */
+export const startAuraProjectChat = (projectId: null | string) =>
+  apply(api('/next-chat', 'PUT', { project_id: projectId }))
 
 export const assignAuraProject = (sessionId: string, projectId: null | string) =>
   apply(api('/membership', 'PUT', { session_id: sessionId, project_id: projectId }))

@@ -179,3 +179,16 @@ async def aura_memory(request: Request):
     """Read-only view of the built-in memory notes for the signed-in owner (reset: /api/memory/reset)."""
     _require_token(request)
     return await asyncio.to_thread(_read_memory_notes)
+
+
+class NextChatProject(BaseModel):
+    project_id: Optional[str] = Field(default=None, max_length=64)
+
+
+@router.put("/api/aura/projects/next-chat")
+async def set_aura_next_chat_project(body: NextChatProject, request: Request):
+    """The next NEW chat starts in this project: it is filed there and gets the notes once."""
+    _require_token(request)
+    from tools.aura_projects import set_next_chat
+
+    return await _projects(set_next_chat, body.project_id)
