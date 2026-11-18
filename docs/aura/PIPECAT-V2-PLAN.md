@@ -33,3 +33,18 @@ PR #11 measured the local speech process tree at 249 MiB RSS peak. Render free h
 the server was at ~479 MiB before an earlier deploy. The speech runtime is therefore **not** built
 into the default Docker image here; enabling full duplex on Render needs Melvin's decision (a
 larger instance or a separate speech host).
+
+## Status (steps 1-5)
+
+| Step | Commit | Result |
+|---|---|---|
+| 1 Plan | `1eef75e1` | done |
+| 2 Cherry-pick PR #11 (8 commits, `-x`) | `e8faecb9`..`41dc3c03` | done; 2 conflicts kept the live files |
+| 3 Default image + browser fallback as live | `ff808dd9` | `git diff e7882138 -- Dockerfile browser-voice.tsx browser-voice.test.tsx voice-call.tsx tools/aura_voice_call.py` is empty |
+| 4a Server gate | `ca73c55e` | new tests red on the pre-gate code, green after |
+| 4b Composer selector | `5da4b771` | Vitest green |
+| 5 Gates | this commit | see PR #16 description |
+
+Setting on Render: `aura_config.py --write` replaces the `aura` block at boot, so
+`aura.voice.full_duplex` stays off on the deploy. Turning it on there would need a
+config change plus the runtime in the image: Melvin's call (memory risk above).
