@@ -58,7 +58,7 @@ Everything Aura stores lives under `$HERMES_HOME` (`/opt/data` in the image; `Do
 ## Option A — continuous SQLite replication plus periodic file backup to S3-compatible storage
 
 **How it would work:**
-- On boot, before the gateway starts: `litestream restore` for `state.db` and `projects.db`, then download and unpack a tarball of the other files.
+- On boot, before the gateway starts: `litestream restore` for `state.db`, `projects.db` and `aura-spend.db`, then download and unpack a tarball of the other files.
 - While running: `litestream replicate` streams each SQLite change about once a second. A timer re-uploads the file tarball (for example every 5 minutes) and on shutdown.
 
 **Supabase Storage as the target: possible, with five problems on the free plan:**
