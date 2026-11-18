@@ -782,3 +782,118 @@
 .aura-dialog .aura-button-danger {
   color: #ffffff;
 }
+
+/* Settings sections */
+.aura-capability-note {
+  margin: 0 0 var(--aura-space-3);
+  line-height: 1.5;
+}
+.aura-link-button {
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--aura-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.aura-dialog .aura-link-button {
+  min-height: 0;
+  min-width: 0;
+}
+.aura-settings-block {
+  margin: 0 0 var(--aura-space-4);
+}
+.aura-settings-block h4 {
+  margin: 0 0 var(--aura-space-2);
+  font-size: var(--aura-text-md);
+  font-weight: 600;
+}
+.aura-memory-text {
+  margin: 0 0 var(--aura-space-2);
+  padding: var(--aura-space-3);
+  max-height: 260px;
+  overflow: auto;
+  border-radius: var(--aura-radius-control);
+  background: var(--aura-subtle);
+  font-size: var(--aura-text-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.aura-settings-list {
+  margin: var(--aura-space-2) 0 var(--aura-space-4);
+  padding: 0;
+  list-style: none;
+}
+.aura-settings-list > li {
+  padding: var(--aura-space-2) 0;
+  border-top: 1px solid var(--aura-line);
+}
+.aura-settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-3);
+}
+.aura-settings-item-main {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--aura-ink);
+  text-align: left;
+  font-size: var(--aura-text-sm);
+}
+.aura-dialog button.aura-settings-item-main {
+  min-height: var(--aura-target);
+}
+.aura-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+  margin-top: var(--aura-space-2);
+}
+.aura-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--aura-space-2);
+}
+.aura-switch,
+.aura-dialog input.aura-switch {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 40px;
+  min-height: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--aura-radius-pill);
+  background: var(--aura-line);
+  position: relative;
+  cursor: pointer;
+}
+.aura-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform var(--aura-fast) var(--aura-ease);
+}
+.aura-switch:checked {
+  background: var(--aura-accent);
+}
+.aura-switch:checked::after {
+  transform: translateX(16px);
+}
+.aura-switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

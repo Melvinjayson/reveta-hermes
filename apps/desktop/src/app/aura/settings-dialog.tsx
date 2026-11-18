@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from '@/lib/icons'
 
 import { AuraModelSettings } from './model-settings'
+import { AuraConnectorsSection, AuraJobsSection, AuraMemorySection, AuraSkillsSection } from './settings-sections'
 
-export const SETTINGS_SECTIONS = ['Appearance', 'Model', 'Voice', 'Account'] as const
+export const SETTINGS_SECTIONS = ['Appearance', 'Model', 'Memory', 'Skills', 'Scheduled jobs', 'Connectors', 'Voice', 'Account'] as const
 type Section = (typeof SETTINGS_SECTIONS)[number]
 type Mode = 'light' | 'dark' | 'system'
 
@@ -85,6 +86,10 @@ export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignO
               <AuraModelSettings />
             </section>
           )}
+          {section === 'Memory' && <AuraMemorySection />}
+          {section === 'Skills' && <AuraSkillsSection />}
+          {section === 'Scheduled jobs' && <AuraJobsSection />}
+          {section === 'Connectors' && <AuraConnectorsSection />}
           {section === 'Voice' && (
             <section aria-labelledby="aura-settings-voice">
               <h3 id="aura-settings-voice">Voice</h3>
