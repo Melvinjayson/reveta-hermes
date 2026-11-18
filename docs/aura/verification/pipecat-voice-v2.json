@@ -1,0 +1,113 @@
+{
+  "branch": "claude/aura-pipecat-voice-v2-3p4qpx",
+  "base": "e7882138 (aura/working-product-20261111)",
+  "results": {
+    "desktop_typecheck": {
+      "status": "PASSED",
+      "command": "NODE_OPTIONS=--max-old-space-size=6144 pnpm run typecheck (apps/desktop)",
+      "note": "default Node heap OOMs (exit 134) on this machine"
+    },
+    "vitest_aura_composer_voice": {
+      "status": "PASSED",
+      "command": "vitest run --project ui src/app/aura src/app/chat/composer src/lib/pipecat-voice.test.ts src/app/session/hooks/use-message-stream/voice-playback.test.tsx",
+      "files": 113,
+      "tests": 783
+    },
+    "pytest_voice": {
+      "status": "PASSED",
+      "command": "scripts/run_tests.sh <9 voice/interrupt/free-only/quota files>",
+      "passed": 56,
+      "failed": 0,
+      "skipped": 1,
+      "skip": "test_aura_voice_pipeline.py importorskip('pipecat') in the agent env, by design"
+    },
+    "pytest_broader": {
+      "status": "FAILED (pre-existing)",
+      "passed": 523,
+      "failed": 103,
+      "files_failed": [
+        "tests/agent/test_run_agent.py",
+        "tests/agent/test_reply_line_before_silence.py",
+        "tests/gateway/test_local_session_voice_tts.py"
+      ],
+      "note": "same 3 files fail with the same 103 failures on untouched e7882138"
+    },
+    "scripts_check": {
+      "status": "PASSED",
+      "command": "python scripts/check --base origin/aura/working-product-20261111",
+      "checks": 14
+    },
+    "browser_voice_mode": {
+      "status": "PASSED",
+      "command": "python scripts/reveta/aura_browser.py --voice-mode-only",
+      "real": [
+        "Webapp",
+        "gateway",
+        "/api/aura/voice/mode",
+        "chat admission"
+      ],
+      "fake": [
+        "model",
+        "STT/TTS socket",
+        "mode=on route"
+      ]
+    },
+    "browser_product": {
+      "status": "PASSED",
+      "command": "python scripts/reveta/aura_browser.py --product-only"
+    },
+    "browser_full_suite": {
+      "status": "FAILED (pre-existing, stale script)",
+      "failure": "connected scenario waits for [data-aura-card=goal], which the live UI no longer renders (PR #12); live branch's own suite fails earlier on .aura-browser-voice"
+    },
+    "real_speech_graph": {
+      "status": "PASSED",
+      "command": "pm.build_env .voice-runtime; aura_pipecat_probe.probe() with /usr/bin/ffmpeg",
+      "probe": {
+        "pipecat": "1.15.0",
+        "real": [
+          "Silero VAD",
+          "PocketSphinx bundled English",
+          "FFmpeg Flite slt"
+        ],
+        "fake": [
+          "synthetic speech source",
+          "Hermes reply"
+        ],
+        "provider_calls": 0,
+        "reply_to_first_pcm_ms": 257.3,
+        "speech_process_tree_peak_rss_mib": 273.13,
+        "partial_count": 28,
+        "final": {
+          "type": "final",
+          "turn_id": "b9144594ca72433aa28bc137ea0dc239",
+          "text": "change a request and tell me the time"
+        },
+        "played": {
+          "type": "played",
+          "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "message_index": 0,
+          "text": "Change the request and tell me the time.",
+          "interrupted": false
+        },
+        "interrupted": {
+          "type": "played",
+          "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "message_index": 0,
+          "text": "Change the request and tell me the time.",
+          "interrupted": true
+        },
+        "limit": "Local speech process tree only; total deployed host and real phone acceptance remain separate."
+      },
+      "caveat": "the PM ffmpeg (~/.hermes/tools/ffmpeg-9.0.1) has no flite filter; with it the probe times out waiting for audio"
+    },
+    "real_chat_model": {
+      "status": "BLOCKED",
+      "reason": "no model key in this environment; would need a new secret"
+    },
+    "android_phone": {
+      "status": "BLOCKED",
+      "reason": "no device attached"
+    }
+  }
+}
