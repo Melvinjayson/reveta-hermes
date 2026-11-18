@@ -1,4 +1,4 @@
-# Hermes capabilities available to Aura — inventory
+# Hermes capabilities available to Aura Zero — inventory
 
 Branch `claude/aura-redesign-v1` (draft PR #17), based on `e7882138`. Written
 18 Nov 2026 from the repository itself; every row names the file that proves it.

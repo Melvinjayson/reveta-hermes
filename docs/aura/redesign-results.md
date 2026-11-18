@@ -1,4 +1,4 @@
-# Aura redesign v1 — results
+# Aura Zero redesign v1 — results
 
 Branch `claude/aura-redesign-v1`, final code commit `a66eef18`, base `aura/working-product-20261111`
 at `e7882138` (PR #15). Fake model only (`tests/fakes/fake_llm_provider.py`). No real-model call,

@@ -1,4 +1,4 @@
-# Aura screenshot evidence
+# Aura Zero screenshot evidence
 
 Synthetic data only. Real local Webapp + FakeLLMServer; no real-model output.
 

@@ -1,4 +1,4 @@
-# Aura redesign v1 — specification
+# Aura Zero redesign v1 — specification
 
 Branch `claude/aura-redesign-v1`, based on `aura/working-product-20261111` at
 `e78821386a54` (PR #15 merge). PR #16 is not used. Not merged, not deployed.

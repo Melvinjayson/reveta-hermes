@@ -1,4 +1,4 @@
-# Making Aura survive a restart — options at €0
+# Making Aura Zero survive a restart — options at €0
 
 Decision memo, no code. Branch `claude/aura-persistence-notes`, stacked on
 `claude/aura-redesign-v1` (#17). Researched 18 Nov 2026 from the vendors' own pages (links at the
