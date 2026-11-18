@@ -897,3 +897,11 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+.aura-dialog input.aura-switch {
+  background: var(--aura-line);
+  min-height: 0;
+  border: 0;
+}
+.aura-dialog input.aura-switch:checked {
+  background: var(--aura-accent);
+}

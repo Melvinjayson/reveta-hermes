@@ -81,7 +81,23 @@ try {
 
   await openSettings(page)
   await shot(page, 'settings-mobile')
+  for (const section of ['Memory', 'Skills', 'Scheduled jobs', 'Connectors']) {
+    const tab = page.getByRole('dialog', { name: 'Settings' }).getByRole('button', { name: section, exact: true })
+    if (await tab.count()) {
+      await tab.click()
+      await page.waitForTimeout(800)
+      await shot(page, `settings-${section.toLowerCase().replace(/ /g, '-')}-mobile`)
+    }
+  }
   await closeOverlays(page)
+  if (await page.getByRole('button', { name: 'Add context', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Add context', exact: true }).click()
+    await page.getByRole('menuitem', { name: /^Tools/ }).click()
+    await expect(page.getByRole('switch').first()).toBeVisible({ timeout: 30000 })
+    await settle(page)
+    await shot(page, 'tools-mobile')
+    await closeOverlays(page)
+  }
 
   await page.setViewportSize(sizes.desktop)
   await page.reload()
