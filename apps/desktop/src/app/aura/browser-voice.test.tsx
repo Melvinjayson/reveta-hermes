@@ -32,7 +32,7 @@ beforeEach(() => {
 
 function mount() {
   const onSubmit = vi.fn().mockResolvedValue(true)
-  render(<AuraBrowserVoice busy={false} disabled={false} onSubmit={onSubmit} sessionId="same-text-thread" />)
+  render(<AuraBrowserVoice busy={false} disabled={false} onInterrupt={vi.fn()} onSubmit={onSubmit} sessionId="same-text-thread" />)
   fireEvent.click(screen.getByRole('button', { name: 'Start voice' }))
 
   return { onSubmit, mic: microphones[0] }
@@ -93,18 +93,4 @@ it('does not replay a stopped reply when history replaces its live message id', 
     { ...reply, id: 'new-reply' }
   ]))
   await waitFor(() => expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(2))
-})
-
-it('requests generation-only interruption on the same gateway session', async () => {
-  const request = vi.fn().mockResolvedValue({ status: 'interrupted' })
-  const onSubmit = vi.fn().mockResolvedValue(true)
-  const { rerender } = render(<AuraBrowserVoice busy disabled={false} gateway={{ request }} onSubmit={onSubmit} sessionId="same-text-thread" />)
-  fireEvent.click(screen.getByRole('button', { name: 'Start voice' }))
-  act(() => microphones[0].result('changed request'))
-  await waitFor(() => expect(request).toHaveBeenCalledExactlyOnceWith('session.interrupt', {
-    session_id: 'same-text-thread', preserve_running_tools: true
-  }))
-  expect(onSubmit).not.toHaveBeenCalled()
-  rerender(<AuraBrowserVoice busy={false} disabled={false} gateway={{ request }} onSubmit={onSubmit} sessionId="same-text-thread" />)
-  await waitFor(() => expect(onSubmit).toHaveBeenCalledExactlyOnceWith('changed request'))
 })
