@@ -2,7 +2,7 @@
  "counts": {
   "http": {
    "keep-host-wide": 1,
-   "undecided": 342
+   "undecided": 347
   },
   "rpc": {
    "authority": 106,
@@ -51,6 +51,7 @@
   {"current_path": "hermes_cli.web_routers.audio:get_client_voice_config", "decision": "undecided", "handler": "GET /api/audio/voice-config", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:get_voice_live_status", "decision": "undecided", "handler": "GET /api/audio/voice-live/status", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_capabilities", "decision": "undecided", "handler": "GET /api/aura/capabilities", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura_companion_actions:companion_audit", "decision": "undecided", "handler": "GET /api/aura/companion/audit", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_memory", "decision": "undecided", "handler": "GET /api/aura/memory", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_projects", "decision": "undecided", "handler": "GET /api/aura/projects", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_provider", "decision": "undecided", "handler": "GET /api/aura/provider", "kind": "http", "ref": ""},
@@ -211,6 +212,10 @@
   {"current_path": "hermes_cli.web_routers.audio:transcribe_audio_upload", "decision": "undecided", "handler": "POST /api/audio/transcribe", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:tts_lease", "decision": "undecided", "handler": "POST /api/audio/tts-lease", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.audio:create_voice_live_session", "decision": "undecided", "handler": "POST /api/audio/voice-live/session", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura_companion_actions:companion_action", "decision": "undecided", "handler": "POST /api/aura/companion/action", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura_companion_actions:companion_action_approve", "decision": "undecided", "handler": "POST /api/aura/companion/action/approve", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura_companion_actions:companion_action_deny", "decision": "undecided", "handler": "POST /api/aura/companion/action/deny", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura_companion_actions:companion_action_result", "decision": "undecided", "handler": "POST /api/aura/companion/action/result", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura_companion:companion_ask", "decision": "undecided", "handler": "POST /api/aura/companion/ask", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura_companion:companion_token", "decision": "undecided", "handler": "POST /api/aura/companion/token", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:create_aura_project", "decision": "undecided", "handler": "POST /api/aura/projects", "kind": "http", "ref": ""},

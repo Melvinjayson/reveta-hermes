@@ -28,4 +28,9 @@ PUBLIC_API_PATHS: frozenset[str] = frozenset({
     # Aura Companion browser extension. NOT cookie-gated: it carries its own 12-hour HMAC key
     # (minted for a signed-in, allow-listed session), which the handler verifies and re-gates on
     # every call. The key, not this allowlist, is the security boundary.
-    "/api/aura/companion/ask"})
+    "/api/aura/companion/ask",
+    # Its take-over gate (hermes_cli/web_routers/aura_companion_actions.py): the same key, checked the same way.
+    "/api/aura/companion/action",
+    "/api/aura/companion/action/approve",
+    "/api/aura/companion/action/deny",
+    "/api/aura/companion/action/result"})

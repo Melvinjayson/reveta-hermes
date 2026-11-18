@@ -810,6 +810,7 @@ from hermes_cli.web_routers import (
     reveta as _reveta_routes,
     aura as _aura_routes,
     aura_companion as _aura_companion_routes,
+    aura_companion_actions as _aura_companion_action_routes,
 )
 
 import hermes_cli.web_routers.desktop_plugins as _desktop_plugin_routes
@@ -856,6 +857,7 @@ app.include_router(_shared_metrics_routes.router)
 app.include_router(_reveta_routes.router)
 app.include_router(_aura_routes.router)
 app.include_router(_aura_companion_routes.router)
+app.include_router(_aura_companion_action_routes.router)
 app.include_router(_delegation_routes.router)
 app.include_router(_webapp_access_routes.router, dependencies=[_Depends(_route_on("web_access"))])
 app.include_router(_ui_preferences_routes.router, dependencies=[_Depends(_route_on("ui_preferences"))])
