@@ -186,11 +186,15 @@ class WorkerControls:
         self.reader = threading.Thread(target=self.read, name='managed-controls', daemon=True)
         self.reader.start()
 
-    def stop(self):
-        self.stopped.set()
+    def stop(self, *, preserve_running_tools=False):
         if self.agent is not None:
-            from agent.interrupt_compat import request_hard_interrupt
-            request_hard_interrupt(self.agent)  # parity with the canonical Stop (SessionAuthority.interrupt)
+            from agent.interrupt_compat import request_hard_interrupt, request_voice_interrupt
+            if preserve_running_tools:
+                if not request_voice_interrupt(self.agent):
+                    return False
+            else:
+                request_hard_interrupt(self.agent)  # parity with the canonical Stop (SessionAuthority.interrupt)
+        self.stopped.set()
         with self.lock:
             for state in self.clarifications.values():
                 state['answer'] = _INTERRUPTED
@@ -203,6 +207,10 @@ class WorkerControls:
                 frame = read_frame(sys.stdin.buffer)
                 if frame == {'type': 'stop'}:
                     self.stop()
+                    continue
+                if frame == {'type': 'voice_interrupt'}:
+                    self.stop(preserve_running_tools=True)
+                    resolve_gateway_approval(self.route, 'deny', resolve_all=True)
                     continue
                 if frame == {'type': 'finish'}:
                     self.finish.set()

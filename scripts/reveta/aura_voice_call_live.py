@@ -4,6 +4,8 @@ Starts a FastAPI app on :8765 serving run_call, then drives it like the browser:
 speech in -> VAD -> transcript; speak -> audio out; speech during reply -> interrupt.
 """
 import asyncio, json, os, resource, sys, time, wave, audioop
+from pathlib import Path
+import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 assert os.environ.get('GEMINI_API_KEY'), 'set GEMINI_API_KEY (free-tier key)'
 
@@ -19,12 +21,12 @@ async def ws_route(ws: WebSocket):
     await avc.run_call(ws)
 
 def rss_mb():
-    for line in open('/proc/self/status'):
+    for line in open('/proc/self/status', encoding='utf-8-sig'):
         if line.startswith('VmRSS'):
             return int(line.split()[1]) / 1024
 
 def speech_16k():
-    w = wave.open(os.environ.get('AURA_VOICE_SAMPLE', '/tmp/tts_sample.wav')); pcm = w.readframes(w.getnframes())
+    w = wave.open(os.environ.get('AURA_VOICE_SAMPLE', str(Path(tempfile.gettempdir()) / 'tts_sample.wav'))); pcm = w.readframes(w.getnframes())
     out, _ = audioop.ratecv(pcm, 2, 1, w.getframerate(), 16000, None)
     return out
 
@@ -61,7 +63,7 @@ async def client():
         for _ in range(80):
             if any(e[1].get('type') == 'bot_speaking' for e in log): break
             await asyncio.sleep(0.25)
-        print('   first audio after %.2fs, rss=%.0f MB' % ((first_audio or time.time()) - ts, rss_mb()), flush=True)
+        print(f'   first audio after {(first_audio or time.time()) - ts:.2f}s, rss={rss_mb():.0f} MB', flush=True)
         await asyncio.sleep(1.5)
         print('[3] barge in while speaking', flush=True)
         before = audio_bytes
@@ -70,17 +72,17 @@ async def client():
             if sum(1 for e in log if e[1].get('type') == 'transcript') >= 2: break
             await asyncio.sleep(0.5)
         a1 = audio_bytes; await asyncio.sleep(2); a2 = audio_bytes
-        print('   audio bytes during barge-in window=%d, after settling grew by %d' % (a1 - before, a2 - a1), flush=True)
+        print(f'   audio bytes during barge-in window={a1 - before}, after settling grew by {a2 - a1}', flush=True)
         print('[4] tap interrupt with queued speech', flush=True)
         await ws.send(json.dumps({'type': 'speak', 'text': 'One more sentence to cut off with a tap.'}))
         await asyncio.sleep(0.3)
         await ws.send(json.dumps({'type': 'interrupt'}))
         b = audio_bytes; await asyncio.sleep(4)
-        print('   audio after tap interrupt grew by %d bytes' % (audio_bytes - b), flush=True)
+        print(f'   audio after tap interrupt grew by {audio_bytes - b} bytes', flush=True)
         r.cancel()
     types = [e[1].get('type') for e in log]
     print('EVENTS', types)
-    print('PEAK_RSS_MB %.0f base_before_call=%.0f' % (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, base))
+    print(f'PEAK_RSS_MB {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024:.0f} base_before_call={base:.0f}')
 
 async def main():
     server = uvicorn.Server(uvicorn.Config(app, port=8765, log_level='warning'))

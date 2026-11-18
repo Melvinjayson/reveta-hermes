@@ -29,6 +29,7 @@ import { handleSessionInfoEvent } from './session-info'
 import { handleStatusEvent } from './status'
 import { handleToolEvent, handleToolProgressEvent, retireTurnToolProgress } from './tools'
 import type { GatewayEventContext, GatewayEventDeps, GatewayEventHandler } from './types'
+import { handleVoicePlaybackEvent } from './voice-playback'
 
 export type { GatewayEventDeps } from './types'
 
@@ -90,6 +91,7 @@ const HANDLERS: GatewayEventHandler[] = [
   handleSessionInfoEvent,
   handleDeferredPickEvent,
   handleControlEvent,
+  handleVoicePlaybackEvent,
   handleMessageStreamEvent,
   handleToolProgressEvent,
   handleToolEvent,

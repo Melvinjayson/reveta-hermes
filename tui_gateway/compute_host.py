@@ -200,7 +200,8 @@ class ComputeHost:
                 return
             # In the child the shared helper interrupts the local agent and releases this
             # process's pending clarify Event (the parent only has a metadata mirror).
-            server._interrupt_session_turn(sid, session)
+            server._interrupt_session_turn(sid, session, **(
+                {"preserve_running_tools": True} if frame.get("preserve_running_tools") is True else {}))
             self._reply("interrupt.ack", sid, request_id, applied=True, applied_ns=now_ns())
         self._guarded(frame, "interrupt.ack", body, applied=False)
 

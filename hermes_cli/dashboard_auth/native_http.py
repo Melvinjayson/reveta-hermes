@@ -245,7 +245,7 @@ def redeem_native_ws(conn):
     return grant
 
 
-AUDIO_STREAM_PATHS = frozenset({'/api/audio/speak-stream', '/api/audio/transcribe-stream', '/api/audio/voice-call'})
+AUDIO_STREAM_PATHS = frozenset({'/api/audio/speak-stream', '/api/audio/transcribe-stream', '/api/audio/voice-call', '/api/audio/pipecat'})
 
 
 def redeem_audio_ws(ws):

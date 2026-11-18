@@ -27,6 +27,7 @@ def browser_session(
     cost_blocked: bool = False,
     product: bool = False,
     retired_model: bool = False,
+    voice_mode: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -128,6 +129,7 @@ def browser_session(
                     "costBlocked": cost_blocked,
                     "product": product,
                     "retiredModel": retired_model,
+                    "voiceMode": voice_mode,
                 }
             ),
             text=True,
@@ -170,6 +172,7 @@ def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--product-only', action='store_true')
+    parser.add_argument('--voice-mode-only', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="aura-browser-") as directory:
         target = Path(directory) / "synthetic-action-count.json"
@@ -206,6 +209,8 @@ def main() -> int:
         try:
             if args.product_only:
                 return product_scenario(directory, target)
+            if args.voice_mode_only:
+                return voice_mode_scenario(directory, target)
             return run_scenarios(directory, target, command)
         finally:
             action_server.shutdown()
@@ -261,6 +266,14 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
         )
 
 
+def voice_mode_scenario(directory: str, target: Path) -> int:
+    """Default config (full duplex off): live voice by default; selector and fallback (PR #16)."""
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text
+
+    with FakeLLMServer([Text('Stub output: noted.')] * 4) as fake:
+        return browser_session(Path(directory) / 'voice-mode', fake.base_url, target, voice_mode=True)
+
+
 def product_scenario(directory: str, target: Path) -> int:
     from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
 
@@ -279,7 +292,8 @@ def product_scenario(directory: str, target: Path) -> int:
         ToolCall('aura_computer', {'command': 'pwd'}),
         ToolCall('aura_file', {'name': 'brief.md', 'action': 'write', 'content': brief}),
         Text('Brief ready. HTTP methods, status codes and representations define the exchange.\n\n' + '\n'.join(f'[Source {index}]({url})' for index, url in enumerate(urls, 1))),
-        Text('Remember the HTTP methods and status codes from your brief.', chunk_chars=4, delay_per_chunk=0.15),
+        Text('Remember the HTTP methods. This is a longer explanation that should be cut short when the request changes. The unplayed remainder must not survive in history.', chunk_chars=4, delay_per_chunk=0.1),
+        Text('Status codes describe the HTTP response.', chunk_chars=4, delay_per_chunk=0.03),
     ]) as fake:
         result = browser_session(Path(directory) / 'product', fake.base_url, target, product=True)
         if result:
@@ -299,8 +313,8 @@ def product_scenario(directory: str, target: Path) -> int:
                         print(redact_sensitive_text(str(detail), force=True)[:1000], file=sys.stderr)
             return result
         requests = fake.main_requests()
-        if len(requests) != 7:
-            raise AssertionError(f'Product loop expected 7 fake generations, got {len(requests)}')
+        if len(requests) != 8:
+            raise AssertionError(f'Product loop expected 8 fake generations, got {len(requests)}')
         history = requests[-1]['messages']
         tool_results = [message for message in history if message.get('role') == 'tool']
         if len(tool_results) < 5 or any('"success": false' in str(row.get('content')) for row in tool_results):

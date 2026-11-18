@@ -212,6 +212,7 @@ function handleMessageStart(ctx: GatewayEventContext): boolean {
       awaitingResponse: true,
       sawAssistantPayload: false,
       interrupted: false,
+      voiceInterrupted: false,
       interimBoundaryPending: false,
       // Backend accepted the turn — the no-payload settle gate below may
       // now treat a running=false heartbeat as a real turn end.

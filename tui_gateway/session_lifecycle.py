@@ -770,6 +770,7 @@ def _ws_session_is_orphaned(session: dict | None) -> bool:
 
 def _interrupt_session_turn(
     sid: str, session: dict, *, request_id: str | None = None, orphan: bool = False,
+    preserve_running_tools: bool = False,
 ) -> bool:
     """Apply the shared ``session.interrupt`` contract to one claimed session; returns whether the compute-host control
     channel was used. The WS orphan reaper reuses this so a dead client gets the same partial-history/queue semantics.
@@ -782,12 +783,17 @@ def _interrupt_session_turn(
     # abort it nor clear `running` under it, or the next submit is admitted idle and loses its reply (#133504).
     compressing = bool(session.get("_manual_compress_active"))
     should_interrupt = bool(session.get("running")) and not compressing
+    if preserve_running_tools and should_interrupt and not use_compute_host and session.get("agent") is not None:
+        from agent.interrupt_compat import request_voice_interrupt
+        if not request_voice_interrupt(session["agent"]):
+            raise ValueError("voice interruption is not supported by this agent")
     run_thread_alive = False
     if use_compute_host:
         # The host owns the live turn (parent `running` can lag a blocked tool), so let it decide. Gate on
         # `_compute_host_active`: HostSupervisor.interrupt() calls start(), so a lazy session would spawn a child to interrupt.
         if should_interrupt or session.get("_compute_host_active"):
-            _get_compute_host_supervisor().interrupt(sid, request_id=request_id)
+            _get_compute_host_supervisor().interrupt(sid, request_id=request_id,
+                **({"preserve_running_tools": True} if preserve_running_tools else {}))
     else:
         run_thread_alive = (rt := session.get("_run_thread")) is not None and rt.is_alive()
     with session["history_lock"]:
@@ -795,7 +801,7 @@ def _interrupt_session_turn(
         session["queued_prompt"] = None
         session.pop("queued_prompts", None)
         session["_queued_prompt_generation"] = int(session.get("_queued_prompt_generation", 0)) + 1
-    if should_interrupt:
+    if should_interrupt and not preserve_running_tools:
         # Sibling of gateway/run_agent_cache.py::_interrupt_and_clear_session: a user-initiated stop of a
         # live TUI/desktop turn is the same "loop is gone" event for plugins holding per-turn external
         # resources. Observer-only; dispatch failures never break the interrupt.
@@ -812,7 +818,7 @@ def _interrupt_session_turn(
         except Exception:
             logger.debug("agent_loop_stopped hook dispatch failed", exc_info=True)
     if not use_compute_host:
-        if should_interrupt:
+        if should_interrupt and not preserve_running_tools:
             from agent.interrupt_compat import request_hard_interrupt
             request_hard_interrupt(session.get("agent"))
         if not run_thread_alive and not compressing:
@@ -827,7 +833,7 @@ def _interrupt_session_turn(
     # post-turn review is still running (the common case: the main turn already finished) would see
     # "stopped" while the review keeps calling the model. Fires unconditionally (both compute-host
     # and in-process turns) since the review is always local to this process.
-    if (agent_for_review := session.get("agent")) is not None:
+    if not preserve_running_tools and (agent_for_review := session.get("agent")) is not None:
         with contextlib.suppress(Exception):
             from agent.background_review import cancel_background_review_for_live_turn
             cancel_background_review_for_live_turn(
