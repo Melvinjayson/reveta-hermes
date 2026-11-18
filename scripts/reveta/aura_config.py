@@ -83,6 +83,11 @@ def write_soul(home: Path) -> bool:
     return True
 
 
+# Owner settings with a default: the generated value applies until the owner sets a boolean of their own.
+# Decision F (18 Nov 2026): clarifying questions appear without an approval tap; every other
+# consequential tool still asks (tools/aura_dispatch_policy.py).
+AURA_OWNER_DEFAULTS = {"clarify_without_approval": True}
+
 COMPOSIO_MCP_URL = "https://connect.composio.dev/mcp"
 # Composio's remote sandboxes run open-ended code off-box; Aura has its own workspace tool.
 COMPOSIO_EXCLUDED_TOOLS = ["COMPOSIO_REMOTE_WORKBENCH", "COMPOSIO_REMOTE_BASH_TOOL"]
@@ -141,6 +146,7 @@ def aura_settings(env: dict[str, str]) -> dict:
             "free_only": False,
             "free_models": free_models,
             "free_tools": [],
+            **AURA_OWNER_DEFAULTS,
             "anthropic": {
                 "model": env.get("AURA_ANTHROPIC_MODEL", "claude-sonnet-4-5"),
                 "per_chat_usd": _cap(env.get("AURA_ANTHROPIC_PER_CHAT_USD", "0")),
@@ -210,7 +216,8 @@ def merge_owner_settings(config: dict, settings: dict) -> dict:
 
     Generated keys win (model defaults, free-only policy, approvals, prompt, webapp). The owner keeps:
     the paid route and its model (Settings -> Model, tools/aura_provider.py); every ``aura.*`` key the
-    generator does not set, such as ``clarify_without_approval`` and ``voice``; the capability switches
+    generator does not set (such as ``voice``), and a boolean of their own for each key in
+    ``AURA_OWNER_DEFAULTS``; the capability switches
     from Tools (tools/aura_capabilities.py) in ``platform_toolsets``; and MCP servers with their on/off
     switch (Settings -> Connectors). Composio follows the environment: without its key it is removed.
     """
@@ -222,7 +229,8 @@ def merge_owner_settings(config: dict, settings: dict) -> dict:
     owner_servers = {name: servers.pop(name) for name in list(servers) if name in COMPOSIO_SERVERS}
     config.update(settings)
     for key, value in old_aura.items():
-        config["aura"].setdefault(key, value)
+        if key not in config["aura"] or (key in AURA_OWNER_DEFAULTS and isinstance(value, bool)):
+            config["aura"][key] = value
     if isinstance(old_aura.get("paid_route"), dict) and isinstance(old_model, dict):
         config["model"] = old_model
     else:

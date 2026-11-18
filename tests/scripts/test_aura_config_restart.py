@@ -107,3 +107,22 @@ def test_public_address_and_origin_come_from_aura_public_url(tmp_path, monkeypat
 def test_a_malformed_public_url_stops_the_boot(bad):
     with pytest.raises(ValueError, match="AURA_PUBLIC_URL"):
         aura_config.aura_settings({"AURA_PUBLIC_URL": bad})
+
+
+def test_clarify_skips_approval_by_default_and_an_owner_false_survives_boots(tmp_path, monkeypatch):
+    """Decision F: on in the generated config, but it stays the owner's switch."""
+    from tools.aura_dispatch_policy import _classification
+
+    home = tmp_path / "home"
+    config = _boot(monkeypatch, home)
+    assert config["aura"]["clarify_without_approval"] is True
+    assert _classification("clarify", {}, config) == "internal"
+    assert _classification("terminal", {"command": "ls"}, config) == "consequential"
+
+    config["aura"]["clarify_without_approval"] = False
+    _save(home, config)
+    assert _boot(monkeypatch, home)["aura"]["clarify_without_approval"] is False
+
+    config["aura"]["clarify_without_approval"] = "yes"  # not a boolean: the default applies again
+    _save(home, config)
+    assert _boot(monkeypatch, home)["aura"]["clarify_without_approval"] is True

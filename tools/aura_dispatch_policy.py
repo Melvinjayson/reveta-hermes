@@ -48,8 +48,9 @@ def _config():
 def _clarify_without_approval(config):
     """Owner setting ``aura.clarify_without_approval``; OFF unless it is literally ``true``.
 
-    Off by default, so a clarifying question still needs the approval tap. Turning it on is the
-    owner's decision; any other value (a string, 1, a missing key) keeps the approval."""
+    Aura's generated config turns it on (decision F, ``AURA_OWNER_DEFAULTS`` in
+    scripts/reveta/aura_config.py); the owner can set it to ``false``. Any value other than a literal
+    ``true`` (a string, 1, a missing key) keeps the approval tap."""
     aura = config.get("aura") if isinstance(config, dict) else None
     return isinstance(aura, dict) and aura.get("clarify_without_approval") is True
 
