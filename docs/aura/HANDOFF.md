@@ -21,7 +21,12 @@ model and FFmpeg's local Flite `slt` voice cost $0 and need no keys/downloads.
 `pipecat-ai[silero]==1.15.0` and `pocketsphinx==5.1.1` have their own frozen PM
 manifest/lock under `hermes_cli/aura_voice_runtime`. Isolation avoids the existing
 KittenTTS / soundfile version conflict without relaxing core requirements.
-Docker bakes this environment at `.voice-runtime` and installs Debian FFmpeg.
+**v2 (PR #16):** the default Docker image does *not* bake this environment or
+FFmpeg (Render free has 512 MiB; the speech tree peaked at 249 MiB RSS). Full
+duplex is opt-in: `aura.voice.full_duplex: true` in `config.yaml` plus a locally
+built `.voice-runtime` (commands below). Otherwise the composer shows the live
+`AuraVoice` unchanged. On Render, `scripts/reveta/aura_config.py --write`
+rewrites the `aura` block at boot, so the setting cannot be on there today.
 No UDP, LiveKit, extra service or Render configuration is used.
 
 `HermesBridge` emits final transcripts to the signed-in composer's existing
