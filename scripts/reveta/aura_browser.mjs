@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { productFlow } from './aura_product_browser.mjs'
+import { voiceModeFlow } from './aura_pipecat_browser.mjs'
 const require = createRequire(new URL('../../apps/desktop/package.json', import.meta.url))
 const { chromium, expect } = require('@playwright/test')
 let url = ''
@@ -78,6 +79,8 @@ try {
     await approval.getByRole('button', { name: 'Change', exact: true }).click()
     await expect(page.getByText('Stub output: browser step declined.')).toBeVisible({ timeout: 60000 })
     console.log('PASS: unlocked clarify shows its choices with no approval tap; click-and-type browser waits for approval and Change runs nothing.')
+  } else if (launch.voiceMode) {
+    await voiceModeFlow(page, expect, output)
   } else if (launch.product) {
     await productFlow(page, expect, output)
   } else if (launch.costBlocked) {

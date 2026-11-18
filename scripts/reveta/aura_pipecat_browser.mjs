@@ -68,3 +68,50 @@ export async function continuousVoiceFlow(page, expect, output, fixture) {
   await expect(page.locator('[data-role=assistant]').last()).toContainText('Status codes describe the HTTP response.')
   console.log('PASS: phone 390x844; real chat admission with fake STT/TTS; live partial, final dedup, acknowledged prefix, barge-in flush, changed request same thread, truncated history after reload.')
 }
+
+/** PR #16: the live voice is the default; full duplex appears only when the server enables it,
+ * and a refused speech edge falls back to the live voice. Real app/gateway/mode route; fake STT. */
+/* global window */
+export async function voiceModeFlow(page, expect, output) {
+  const voice = page.getByRole('group', { name: 'Voice', exact: true })
+  const continuous = page.getByLabel('Continuous voice')
+  // The real server route, called through the app's own authenticated API client.
+  const body = await page.evaluate(() => window.hermesDesktop.api({ path: '/api/aura/voice/mode' }))
+  if (body?.full_duplex !== false || body?.enabled !== false) {
+    throw new Error(`Default mode should be off, got ${JSON.stringify(body)}`)
+  }
+  await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible({ timeout: 60000 })
+  await expect(voice.getByRole('button', { name: 'Start voice' })).toBeVisible({ timeout: 60000 })
+  // Trial click: passes only once nothing (the CONNECTING overlay) covers the control.
+  await voice.getByRole('button', { name: 'Start voice' }).click({ trial: true, timeout: 60000 })
+  await expect(continuous).toHaveCount(0)
+  await page.screenshot({ path: `${output}/voice-default-mobile.png` })
+  console.log(`PASS: real GET /api/aura/voice/mode -> ${JSON.stringify(body)}; composer shows the live voice, no continuous voice.`)
+
+  await page.route('**/api/aura/voice/mode**', route => route.fulfill({ json: { full_duplex: true, enabled: true, runtime: true } }))
+  const fixture = await installVoiceFixture(page)
+  await page.reload()
+  await expect(continuous).toBeVisible({ timeout: 60000 })
+  await expect(voice).toHaveCount(0)
+  await continuous.getByRole('button', { name: 'Voice', exact: true }).click()
+  await expect.poll(() => fixture.connected).toBe(true)
+  fixture.emit({ type: 'partial', turn_id: fixture.turn, text: 'What should I remember' })
+  await expect(continuous).toContainText('What should I remember')
+  for (let i = 0; i < 2; i++) { fixture.emit({ type: 'final', turn_id: fixture.turn, text: 'What should I remember from the brief?' }) }
+  await expect(page.locator('[data-role=user]').filter({ hasText: 'What should I remember from the brief?' })).toHaveCount(1, { timeout: 60000 })
+  await page.screenshot({ path: `${output}/voice-full-duplex-mobile.png` })
+  console.log('PASS: with mode on (route-faked), continuous voice replaces it; a duplicated final is admitted once through the real chat.')
+
+  await page.unrouteAll({ behavior: 'ignoreErrors' })
+  await page.route('**/api/aura/voice/mode**', route => route.fulfill({ json: { full_duplex: true, enabled: true, runtime: true } }))
+  await page.routeWebSocket('**/api/audio/pipecat?**', ws => {
+    ws.onMessage(raw => {
+      if (JSON.parse(String(raw)).type === 'hello') { ws.send(JSON.stringify({ type: 'unavailable', epoch: 'x', seq: 1 })); ws.close() }
+    })
+  })
+  await page.reload()
+  await continuous.getByRole('button', { name: 'Voice', exact: true }).click()
+  await expect(voice.getByRole('button', { name: 'Start voice' })).toBeVisible({ timeout: 60000 })
+  await expect(continuous).toHaveCount(0)
+  console.log('PASS: a refused speech edge falls back to the live voice (AuraVoice), not a bare control.')
+}

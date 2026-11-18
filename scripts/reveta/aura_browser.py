@@ -28,6 +28,7 @@ def browser_session(
     product: bool = False,
     retired_model: bool = False,
     capabilities: bool = False,
+    voice_mode: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -149,6 +150,7 @@ def browser_session(
                     "product": product,
                     "retiredModel": retired_model,
                     "capabilities": capabilities,
+                    "voiceMode": voice_mode,
                 }
             ),
             text=True,
@@ -191,6 +193,7 @@ def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--product-only', action='store_true')
+    parser.add_argument('--voice-mode-only', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="aura-browser-") as directory:
         target = Path(directory) / "synthetic-action-count.json"
@@ -227,6 +230,8 @@ def main() -> int:
         try:
             if args.product_only:
                 return product_scenario(directory, target)
+            if args.voice_mode_only:
+                return voice_mode_scenario(directory, target)
             return run_scenarios(directory, target, command)
         finally:
             action_server.shutdown()
@@ -309,6 +314,12 @@ def capabilities_scenario(directory: str, target: Path) -> int:
                                        for text in tool_results[-1:]):
             raise AssertionError('Declined browser step did not come back as refused')
         return 0
+def voice_mode_scenario(directory: str, target: Path) -> int:
+    """Default config (full duplex off): live voice by default; selector and fallback (PR #16)."""
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text
+
+    with FakeLLMServer([Text('Stub output: noted.')] * 4) as fake:
+        return browser_session(Path(directory) / 'voice-mode', fake.base_url, target, voice_mode=True)
 
 
 def product_scenario(directory: str, target: Path) -> int:
