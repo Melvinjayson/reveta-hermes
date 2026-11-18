@@ -77,7 +77,7 @@ export async function productFlow(page, expect, output) {
   })
   expect(audioTracks).toBe(1)
   await expect(voice).toContainText('Full duplex unavailable')
-  await voice.getByRole('button', { name: 'Start voice', exact: true }).click()
+  await voice.getByRole('button', { name: 'Start voice chat', exact: true }).click()
   await expect(voice, 'voice listens immediately after enabling').toHaveAttribute('data-aura-voice', 'Listening')
   await page.evaluate(() => window.auraVoiceFixture.interim('What should I remember'))
   await expect(voice.getByLabel('Live transcript')).toContainText('What should I remember')

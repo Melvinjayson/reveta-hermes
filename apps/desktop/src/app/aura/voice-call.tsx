@@ -586,20 +586,20 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
   const label = voiceLabel(active, muted, busy, status)
 
   return (
-    <div aria-label="Voice" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+    <div aria-label="Voice chat" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
       <button
         aria-describedby="aura-voice-hint"
-        aria-label={active ? 'End voice' : 'Start voice'}
+        aria-label={active ? 'End voice chat' : 'Start voice chat'}
         aria-pressed={active}
         className="aura-voice-toggle"
         disabled={disabled}
         onClick={active ? stop : start}
-        title={active ? 'End voice' : 'Start voice'}
+        title={active ? 'End voice chat' : 'Start voice chat'}
         type="button"
       >
         {active ? <PhoneOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
         <span aria-hidden="true" className="aura-voice-dot" />
-        <span className="aura-voice-label">{active ? label : 'Voice'}</span>
+        <span className="aura-voice-label">{active ? label : 'Voice chat'}</span>
       </button>
       {active && (
         <button

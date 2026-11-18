@@ -74,7 +74,7 @@ def main() -> int:
                 print("Temporary Webapp launch failed; private launcher output withheld.", file=sys.stderr)
                 return 1
             return subprocess.run(
-                ["node", "scripts/reveta/aura_screens.mjs"], cwd=ROOT, env=env,
+                ["node", os.environ.get("AURA_SCREENS_SCRIPT", "scripts/reveta/aura_screens.mjs")], cwd=ROOT, env=env,
                 input=json.dumps({"url": links[-1], "output": str(output)}),
                 text=True, timeout=300, check=False,
             ).returncode

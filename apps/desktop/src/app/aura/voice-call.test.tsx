@@ -77,9 +77,9 @@ async function startCall() {
   render(<AuraVoice busy={false} disabled={false} onInterrupt={vi.fn()} onSubmit={onSubmit} sessionId="s1" />)
   // The browser voice shows until the server says a live call can start.
   await vi.waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Start voice' }).getAttribute('aria-describedby')).toBe('aura-voice-hint')
+    expect(screen.getByRole('button', { name: 'Start voice chat' }).getAttribute('aria-describedby')).toBe('aura-voice-hint')
   )
-  const toggle = screen.getByRole('button', { name: 'Start voice' })
+  const toggle = screen.getByRole('button', { name: 'Start voice chat' })
   expect(toggle.getAttribute('aria-pressed')).toBe('false')
   await act(async () => {
     fireEvent.click(toggle)
@@ -200,8 +200,8 @@ it('mutes the microphone track and shows it, then ends the call cleanly', async 
   expect(track.enabled).toBe(false)
   expect(screen.getByRole('status').textContent).toBe('Muted')
   expect(screen.getByRole('button', { name: 'Unmute microphone' }).getAttribute('aria-pressed')).toBe('true')
-  fireEvent.click(screen.getByRole('button', { name: 'End voice' }))
+  fireEvent.click(screen.getByRole('button', { name: 'End voice chat' }))
   expect(track.stop).toHaveBeenCalled()
-  expect(screen.getByRole('button', { name: 'Start voice' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Start voice chat' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Mute microphone' })).toBeNull()
 })

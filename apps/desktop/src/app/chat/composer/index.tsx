@@ -2,6 +2,7 @@ import { ComposerPrimitive } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { AuraDictation } from '@/app/aura/dictation'
 import { AuraLocalTalk } from '@/app/aura/local-talk'
 import { AuraVoice } from '@/app/aura/voice-call'
 import { useTourMarker } from '@/app/chat/tour-marker'
@@ -1514,6 +1515,7 @@ export function ChatBar({
                       start, detached from the cluster (#116332). */}
                     <div className="flex min-w-0 items-center justify-end gap-(--composer-control-gap) [grid-area:controls]">
                       <ContribSlot area={COMPOSER_AREAS.actions} />
+                      {isBrowserHostedDesktop() && <AuraDictation disabled={disabled} />}
                       {controls}
                     </div>
                   </div>

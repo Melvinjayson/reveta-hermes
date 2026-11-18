@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import { AuraComposerMenuSection } from '@/app/aura/tools-menu'
 import { composerPanelCard } from '@/components/chat/composer-dock'
 import { Button } from '@/components/ui/button'
 import { Codicon } from '@/components/ui/codicon'
@@ -16,6 +17,7 @@ import { Kbd } from '@/components/ui/kbd'
 import { Tip } from '@/components/ui/tooltip'
 import { useI18n } from '@/i18n'
 import { Clipboard, FileText, FolderOpen, type IconComponent, ImageIcon, Link, MessageSquareText } from '@/lib/icons'
+import { isBrowserHostedDesktop } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 import { useComposerAttachmentProviders } from './contrib'
@@ -87,6 +89,8 @@ export function ContextMenu({
           <ContextMenuItem icon={Link} onSelect={onOpenUrlDialog}>
             {c.url}
           </ContextMenuItem>
+
+          {isBrowserHostedDesktop() && <AuraComposerMenuSection />}
 
           <DropdownMenuSeparator />
 

@@ -75,27 +75,6 @@
 .aura-chat > [data-chat-surface] {
   height: 100%;
 }
-.aura-empty {
-  margin: auto;
-  padding: 40px 24px 24px;
-  width: min(100%, 620px);
-  text-align: center;
-  color: var(--aura-ink);
-}
-.aura-empty-mark {
-  margin: 0 auto 24px;
-  width: 72px;
-  height: 72px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--aura-accent) 8%, transparent);
-}
-.aura-empty-mark img {
-  height: 50px;
-  width: 42px;
-  object-fit: contain;
-}
 .aura-eyebrow {
   font-size: 11px;
   text-transform: uppercase;
@@ -103,36 +82,6 @@
   font-weight: 500;
   color: var(--aura-muted);
   margin: 0 0 16px;
-}
-.aura-empty h1 {
-  font-family: var(--aura-font);
-  font-weight: 500;
-  font-size: clamp(32px, 7vw, 48px);
-  line-height: 1.15;
-  letter-spacing: -1.6px;
-  margin: 0 0 16px;
-}
-.aura-empty > p:not(.aura-eyebrow) {
-  color: var(--aura-muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.aura-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 28px 0;
-}
-.aura-suggestions button {
-  padding: 10px 14px;
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  border: 1px solid var(--aura-line);
-  background: var(--aura-surface);
-  color: var(--aura-ink);
-  font-size: 13px;
 }
 .aura-notice {
   border: 1px solid var(--aura-line);
@@ -384,9 +333,6 @@
 .aura-app {
   font-size: 1rem;
   line-height: 1.5;
-}
-.aura-empty {
-  padding-inline: 16px;
 }
 .aura-eyebrow {
   font-size: 0.8125rem;

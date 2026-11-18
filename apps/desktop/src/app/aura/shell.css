@@ -560,7 +560,7 @@
     border-bottom-color: transparent;
     padding: 0 var(--aura-space-3);
   }
-  .aura-header-mark {
+  .aura-app .aura-header-mark {
     display: none;
   }
   .aura-header-title {
@@ -571,4 +571,86 @@
   .aura-app:not([data-aura-collapsed]) .aura-header-new {
     display: none;
   }
+}
+
+/* Tools dialog */
+.aura-tools-body {
+  overflow-y: auto;
+  padding: var(--aura-space-4) var(--aura-space-6) var(--aura-space-6);
+}
+.aura-tools-body > p {
+  margin: 0 0 var(--aura-space-4);
+  line-height: 1.5;
+}
+.aura-tool-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.aura-tool-list li + li {
+  border-top: 1px solid var(--aura-line);
+}
+.aura-tool-list label {
+  display: flex;
+  align-items: center;
+  gap: var(--aura-space-4);
+  min-height: 56px;
+  padding: var(--aura-space-3) 0;
+  cursor: pointer;
+}
+.aura-tool-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--aura-text-sm);
+  line-height: 1.4;
+}
+.aura-tool-name {
+  font-size: var(--aura-text-md);
+  font-weight: 500;
+}
+.aura-tool-blocked {
+  color: var(--aura-warn);
+}
+.aura-tool-list input[role='switch'] {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 40px;
+  min-height: 0;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--aura-radius-pill);
+  background: var(--aura-line);
+  position: relative;
+  cursor: pointer;
+  transition: background-color var(--aura-fast) var(--aura-ease);
+}
+.aura-tool-list input[role='switch']::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform var(--aura-fast) var(--aura-ease);
+}
+.aura-tool-list input[role='switch']:checked {
+  background: var(--aura-accent);
+}
+.aura-tool-list input[role='switch']:checked::after {
+  transform: translateX(16px);
+}
+.aura-tool-list input[role='switch']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.aura-tool-list input[role='switch']:focus-visible {
+  outline: 2px solid var(--aura-accent);
+  outline-offset: 2px;
 }

@@ -1,6 +1,7 @@
 import './tokens.css'
 import './aura.css'
 import './shell.css'
+import './home.css'
 
 import { useStore } from '@nanostores/react'
 import { Menu, SquarePen } from 'lucide-react'
@@ -24,6 +25,7 @@ import { AuraContinueLater, AuraReadiness } from './readiness'
 import { AuraSearchDialog, isSearchShortcut } from './search-dialog'
 import { AuraSettingsDialog } from './settings-dialog'
 import { auraSignOut } from './sign-out'
+import { AuraToolsDialog } from './tools-menu'
 
 interface AuraShellProps {
   actions: WiringActions
@@ -273,6 +275,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         theme={resolvedMode}
         titleOf={sessionTitle}
       />
+      <AuraToolsDialog theme={resolvedMode} />
       <AuraSettingsDialog
         mode={mode as 'light' | 'dark' | 'system'}
         onClose={() => setSettings(false)}

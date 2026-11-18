@@ -28,6 +28,7 @@ async function send(page, text) {
 
 async function settle(page) {
   await expect(page.locator('.aura-empty, [data-role]').first()).toBeVisible({ timeout: 60000 })
+  await page.waitForFunction(() => !document.body.innerText.toLowerCase().includes('connecting'), null, { timeout: 60000 })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(400)
 }
@@ -91,6 +92,19 @@ try {
   await page.getByRole('button', { name: /^New (conversation|chat)$/ }).filter({ visible: true }).first().click()
   await settle(page)
   await shot(page, 'home-desktop')
+  if (await page.getByRole('button', { name: 'Add context', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Add context', exact: true }).click()
+    await page.waitForTimeout(300)
+    await shot(page, 'plus-menu-desktop')
+    const tools = page.getByRole('menuitem', { name: /^Tools/ })
+    if (await tools.count()) {
+      await tools.click()
+      await expect(page.getByRole('switch').first()).toBeVisible({ timeout: 30000 })
+      await settle(page)
+      await shot(page, 'tools-desktop')
+    }
+    await closeOverlays(page)
+  }
   console.log(`Screens written to ${output}`)
 } catch (error) {
   console.error(String(error))
