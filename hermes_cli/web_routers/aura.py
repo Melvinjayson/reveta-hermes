@@ -69,3 +69,30 @@ async def set_aura_provider(body: ProviderUpdate, request: Request):
                                        body.per_chat_usd, body.api_key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class CapabilityUpdate(BaseModel):
+    enabled: Optional[list[str]] = None
+    mode: Optional[str] = Field(default=None, max_length=32)
+
+
+@router.get("/api/aura/capabilities")
+async def aura_capabilities(request: Request):
+    _require_token(request)
+    from tools.aura_capabilities import status
+
+    return await asyncio.to_thread(status)
+
+
+@router.put("/api/aura/capabilities")
+async def set_aura_capabilities(body: CapabilityUpdate, request: Request):
+    """Switch Hermes toolsets on or off for NEW conversations; running ones keep their tools."""
+    _require_token(request)
+    from tools.aura_capabilities import configure, set_mode
+
+    try:
+        if body.mode is not None:
+            return await asyncio.to_thread(set_mode, body.mode)
+        return await asyncio.to_thread(configure, body.enabled or [])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
