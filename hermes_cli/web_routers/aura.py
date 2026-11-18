@@ -169,7 +169,7 @@ def _read_memory_notes() -> dict:
     notes = {}
     for key, name in _MEMORY_NOTES:
         path = root / name
-        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        text = path.read_text(encoding="utf-8-sig", errors="replace") if path.is_file() else ""
         notes[key] = {"text": text[:_MEMORY_READ_CAP], "truncated": len(text) > _MEMORY_READ_CAP}
     return notes
 

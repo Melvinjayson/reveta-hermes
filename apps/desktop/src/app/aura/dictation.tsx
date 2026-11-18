@@ -1,7 +1,9 @@
+import { useStore } from '@nanostores/react'
 import { Mic, Square } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { requestComposerFocus, requestComposerInsert } from '@/app/chat/composer/focus'
+import { $gatewayState } from '@/store/session'
 
 interface Recognition {
   continuous: boolean
@@ -25,7 +27,9 @@ function recognitionCtor(): RecognitionCtor | undefined {
 
 /** Composer dictation: speech becomes draft text; nothing is sent until the user presses Send.
  * Separate from Voice chat, which holds a spoken conversation. Hidden without browser support. */
-export function AuraDictation({ disabled }: { disabled: boolean }) {
+export function AuraDictation({ disabled: forced = false }: { disabled?: boolean }) {
+  const gateway = useStore($gatewayState)
+  const disabled = forced || gateway !== 'open'
   const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
   const recognition = useRef<Recognition | null>(null)

@@ -10,8 +10,10 @@ import { Menu, PanelRight, SquarePen } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { COMPOSER_AREAS } from '@/app/chat/composer/contrib'
 import type { WiringActions } from '@/app/contrib/types'
 import { useStatusSnapshot } from '@/app/shell/hooks/use-status-snapshot'
+import { Contribute } from '@/contrib/react/contribute'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { sessionTitle } from '@/lib/chat-runtime'
 import { FolderOpen, PanelLeftIcon, Plus, Search, Settings, X } from '@/lib/icons'
@@ -22,6 +24,7 @@ import type { SessionInfo } from '@/types/hermes'
 
 import { AuraConversationCards } from './conversation-cards'
 import { AuraConversationRow } from './conversation-row'
+import { AuraDictation } from './dictation'
 import { groupHistory } from './history'
 import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
 import { AuraProjectDialog } from './project-dialog'
@@ -340,6 +343,9 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         theme={resolvedMode}
         titleOf={sessionTitle}
       />
+      <Contribute area={COMPOSER_AREAS.actions} id="aura:dictation">
+        <AuraDictation />
+      </Contribute>
       <AuraToolsDialog theme={resolvedMode} />
       <AuraProjectDialog
         onClose={() => setProject(null)}

@@ -6,6 +6,11 @@ import { requestComposerInsert } from '@/app/chat/composer/focus'
 import { AuraDictation } from './dictation'
 
 vi.mock('@/app/chat/composer/focus', () => ({ requestComposerFocus: vi.fn(), requestComposerInsert: vi.fn() }))
+vi.mock('@/store/session', async () => {
+  const { atom } = await import('nanostores')
+
+  return { $gatewayState: atom('open') }
+})
 
 type Handler = (event: { resultIndex: number; results: { isFinal: boolean; 0: { transcript: string } }[] }) => void
 
