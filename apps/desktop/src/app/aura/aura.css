@@ -135,16 +135,6 @@
   padding: 8px 0 20px;
   align-items: flex-end;
 }
-.aura-chat .composer-human-message {
-  width: fit-content;
-  max-width: 88%;
-  padding: 12px 16px;
-  border: 1px solid var(--aura-line);
-  background: var(--aura-surface);
-  color: var(--aura-ink);
-  box-shadow: none;
-  border-radius: 16px 16px 6px 16px;
-}
 .aura-chat [data-role='assistant'] {
   color: var(--aura-ink);
   background: transparent;
@@ -296,23 +286,6 @@
 .aura-context .aura-eyebrow {
   margin-bottom: 6px;
 }
-.aura-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-block: 12px;
-}
-.aura-sources a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--aura-line);
-  border-radius: 10px;
-  color: var(--aura-link);
-  background: var(--aura-surface);
-  font-size: 12px;
-}
 .aura-chat .composer-human-message {
   margin-left: auto;
 }
@@ -321,10 +294,6 @@
   border: 1px solid var(--aura-line);
   background: var(--aura-surface);
   box-shadow: 0 4px 24px color-mix(in srgb, var(--aura-ink) 4%, transparent);
-}
-.aura-chat [data-role='assistant'] a {
-  color: var(--aura-ink);
-  text-decoration: underline;
 }
 .aura-chat [data-slot='composer-surface']:focus-within {
   border-color: var(--aura-link);
@@ -362,9 +331,6 @@
 .aura-app summary:focus-visible {
   outline: 2px solid var(--aura-link);
   outline-offset: 2px;
-}
-.aura-chat .composer-human-message {
-  max-width: 80%;
 }
 .aura-chat [data-slot='composer-bounds'] {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -434,22 +400,6 @@
   padding: 8px 0;
   border: 0;
   text-decoration: underline;
-}
-/* Touch actions wait for the native long-press/context-menu gesture. Keyboard focus always reveals them. */
-html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'] {
-  opacity: 0;
-  pointer-events: none;
-}
-html[data-hermes-desktop-host='browser'] .aura-chat [data-aura-actions-open] [data-slot='aui_msg-actions'],
-html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions']:focus-within {
-  opacity: 1;
-  pointer-events: auto;
-}
-@media (hover: hover) {
-  html[data-hermes-desktop-host='browser'] .aura-chat [data-role='assistant']:hover [data-slot='aui_msg-actions'] {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 
 /* Voice: one compact pill beside the composer, state shown by a dot and a word, not a banner. */

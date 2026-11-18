@@ -1,7 +1,8 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
+import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 
+import { searchSessions } from '@/api/sessions'
 import { Search, X } from '@/lib/icons'
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo, SessionSearchResult } from '@/types/hermes'
 
 import { groupHistory } from './history'
 
@@ -11,7 +12,9 @@ interface AuraSearchDialogProps {
   theme: string
   titleOf: (session: SessionInfo) => string
   onClose: () => void
-  onOpen: (session: SessionInfo) => void
+  onOpen: (id: string, session?: SessionInfo) => void
+  /** Injected for tests; defaults to the server's full-text message search. */
+  search?: (query: string) => Promise<{ results: SessionSearchResult[] }>
 }
 
 /** True for Cmd+K on Apple keyboards and Ctrl+K elsewhere. */
@@ -19,13 +22,34 @@ export function isSearchShortcut(event: { key: string; metaKey: boolean; ctrlKey
   return event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey) && !event.altKey
 }
 
-/** Title search over the conversations already loaded in this browser; no message bodies are searched. */
-export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOpen }: AuraSearchDialogProps) {
+/** The server marks matches with >>> and <<< (SQLite FTS snippet); render them as <mark>. */
+export function highlightSnippet(snippet: string): ReactNode[] {
+  return snippet.split(/(>>>.*?<<<)/g).filter(Boolean).map((part, index) =>
+    part.startsWith('>>>') && part.endsWith('<<<') ? <mark key={index}>{part.slice(3, -3)}</mark> : part
+  )
+}
+
+const MESSAGE_SEARCH_MIN = 2
+const MESSAGE_SEARCH_DELAY_MS = 250
+
+interface Option {
+  id: string
+  session?: SessionInfo
+  label: ReactNode
+  detail?: ReactNode
+}
+
+/** Titles of loaded conversations, plus the server's full-text search inside message text. */
+export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOpen, search = searchSessions }: AuraSearchDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const request = useRef(0)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
-  const results = groupHistory(sessions, titleOf, query)
-  const flat = results.flatMap(section => section.entries)
+  const [hits, setHits] = useState<SessionSearchResult[]>([])
+  const [searching, setSearching] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const byId = new Map(sessions.map(session => [session.id, session]))
+  const titles = groupHistory(sessions, titleOf, query)
 
   useEffect(() => {
     const node = dialog.current
@@ -33,6 +57,7 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
     if (open && node && !node.open) {
       setQuery('')
       setActive(0)
+      setHits([])
       node.showModal()
     }
 
@@ -41,9 +66,59 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
     }
   }, [open])
 
-  const choose = (session: SessionInfo | undefined) => {
-    if (session) {
-      onOpen(session)
+  useEffect(() => {
+    const text = query.trim()
+    const token = ++request.current
+
+    if (text.length < MESSAGE_SEARCH_MIN) {
+      setHits([])
+      setSearching(false)
+
+      return
+    }
+
+    setSearching(true)
+
+    const timer = window.setTimeout(() => {
+      search(text)
+        .then(response => {
+          if (token === request.current) {
+            setHits(response.results ?? [])
+            setFailed(false)
+          }
+        })
+        .catch(() => token === request.current && setFailed(true))
+        .finally(() => token === request.current && setSearching(false))
+    }, MESSAGE_SEARCH_DELAY_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [query, search])
+
+  const sections: { label: string; options: Option[] }[] = [
+    ...titles.map(section => ({
+      label: section.group,
+      options: section.entries.map(entry => ({ id: entry.session.id, session: entry.session, label: entry.title }))
+    })),
+    {
+      label: 'In messages',
+      options: hits.map(hit => {
+        const session = byId.get(hit.session_id)
+
+        return {
+          id: hit.session_id,
+          session,
+          label: session ? titleOf(session) : 'Conversation',
+          detail: highlightSnippet(hit.snippet)
+        }
+      })
+    }
+  ].filter(section => section.options.length > 0)
+
+  const flat = sections.flatMap(section => section.options)
+
+  const choose = (option: Option | undefined) => {
+    if (option) {
+      onOpen(option.id, option.session)
     }
   }
 
@@ -56,7 +131,7 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
       setActive(index => Math.max(0, index - 1))
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      choose(flat[active]?.session)
+      choose(flat[active])
     }
   }
 
@@ -77,7 +152,7 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
       <div className="aura-search-field">
         <Search aria-hidden="true" size={18} />
         <input
-          aria-activedescendant={flat[active] ? `aura-search-${flat[active].session.id}` : undefined}
+          aria-activedescendant={flat[active] ? `aura-search-option-${active}` : undefined}
           aria-controls="aura-search-results"
           aria-expanded="true"
           aria-label="Search conversations"
@@ -87,7 +162,7 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
             setActive(0)
           }}
           onKeyDown={onKeyDown}
-          placeholder="Search conversations"
+          placeholder="Search titles and messages"
           role="combobox"
           value={query}
         />
@@ -96,10 +171,10 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
         </button>
       </div>
       <div className="aura-search-results" id="aura-search-results" role="listbox">
-        {results.map(section => (
-          <div aria-label={section.group} className="aura-search-group" key={section.group} role="group">
-            <p className="aura-section-label">{section.group}</p>
-            {section.entries.map(entry => {
+        {sections.map(section => (
+          <div aria-label={section.label} className="aura-search-group" key={section.label} role="group">
+            <p className="aura-section-label">{section.label}</p>
+            {section.options.map(option => {
               row += 1
               const index = row
 
@@ -107,25 +182,33 @@ export function AuraSearchDialog({ open, sessions, theme, titleOf, onClose, onOp
                 <div
                   aria-selected={index === active}
                   className="aura-search-option"
-                  id={`aura-search-${entry.session.id}`}
-                  key={entry.session.id}
-                  onClick={() => choose(entry.session)}
+                  data-has-detail={option.detail ? '' : undefined}
+                  id={`aura-search-option-${index}`}
+                  key={`${section.label}:${option.id}:${index}`}
+                  onClick={() => choose(option)}
                   onMouseMove={() => setActive(index)}
                   role="option"
                 >
-                  {entry.title}
+                  <span className="aura-search-title">{option.label}</span>
+                  {option.detail && <span className="aura-search-snippet">{option.detail}</span>}
                 </div>
               )
             })}
           </div>
         ))}
-        {!flat.length && (
+        {searching && <p className="aura-empty-note" role="status">Searching messages…</p>}
+        {failed && !searching && (
+          <p className="aura-empty-note" role="alert">
+            Message search is unavailable right now. Title matches still work.
+          </p>
+        )}
+        {!flat.length && !searching && !failed && (
           <p className="aura-empty-note" role="status">
-            {sessions.length ? 'No conversation titles match.' : 'No conversations yet.'}
+            {!sessions.length ? 'No conversations yet.' : query.trim() ? 'Nothing matches.' : 'Type to search.'}
           </p>
         )}
       </div>
-      <p className="aura-search-hint">Searches conversation titles. Enter opens, Esc closes.</p>
+      <p className="aura-search-hint">Searches titles and message text. Enter opens, Esc closes.</p>
     </dialog>
   )
 }

@@ -2,6 +2,7 @@ import './tokens.css'
 import './aura.css'
 import './shell.css'
 import './home.css'
+import './thread.css'
 
 import { useStore } from '@nanostores/react'
 import { Menu, SquarePen } from 'lucide-react'
@@ -191,12 +192,14 @@ export function AuraShell({ actions, children }: AuraShellProps) {
     setDrawer(false)
   }
 
-  const openSession = (session: SessionInfo) => {
-    actions.onResumeSession(session.id, session)
+  const resumeById = (id: string, session?: SessionInfo) => {
+    actions.onResumeSession(id, session)
     setResumed(true)
     setDrawer(false)
     setSearching(false)
   }
+
+  const openSession = (session: SessionInfo) => resumeById(session.id, session)
 
   const showHistory = () => (wide ? setCollapsed(false) : setDrawer(true))
 
@@ -269,7 +272,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
       </dialog>
       <AuraSearchDialog
         onClose={() => setSearching(false)}
-        onOpen={openSession}
+        onOpen={resumeById}
         open={searching}
         sessions={sessions}
         theme={resolvedMode}
