@@ -99,6 +99,17 @@ try {
   await openSettings(page)
   await shot(page, 'settings-desktop')
   await closeOverlays(page)
+  if (await page.getByRole('button', { name: 'New project', exact: true }).count()) {
+    await page.getByRole('button', { name: 'New project', exact: true }).first().click()
+    await page.getByRole('textbox', { name: 'Name' }).fill('Synthetic launch')
+    await page.getByRole('button', { name: 'Create project', exact: true }).click()
+    await page.getByRole('button', { name: /Synthetic launch/ }).first().click()
+    await page.getByRole('combobox', { name: 'Add a chat' }).selectOption({ index: 1 })
+    await expect(page.locator('.aura-project-chats li')).toHaveCount(1, { timeout: 30000 })
+    await settle(page)
+    await shot(page, 'project-desktop')
+    await closeOverlays(page)
+  }
   await page.getByRole('button', { name: /^New (conversation|chat)$/ }).filter({ visible: true }).first().click()
   await settle(page)
   await shot(page, 'home-desktop')

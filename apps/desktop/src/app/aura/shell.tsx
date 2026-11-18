@@ -14,7 +14,7 @@ import type { WiringActions } from '@/app/contrib/types'
 import { useStatusSnapshot } from '@/app/shell/hooks/use-status-snapshot'
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { sessionTitle } from '@/lib/chat-runtime'
-import { PanelLeftIcon, Plus, Search, Settings, X } from '@/lib/icons'
+import { FolderOpen, PanelLeftIcon, Plus, Search, Settings, X } from '@/lib/icons'
 import { $activeGatewayProfile } from '@/store/profile'
 import { $currentModel, $gatewayState, $selectedStoredSessionId, $sessions } from '@/store/session'
 import { useTheme } from '@/themes'
@@ -24,6 +24,8 @@ import { AuraConversationCards } from './conversation-cards'
 import { AuraConversationRow } from './conversation-row'
 import { groupHistory } from './history'
 import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
+import { AuraProjectDialog } from './project-dialog'
+import { $auraPendingProject, $auraProjects, assignAuraProject, type AuraProject, loadAuraProjects, pendingTarget } from './projects'
 import { AuraContinueLater, AuraReadiness } from './readiness'
 import { AuraSearchDialog, isSearchShortcut } from './search-dialog'
 import { AuraSettingsDialog } from './settings-dialog'
@@ -38,7 +40,9 @@ interface AuraShellProps {
 
 interface AuraNavProps {
   activeId: null | string
+  projects: AuraProject[] | null
   sessions: SessionInfo[]
+  onProject: (id: string) => void
   onClose?: () => void
   onCollapse?: () => void
   onDelete: (session: SessionInfo) => Promise<void> | void
@@ -49,7 +53,7 @@ interface AuraNavProps {
 }
 
 /** The same navigation in the desktop sidebar and the phone drawer. */
-function AuraNav({ activeId, sessions, onClose, onCollapse, onDelete, onNewChat, onOpen, onSearch, onSettings }: AuraNavProps) {
+function AuraNav({ activeId, projects, sessions, onProject, onClose, onCollapse, onDelete, onNewChat, onOpen, onSearch, onSettings }: AuraNavProps) {
   const history = groupHistory(sessions, sessionTitle)
 
   return (
@@ -82,6 +86,22 @@ function AuraNav({ activeId, sessions, onClose, onCollapse, onDelete, onNewChat,
         </button>
       </nav>
       <div aria-label="Conversation history" className="aura-conversations" role="region">
+        <section aria-label="Projects" className="aura-projects">
+          <div className="aura-projects-head">
+            <h3 className="aura-section-label">Projects</h3>
+            <button aria-label="New project" className="aura-icon-button" onClick={() => onProject('new')} type="button">
+              <Plus size={16} />
+            </button>
+          </div>
+          {(projects ?? []).map(project => (
+            <button className="aura-project-item" key={project.id} onClick={() => onProject(project.id)} type="button">
+              <FolderOpen aria-hidden="true" size={16} />
+              <span>{project.name}</span>
+              <span className="aura-muted">{project.session_ids.length || ''}</span>
+            </button>
+          ))}
+          {projects && !projects.length && <p className="aura-empty-note">Group related chats into a project.</p>}
+        </section>
         {history.map(section => (
           <section aria-label={section.group} key={section.group}>
             <h3 className="aura-section-label">{section.group}</h3>
@@ -118,6 +138,9 @@ export function AuraShell({ actions, children }: AuraShellProps) {
   const [settings, setSettings] = useState(false)
   const [resumed, setResumed] = useState(false)
   const [error, setError] = useState('')
+  const [project, setProject] = useState<null | string>(null)
+  const projects = useStore($auraProjects)
+  const pendingProject = useStore($auraPendingProject)
   const sessions = useStore($sessions)
   const activeId = useStore($selectedStoredSessionId)
   const gatewayState = useStore($gatewayState)
@@ -159,6 +182,20 @@ export function AuraShell({ actions, children }: AuraShellProps) {
       setDrawer(false)
     }
   }, [wide])
+
+  useEffect(() => {
+    void loadAuraProjects()
+  }, [])
+
+  // "New chat in this project": the chat has no stored id until its first message lands.
+  useEffect(() => {
+    const target = pendingTarget(pendingProject, activeId)
+
+    if (target && activeId) {
+      $auraPendingProject.set(null)
+      void assignAuraProject(activeId, target)
+    }
+  }, [activeId, pendingProject])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -210,7 +247,12 @@ export function AuraShell({ actions, children }: AuraShellProps) {
 
   const navProps = {
     activeId,
+    projects,
     sessions,
+    onProject: (id: string) => {
+      setDrawer(false)
+      setProject(id)
+    },
     onDelete: (session: SessionInfo) => actions.onDeleteSession(session.id),
     onNewChat: newChat,
     onOpen: openSession,
@@ -297,6 +339,22 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         titleOf={sessionTitle}
       />
       <AuraToolsDialog theme={resolvedMode} />
+      <AuraProjectDialog
+        onClose={() => setProject(null)}
+        onNewChat={id => {
+          setProject(null)
+          $auraPendingProject.set({ projectId: id, from: activeId })
+          newChat()
+        }}
+        onOpenChat={session => {
+          setProject(null)
+          openSession(session)
+        }}
+        projectId={project}
+        sessions={sessions}
+        theme={resolvedMode}
+        titleOf={sessionTitle}
+      />
       <AuraSettingsDialog
         mode={mode as 'light' | 'dark' | 'system'}
         onClose={() => setSettings(false)}
