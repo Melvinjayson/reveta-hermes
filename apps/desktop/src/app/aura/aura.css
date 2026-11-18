@@ -37,41 +37,14 @@
   color: var(--aura-muted);
 }
 .aura-app {
-  --aura-ink: #101c49;
-  --aura-muted: #5b6788;
-  --aura-page: #f4f8fb;
-  --aura-surface: #ffffff;
-  --aura-accent: #479edb;
-  --aura-link: #247ab7;
-  --aura-sky: #7fd3f3;
-  --aura-line: color-mix(in srgb, var(--aura-ink) 15%, transparent);
-  --ui-chat-surface-background: var(--aura-page);
-  --ui-bg-chrome: var(--aura-page);
-  --ui-text-primary: var(--aura-ink);
-  --ui-text-secondary: var(--aura-muted);
-  --ui-text-tertiary: var(--aura-muted);
-  --ui-text-quaternary: var(--aura-muted);
-  --foreground: var(--aura-ink);
-  --background: var(--aura-page);
-  --dt-user-bubble: var(--aura-surface);
-  --ui-composer-background: var(--aura-surface);
-  --ui-control-active-background: var(--aura-line);
   color: var(--aura-ink);
   background: var(--aura-page);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--aura-font);
   height: var(--aura-viewport, 100dvh);
   width: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-.aura-app[data-aura-theme='dark'] {
-  --aura-ink: #ededef;
-  --aura-muted: #a1a1aa;
-  --aura-page: #0a0a0b;
-  --aura-surface: #111113;
-  --aura-link: #7fd3f3;
-  --aura-line: rgba(255, 255, 255, 0.12);
 }
 .aura-app *,
 .aura-sheet * {
@@ -124,7 +97,7 @@
   gap: 8px;
   color: var(--aura-ink);
   text-decoration: none;
-  font-family: Outfit, system-ui, sans-serif;
+  font-family: var(--aura-font);
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.8px;
@@ -178,7 +151,7 @@
   margin: 0 0 16px;
 }
 .aura-empty h1 {
-  font-family: Outfit, system-ui, sans-serif;
+  font-family: var(--aura-font);
   font-weight: 500;
   font-size: clamp(32px, 7vw, 48px);
   line-height: 1.15;
@@ -216,12 +189,6 @@
   display: none;
 }
 .aura-sheet {
-  --aura-ink: #101c49;
-  --aura-muted: #5b6788;
-  --aura-page: #f4f8fb;
-  --aura-surface: #ffffff;
-  --aura-line: rgba(16, 28, 73, 0.15);
-  --aura-link: #247ab7;
   margin: auto 0 0;
   width: 100%;
   max-width: none;
@@ -231,18 +198,11 @@
   padding: 24px 24px max(24px, env(safe-area-inset-bottom));
   color: var(--aura-ink);
   background: var(--aura-surface);
-  font-family: Inter, system-ui, sans-serif;
+  font-family: var(--aura-font);
 }
 .aura-sheet::backdrop {
-  background: rgba(16, 28, 73, 0.3);
+  background: var(--aura-scrim);
   backdrop-filter: blur(4px);
-}
-.aura-app[data-aura-theme='dark'] .aura-sheet {
-  --aura-ink: #ededef;
-  --aura-muted: #a1a1aa;
-  --aura-surface: #111113;
-  --aura-line: rgba(255, 255, 255, 0.12);
-  --aura-link: #7fd3f3;
 }
 .aura-nav-title {
   display: flex;
@@ -277,7 +237,7 @@
 }
 .aura-rail nav button[aria-current],
 .aura-sheet nav button[aria-current] {
-  background: color-mix(in srgb, var(--aura-accent, #479edb) 10%, transparent);
+  background: var(--aura-accent-soft);
 }
 .aura-conversations,
 .aura-settings {
@@ -536,18 +496,6 @@
   background: var(--aura-surface);
   font-size: 12px;
 }
-@font-face {
-  font-family: Outfit;
-  src: url('/fonts/aura/outfit.ttf') format('truetype');
-  font-weight: 100 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: Inter;
-  src: url('/fonts/aura/inter.ttf') format('truetype');
-  font-weight: 100 900;
-  font-display: swap;
-}
 .aura-chat .composer-human-message {
   margin-left: auto;
 }
@@ -560,29 +508,6 @@
 .aura-chat [data-role='assistant'] a {
   color: var(--aura-ink);
   text-decoration: underline;
-}
-html[data-hermes-desktop-host='browser'] {
-  --foreground: #101c49 !important;
-  --background: #f4f8fb !important;
-  --midground: #247ab7 !important;
-  --ui-text-primary: #101c49 !important;
-  --ui-text-secondary: #5b6788 !important;
-  --ui-text-tertiary: #5b6788 !important;
-  --ui-text-quaternary: #5b6788 !important;
-}
-html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --foreground: #ededef !important;
-  --background: #0a0a0b !important;
-  --midground: #7fd3f3 !important;
-  --ui-text-primary: #ededef !important;
-  --ui-text-secondary: #a1a1aa !important;
-  --ui-text-tertiary: #a1a1aa !important;
-  --ui-text-quaternary: #a1a1aa !important;
-}
-.aura-app {
-  --dt-input: var(--aura-surface);
-  --dt-composer-ring: var(--aura-link);
-  --composer-fill: var(--aura-surface);
 }
 .aura-chat [data-slot='composer-surface']:focus-within {
   border-color: var(--aura-link);
@@ -700,13 +625,6 @@ html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
   opacity: 1;
   pointer-events: auto;
 }
-.aura-app {
-  --aura-send-ink: #ffffff;
-}
-.aura-app[data-aura-theme='dark'] {
-  --aura-link: #479edb;
-  --aura-send-ink: #0a0a0b;
-}
 .aura-chat [data-slot='composer-surface'] button[type='submit']:not(:disabled) {
   background: var(--aura-link);
   color: var(--aura-send-ink);
@@ -718,45 +636,6 @@ html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
   padding: 8px 0;
   border: 0;
   text-decoration: underline;
-}
-.aura-app {
-  --primary: var(--aura-link);
-  --primary-foreground: var(--aura-send-ink);
-  --muted-foreground: var(--aura-muted);
-  --ring: var(--aura-link);
-}
-html[data-hermes-desktop-host='browser'] {
-  --primary: #247ab7 !important;
-  --primary-foreground: #ffffff !important;
-}
-html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --primary: #479edb !important;
-  --primary-foreground: #0a0a0b !important;
-}
-html[data-hermes-desktop-host='browser'] {
-  --font-sans: Inter, system-ui, sans-serif;
-  --popover: #ffffff;
-  --popover-foreground: #101c49;
-  --card: #ffffff;
-  --card-foreground: #101c49;
-  --muted: #f4f8fb;
-  --secondary: #f4f8fb;
-  --secondary-foreground: #101c49;
-  --accent: #f4f8fb;
-  --accent-foreground: #101c49;
-  --border: rgba(16, 28, 73, 0.15);
-}
-html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --popover: #111113;
-  --popover-foreground: #ededef;
-  --card: #111113;
-  --card-foreground: #ededef;
-  --muted: #18181b;
-  --secondary: #18181b;
-  --secondary-foreground: #ededef;
-  --accent: #18181b;
-  --accent-foreground: #ededef;
-  --border: rgba(255, 255, 255, 0.12);
 }
 /* Touch actions wait for the native long-press/context-menu gesture. Keyboard focus always reveals them. */
 html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'] {
@@ -787,7 +666,7 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 .aura-voice-dot { display: none; width: 8px; height: 8px; border-radius: 50%; background: var(--aura-muted); }
 .aura-voice:not([data-aura-voice='off']) .aura-voice-dot { display: inline-block; }
 .aura-voice[data-aura-voice='Listening'] .aura-voice-dot,
-.aura-voice[data-aura-voice='Hearing you'] .aura-voice-dot { background: #1f9d55; }
+.aura-voice[data-aura-voice='Hearing you'] .aura-voice-dot { background: var(--aura-ok); }
 .aura-voice[data-aura-voice='Hearing you'] .aura-voice-dot,
 .aura-voice[data-aura-voice='Speaking'] .aura-voice-dot,
 .aura-voice[data-aura-voice='Thinking'] .aura-voice-dot,
@@ -795,10 +674,10 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 .aura-voice[data-aura-voice='Reconnecting'] .aura-voice-dot { animation: aura-voice-pulse 1s ease-in-out infinite; }
 .aura-voice[data-aura-voice='Speaking'] .aura-voice-dot { background: var(--aura-link); }
 .aura-voice[data-aura-voice='Muted'] .aura-voice-dot,
-.aura-voice[data-aura-voice='Interrupted'] .aura-voice-dot { background: #c27c0e; }
+.aura-voice[data-aura-voice='Interrupted'] .aura-voice-dot { background: var(--aura-warn); }
 .aura-voice-label { white-space: nowrap; }
 .aura-voice-heard, .aura-voice-error { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--aura-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.aura-voice-error { color: #b42318; white-space: normal; overflow-wrap: anywhere; }
+.aura-voice-error { color: var(--aura-danger); white-space: normal; overflow-wrap: anywhere; }
 .aura-voice .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes aura-voice-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) { .aura-voice .aura-voice-dot { animation: none !important; } }
@@ -812,7 +691,7 @@ html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'
 .aura-conversation-confirm { flex-wrap: wrap; padding: 8px 12px; font-size: 13px; }
 .aura-conversation-confirm span { flex-basis: 100%; overflow-wrap: anywhere; }
 .aura-conversations .aura-conversation-confirm button { width: auto; min-height: 44px; padding: 0 14px; border: 1px solid var(--aura-line); border-radius: 8px; }
-.aura-conversations .aura-conversation-confirm .aura-danger { background: #b42318; color: #fff; border-color: #b42318; }
+.aura-conversations .aura-conversation-confirm .aura-danger { background: var(--aura-danger); color: #fff; border-color: var(--aura-danger); }
 .aura-conversations button:focus-visible { outline: 2px solid var(--aura-link); outline-offset: -2px; }
 
 /* Goal: a one-line suggestion the user confirms; saved goals live in the collapsed context row. */
