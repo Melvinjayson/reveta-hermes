@@ -359,3 +359,48 @@ export function AuraConnectorsSection() {
     </section>
   )
 }
+
+interface VoiceMode {
+  full_duplex: boolean
+  enabled: boolean
+  runtime: boolean
+}
+
+/** Owner switch for full-duplex voice. Off by default; the browser voice stays the fallback. */
+export function AuraVoiceModeSetting() {
+  const { data, error, setError } = useResource<VoiceMode>('/api/aura/voice/mode')
+  const [mode, setMode] = useState<VoiceMode | null>(null)
+  const current = mode ?? data
+
+  const toggle = () =>
+    current &&
+    call<VoiceMode>('/api/aura/voice/mode', 'PUT', { full_duplex: !current.enabled })
+      .then(setMode)
+      .catch(err => setError(errorText(err)))
+
+  return (
+    <div className="aura-settings-item">
+      <div className="aura-settings-item-main">
+        <span className="aura-tool-name">Full-duplex voice</span>
+        <span className="aura-muted">
+          Talk and interrupt at any time, with speech handled on the server. Applies the next time you start Voice chat.
+        </span>
+        {current?.enabled && !current.runtime && (
+          <span className="aura-muted" role="status">
+            This server can’t run it (its speech runtime isn’t available), so Aura keeps the browser voice.
+          </span>
+        )}
+        {error && <span role="alert">{error}</span>}
+      </div>
+      <input
+        aria-label="Full-duplex voice"
+        checked={Boolean(current?.enabled)}
+        className="aura-switch"
+        disabled={!current}
+        onChange={() => void toggle()}
+        role="switch"
+        type="checkbox"
+      />
+    </div>
+  )
+}

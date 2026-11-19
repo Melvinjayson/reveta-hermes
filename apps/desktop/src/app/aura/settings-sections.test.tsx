@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
 
 import { $auraCapabilities } from './capabilities'
-import { AuraConnectorsSection, AuraJobsSection, AuraMemorySection } from './settings-sections'
+import { AuraConnectorsSection, AuraJobsSection, AuraMemorySection, AuraVoiceModeSetting } from './settings-sections'
 
 const api = vi.fn()
 
@@ -57,4 +57,27 @@ it('pauses, runs and deletes a scheduled job through the cron routes; delete nee
   expect(api).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'DELETE' }))
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
   await waitFor(() => expect(api).toHaveBeenCalledWith({ path: '/api/cron/jobs/j1', method: 'DELETE' }))
+})
+
+it('switches full-duplex voice through the voice mode route and says when the server cannot run it', async () => {
+  let enabled = false
+  api.mockImplementation(async ({ method, body }: { method?: string; body?: { full_duplex: boolean } }) => {
+    if (method === 'PUT') {
+      enabled = Boolean(body?.full_duplex)
+    }
+
+    return { enabled, runtime: false, full_duplex: false }
+  })
+  render(<AuraVoiceModeSetting />)
+
+  const toggle = await screen.findByRole('switch', { name: 'Full-duplex voice' })
+  await waitFor(() => expect((toggle as HTMLInputElement).disabled).toBe(false))
+  expect((toggle as HTMLInputElement).checked).toBe(false)
+  expect(screen.queryByRole('status')).toBeNull()
+  fireEvent.click(toggle)
+  await waitFor(() =>
+    expect(api).toHaveBeenCalledWith({ path: '/api/aura/voice/mode', method: 'PUT', body: { full_duplex: true } })
+  )
+  await waitFor(() => expect((toggle as HTMLInputElement).checked).toBe(true))
+  expect(screen.getByRole('status').textContent).toContain('keeps the browser voice')
 })

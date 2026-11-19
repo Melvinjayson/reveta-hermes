@@ -99,3 +99,24 @@ def test_an_ffmpeg_without_flite_keeps_the_browser_voice(monkeypatch, tmp_path):
 
 def test_a_missing_or_broken_ffmpeg_is_not_a_speech_runtime(tmp_path):
     assert pipecat_voice.has_flite(str(tmp_path / "no-such-ffmpeg")) is False
+
+
+def test_the_settings_switch_writes_the_setting_and_it_survives_a_boot(monkeypatch, tmp_path):
+    import sys
+
+    from ruamel.yaml import YAML
+    from hermes_constants import get_hermes_home
+    from scripts.reveta import aura_config
+
+    _write_config("model:\n  default: x\n")
+    _runtime_installed(monkeypatch)
+    with TestClient(_app(monkeypatch)) as client:
+        assert client.put("/api/aura/voice/mode", json={"full_duplex": "yes"}).status_code == 422
+        assert client.put("/api/aura/voice/mode", json={"full_duplex": True}).json() == {
+            "full_duplex": True, "enabled": True, "runtime": True}
+    path = get_hermes_home() / "config.yaml"
+    monkeypatch.setattr(sys, "argv", ["aura_config.py", "--write", str(path)])
+    assert aura_config.main() == 0  # the boot step that used to reset every aura.* key
+    assert YAML().load(path.read_text(encoding="utf-8"))["aura"]["voice"] == {"full_duplex": True}
+    with TestClient(_app(monkeypatch)) as client:
+        assert client.put("/api/aura/voice/mode", json={"full_duplex": False}).json()["enabled"] is False

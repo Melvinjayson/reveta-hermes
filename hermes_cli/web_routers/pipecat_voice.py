@@ -9,7 +9,7 @@ from pathlib import Path
 import time
 import uuid
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
 from hermes_cli.web_server_chat import _ws_auth_ok, _ws_request_is_allowed
 from hermes_cli.web_deps import late
@@ -41,7 +41,8 @@ def has_flite(ffmpeg: str) -> bool:
     import subprocess
 
     try:
-        out = subprocess.run([ffmpeg, '-hide_banner', '-filters'], capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run([ffmpeg, '-hide_banner', '-filters'], capture_output=True, text=True, timeout=10,
+                             check=False).stdout
     except (OSError, subprocess.SubprocessError):
         return False
     return any(line.split()[1:2] == ['flite'] for line in out.splitlines() if line.strip())
@@ -126,6 +127,28 @@ async def _stop_speech(process):
 async def aura_voice_mode(request: Request):
     _require_token(request)
     return await asyncio.to_thread(voice_mode)
+
+
+def set_full_duplex(enabled: bool) -> dict:
+    """The owner's Settings switch, ``aura.voice.full_duplex``. It survives boots because
+    scripts/reveta/aura_config.py keeps every ``aura.*`` key it does not generate."""
+    from hermes_cli.config import load_config, save_config
+
+    config = load_config()
+    aura = config.get('aura') if isinstance(config.get('aura'), dict) else {}
+    voice = aura.get('voice') if isinstance(aura.get('voice'), dict) else {}
+    config['aura'] = {**aura, 'voice': {**voice, 'full_duplex': bool(enabled)}}
+    save_config(config)
+    return voice_mode()
+
+
+@router.put('/api/aura/voice/mode')
+async def aura_voice_mode_set(request: Request):
+    _require_token(request)
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(body.get('full_duplex'), bool):
+        raise HTTPException(status_code=422, detail='full_duplex must be true or false.')
+    return await asyncio.to_thread(set_full_duplex, body['full_duplex'])
 
 
 @router.websocket('/api/audio/pipecat')

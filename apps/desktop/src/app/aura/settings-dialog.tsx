@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { X } from '@/lib/icons'
 
 import { AuraModelSettings } from './model-settings'
-import { AuraConnectorsSection, AuraJobsSection, AuraMemorySection, AuraSkillsSection } from './settings-sections'
+import {
+  AuraConnectorsSection,
+  AuraJobsSection,
+  AuraMemorySection,
+  AuraSkillsSection,
+  AuraVoiceModeSetting
+} from './settings-sections'
 
 export const SETTINGS_SECTIONS = ['Appearance', 'Model', 'Memory', 'Skills', 'Scheduled jobs', 'Connectors', 'Voice', 'Account'] as const
 type Section = (typeof SETTINGS_SECTIONS)[number]
@@ -105,6 +111,7 @@ export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignO
                   stop Aura speaking, or end it at any time. Your words and Aura’s replies are saved in the chat as text.
                 </dd>
               </dl>
+              <AuraVoiceModeSetting />
             </section>
           )}
           {section === 'Account' && (
