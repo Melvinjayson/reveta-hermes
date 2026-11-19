@@ -365,7 +365,7 @@ async def companion_ask(request: Request):
         return JSONResponse({"error": str(exc)}, status_code=429)
     except PermissionError:
         return JSONResponse({"error": "Aura's model policy refused this request."}, status_code=503)
-    except Exception as exc:
+    except Exception as exc:  # health: allow BLE001 -- the model call can fail many ways; its text can echo page content, so only the type is logged
         # Type only: the message can echo page text back into the server log.
         logger.warning("aura companion model call failed: %s", type(exc).__name__)
         return JSONResponse({"error": "Aura's model didn't answer. Try again."}, status_code=502)

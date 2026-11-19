@@ -81,7 +81,7 @@ def generated_secret(home: Optional[Path] = None) -> str:
             pass
         finally:
             tmp.unlink()
-    stored = path.read_text(encoding="utf-8").strip()
+    stored = path.read_text(encoding="utf-8-sig").strip()
     if len(stored) < 32:
         raise ValueError(f"{path} holds no usable companion secret; delete it to make a new one")
     return stored
