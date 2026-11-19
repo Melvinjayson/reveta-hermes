@@ -73,7 +73,7 @@ export async function continuousVoiceFlow(page, expect, output, fixture) {
  * and a refused speech edge falls back to the live voice. Real app/gateway/mode route; fake STT. */
 /* global window */
 export async function voiceModeFlow(page, expect, output) {
-  const voice = page.getByRole('group', { name: 'Voice', exact: true })
+  const voice = page.getByRole('group', { name: 'Voice chat', exact: true })
   const continuous = page.getByLabel('Continuous voice')
   // The real server route, called through the app's own authenticated API client.
   const body = await page.evaluate(() => window.hermesDesktop.api({ path: '/api/aura/voice/mode' }))
@@ -81,9 +81,9 @@ export async function voiceModeFlow(page, expect, output) {
     throw new Error(`Default mode should be off, got ${JSON.stringify(body)}`)
   }
   await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible({ timeout: 60000 })
-  await expect(voice.getByRole('button', { name: 'Start voice' })).toBeVisible({ timeout: 60000 })
+  await expect(voice.getByRole('button', { name: 'Start voice chat' })).toBeVisible({ timeout: 60000 })
   // Trial click: passes only once nothing (the CONNECTING overlay) covers the control.
-  await voice.getByRole('button', { name: 'Start voice' }).click({ trial: true, timeout: 60000 })
+  await voice.getByRole('button', { name: 'Start voice chat' }).click({ trial: true, timeout: 60000 })
   await expect(continuous).toHaveCount(0)
   await page.screenshot({ path: `${output}/voice-default-mobile.png` })
   console.log(`PASS: real GET /api/aura/voice/mode -> ${JSON.stringify(body)}; composer shows the live voice, no continuous voice.`)
@@ -111,7 +111,7 @@ export async function voiceModeFlow(page, expect, output) {
   })
   await page.reload()
   await continuous.getByRole('button', { name: 'Voice', exact: true }).click()
-  await expect(voice.getByRole('button', { name: 'Start voice' })).toBeVisible({ timeout: 60000 })
+  await expect(voice.getByRole('button', { name: 'Start voice chat' })).toBeVisible({ timeout: 60000 })
   await expect(continuous).toHaveCount(0)
   console.log('PASS: a refused speech edge falls back to the live voice (AuraVoice), not a bare control.')
 }

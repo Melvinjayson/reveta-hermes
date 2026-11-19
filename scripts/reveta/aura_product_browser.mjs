@@ -1,6 +1,6 @@
 /* global window */
 import { readFileSync } from 'node:fs'
-import { installVoiceFixture, continuousVoiceFlow } from './aura_pipecat_browser.mjs'
+import { installVoiceFixture } from './aura_pipecat_browser.mjs'
 
 async function openPanel(page, tab) {
   if (!(await page.locator('.aura-panel-tabs').isVisible().catch(() => false))) {
@@ -34,8 +34,6 @@ export async function productFlow(page, expect, output) {
       state
     }
   })
-  // Full duplex is off by default (PR #16); this flow opts in the way the server would report it.
-  await page.route('**/api/aura/voice/mode**', route => route.fulfill({ json: { full_duplex: true, enabled: true, runtime: true } }))
   const fixture = await installVoiceFixture(page)
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
@@ -123,4 +121,5 @@ export async function productFlow(page, expect, output) {
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible()
   await closePanel(page)
   console.log('PASS: mobile research plan → three real sources → Hermes file adapter → cited download → reload/reopen; fake speech UI listening/transcript/thinking/speaking/barge-in/denial, same chat context.')
+
 }

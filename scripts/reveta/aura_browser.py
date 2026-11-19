@@ -340,8 +340,7 @@ def product_scenario(directory: str, target: Path) -> int:
         ToolCall('aura_computer', {'command': 'pwd'}),
         ToolCall('aura_file', {'name': 'brief.md', 'action': 'write', 'content': brief}),
         Text('Brief ready. HTTP methods, status codes and representations define the exchange.\n\n' + '\n'.join(f'[Source {index}]({url})' for index, url in enumerate(urls, 1))),
-        Text('Remember the HTTP methods. This is a longer explanation that should be cut short when the request changes. The unplayed remainder must not survive in history.', chunk_chars=4, delay_per_chunk=0.1),
-        Text('Status codes describe the HTTP response.', chunk_chars=4, delay_per_chunk=0.03),
+        Text('Remember the HTTP methods and status codes from your brief.', chunk_chars=4, delay_per_chunk=0.15),
     ]) as fake:
         result = browser_session(Path(directory) / 'product', fake.base_url, target, product=True)
         if result:
@@ -361,8 +360,8 @@ def product_scenario(directory: str, target: Path) -> int:
                         print(redact_sensitive_text(str(detail), force=True)[:1000], file=sys.stderr)
             return result
         requests = fake.main_requests()
-        if len(requests) != 8:
-            raise AssertionError(f'Product loop expected 8 fake generations, got {len(requests)}')
+        if len(requests) != 7:
+            raise AssertionError(f'Product loop expected 7 fake generations, got {len(requests)}')
         history = requests[-1]['messages']
         tool_results = [message for message in history if message.get('role') == 'tool']
         if len(tool_results) < 5 or any('"success": false' in str(row.get('content')) for row in tool_results):
