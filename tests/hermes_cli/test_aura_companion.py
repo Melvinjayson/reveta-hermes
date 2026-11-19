@@ -174,7 +174,8 @@ def test_ask_route_checks_key_origin_cap_and_calls_the_free_only_model(monkeypat
     _on(monkeypatch)
     monkeypatch.setenv("AURA_COMPANION_DAILY_LIMIT", "2")
     calls = []
-    monkeypatch.setattr(ac, "_call_model", lambda messages, intent: calls.append((messages, intent)) or "An answer")
+    monkeypatch.setattr(ac, "_call_model",
+                        lambda messages, intent, who=None: calls.append((messages, intent, who)) or "An answer")
     token = ac.issue_token("u1", "melvin@example.com")["token"]
     client = _app(None)  # no cookie session: the key is the only credential
     body = {"messages": [{"role": "user", "content": "What is this?"}], "page": PAGE}
@@ -188,7 +189,7 @@ def test_ask_route_checks_key_origin_cap_and_calls_the_free_only_model(monkeypat
     assert ok.status_code == 200 and ok.json() == {"content": "An answer"}
     assert client.post(ac.ASK_PATH, json=body, headers=auth).status_code == 200
     assert client.post(ac.ASK_PATH, json=body, headers=auth).status_code == 429  # daily cap
-    assert len(calls) == 2 and calls[0][1] == "ask"
+    assert len(calls) == 2 and calls[0][1] == "ask" and calls[0][2]["sub"] == "u1"
 
 
 def test_ask_route_validates_shape(monkeypatch):

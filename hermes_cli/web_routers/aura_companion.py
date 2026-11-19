@@ -4,8 +4,9 @@
   extension a 12-hour key through the extension's same-origin bridge script. Never a password.
 * ``POST /api/aura/companion/token``: mints that key for the signed-in Hermes session
   (``request.state.session``); the gate's own-origin rule covers this cookie write.
-* ``POST /api/aura/companion/ask``: one free-only auxiliary model call (``call_llm``, sealed by
-  ``tools.aura_free_only``) over page context that the extension redacted and this route redacts
+* ``POST /api/aura/companion/ask``: one auxiliary model call (``call_llm``, sealed by
+  ``tools.aura_free_only``; under ``free_only: false`` only the owner's capped paid route, for the
+  owner/admin, ``tools/aura_companion_spend.py``) over page context that the extension redacted and this route redacts
   again and fences as untrusted data. Nothing is stored server-side.
 
 The ask route is listed in ``PUBLIC_API_PATHS`` like ``/api/cron/fire`` and checks its own bearer
@@ -15,6 +16,8 @@ be recognised there.
 
 Gate: off unless ``AURA_COMPANION_SECRET`` (32+ characters) is set; then only identities listed in
 ``AURA_COMPANION_ADMINS`` or ``AURA_COMPANION_TESTERS`` (Hermes user id or email, comma separated).
+Without the secret, the owner's ``aura.companion.enabled: true`` (Settings -> Preview) switches it on
+for the owner account only, with a secret generated in ``HERMES_HOME`` (``tools/aura_owner.py``).
 The lists are re-read on every call, so removing someone revokes their key at once, and
 ``AURA_COMPANION_TOKENS_NOT_BEFORE`` (Unix seconds) revokes every key issued earlier.
 ``AURA_COMPANION_DAILY_LIMIT`` (default 40) caps model calls per person per UTC day.
@@ -126,9 +129,14 @@ def _names(var: str) -> set[str]:
 
 
 def _key() -> Optional[bytes]:
+    from tools.aura_owner import companion_switched_on, generated_secret
+
     secret = os.environ.get("AURA_COMPANION_SECRET", "").strip()
     if len(secret) < 32:
-        return None
+        # The owner's Settings switch stands in for the deploy secret (tools/aura_owner.py).
+        if not companion_switched_on():
+            return None
+        secret = generated_secret()
     # Domain-separated so the key can never stand in for another Hermes credential.
     return hmac.new(secret.encode(), b"aura-companion-token-v1", hashlib.sha256).digest()
 
@@ -136,8 +144,12 @@ def _key() -> Optional[bytes]:
 def allowed(user_id: str, email: str) -> bool:
     if _key() is None:
         return False
+    from tools.aura_owner import companion_switched_on, is_owner
+
     who = {str(user_id or "").strip().lower(), str(email or "").strip().lower()} - {""}
-    return bool(who & (_names("AURA_COMPANION_ADMINS") | _names("AURA_COMPANION_TESTERS")))
+    if who & (_names("AURA_COMPANION_ADMINS") | _names("AURA_COMPANION_TESTERS")):
+        return True
+    return companion_switched_on() and is_owner(user_id, email)
 
 
 def _b64(raw: bytes) -> str:
@@ -293,17 +305,20 @@ def build_messages(body: AskBody) -> list[dict]:
                                         f"{redact(body.messages[0].content)}"}]
 
 
-def _call_model(messages: list[dict], intent: str) -> str:
+def _call_model(messages: list[dict], intent: str, who: Optional[dict] = None) -> str:
     from agent.auxiliary_client import call_llm
     from tools.aura_free_only import enabled as free_only
 
-    # The companion never spends. ``enabled()`` returns False under the owner's free_only: false
-    # (15 Nov) instead of raising, so refuse explicitly; using the capped paid route is Melvin's call.
-    if not free_only():
-        raise PermissionError("The companion runs only while Aura's free-only rule is on.")
-    resp = call_llm(task="aura_companion", messages=messages, temperature=0.2,
-                    max_tokens=700 if intent == "takeover" else 900, timeout=60)
-    return resp.choices[0].message.content or ""
+    max_tokens = 700 if intent == "takeover" else 900
+    if free_only():
+        resp = call_llm(task="aura_companion", messages=messages, temperature=0.2, max_tokens=max_tokens,
+                        timeout=60)
+        return resp.choices[0].message.content or ""
+    # With free_only: false only the owner's capped paid route may run it, for the owner/admin only
+    # (Melvin, 19 Nov). Everyone else is refused, as before.
+    from tools.aura_companion_spend import paid_planning
+
+    return paid_planning(messages, max_tokens, who or {})
 
 
 # ---- Routes -------------------------------------------------------------------------------------
@@ -326,6 +341,8 @@ async def companion_token(request: Request):
 
 @router.post(ASK_PATH)
 async def companion_ask(request: Request):
+    from tools.aura_provider import SpendCapReached
+
     # A web page may not present a key: only the extension (or no Origin at all) may call.
     origin = request.headers.get("origin")
     if origin is not None and not _EXTENSION_ORIGIN.match(origin):
@@ -342,9 +359,11 @@ async def companion_ask(request: Request):
     if not await asyncio.to_thread(take_daily_slot, who["sub"]):
         return JSONResponse({"error": "You've reached today's companion limit."}, status_code=429)
     try:
-        content = await asyncio.to_thread(_call_model, build_messages(body), body.page.intent)
+        content = await asyncio.to_thread(_call_model, build_messages(body), body.page.intent, who)
+    except SpendCapReached as exc:
+        return JSONResponse({"error": str(exc)}, status_code=429)
     except PermissionError:
-        return JSONResponse({"error": "Aura's free-only model policy refused this request."}, status_code=503)
+        return JSONResponse({"error": "Aura's model policy refused this request."}, status_code=503)
     except Exception as exc:
         # Type only: the message can echo page text back into the server log.
         logger.warning("aura companion model call failed: %s", type(exc).__name__)
