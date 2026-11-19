@@ -22,6 +22,7 @@ import { $currentModel, $gatewayState, $selectedStoredSessionId, $sessions } fro
 import { useTheme } from '@/themes'
 import type { SessionInfo } from '@/types/hermes'
 
+import { AuraBrowserHandoff } from './browser-handoff'
 import { AuraConversationCards } from './conversation-cards'
 import { AuraConversationRow } from './conversation-row'
 import { AuraDictation } from './dictation'
@@ -313,6 +314,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
             }
           >
             <AuraConversationCards resumed={resumed} />
+            <AuraBrowserHandoff />
             <AuraContinueLater value={showHistory}>{children}</AuraContinueLater>
           </AuraReadiness>
         </main>

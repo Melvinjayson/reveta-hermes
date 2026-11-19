@@ -183,7 +183,9 @@
       }
       case "takeover-start": {
         if (run) { reply({ ok: false, error: "Aura is already acting here." }); return false; }
-        run = { id: crypto.randomUUID().replace(/-/g, ""), state: Takeover.createRun(message.plan) };
+        // A task sent from the Aura chat runs under its handoff id, so the server ties every step to it.
+        const runId = /^[A-Za-z0-9_-]{1,64}$/.test(message.runId || "") ? message.runId : crypto.randomUUID().replace(/-/g, "");
+        run = { id: runId, state: Takeover.createRun(message.plan) };
         render();
         reply({ ok: true });
         drive();

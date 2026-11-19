@@ -36,6 +36,13 @@
 
   <section>
     <h2>Take over</h2>
+    <div id="handoff" class="answer" hidden>
+      <p><strong>From your Aura chat:</strong> <span id="handoff-text"></span></p>
+      <div class="row">
+        <button id="handoff-start" type="button">Plan it here</button>
+        <button id="handoff-dismiss" type="button">Not now</button>
+      </div>
+    </div>
     <p class="hint">Aura acts here only when you ask. Anything that sends, submits, posts, buys, pays or deletes waits for your approval. Press Stop or Esc any time.</p>
     <textarea id="instruction" rows="2" placeholder="e.g. Fill the search box with ‘Dublin co-working’ and search" maxlength="1000"></textarea>
     <button id="plan" type="button">Plan it</button>

@@ -71,3 +71,19 @@ every key.
 Ported from the aura-agent companion (Melvinjayson/aura-agent PR #76). The token bridge pattern (same-window,
 same-origin typed `postMessage` from Aura's page to a content script) and the per-site allow/deny idea come from
 Melvin's own January Aura extension (`Melvinjayson/aura`, Melvin is the sole author). No third-party code is included.
+
+## Tasks from the Aura chat (handoff)
+
+Off unless the companion is switched on for you **and** the owner sets `aura.companion.handoff: true`
+in `config.yaml`. Then a chat shows a *Your browser* card:
+
+1. Write a task and tap **Send to browser**. The side panel shows it under *Take over* within a few
+   seconds; tap **Plan it here** (or **Not now**). Planning and every step work as an ordinary take-over,
+   and every step goes through Aura's server gate and audit log.
+2. A step that sends, submits, posts, buys, pays or deletes waits for **Approve** or **Deny in the chat**.
+   The side panel cannot approve it, so a page or a compromised extension cannot approve its own step.
+   **Stop** in the chat ends the run.
+3. When the run ends, the chat shows what happened. It is web page content, labelled as unchecked;
+   **Add to message** puts it in your draft, quoted, and nothing reaches Aura until you send it.
+
+Server side: `hermes_cli/web_routers/aura_companion_handoff.py`.
