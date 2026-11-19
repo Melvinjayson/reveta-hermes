@@ -77,17 +77,20 @@ async function optOut(host) {
 // Server-side take-over gate (hermes_cli/web_routers/aura_companion_actions.py). Every step is asked for and
 // reported; approve/deny come only from the side panel. Any failure reads as "not granted".
 const GATE_PATHS = { action: "/api/aura/companion/action", result: "/api/aura/companion/action/result",
-  approve: "/api/aura/companion/action/approve", deny: "/api/aura/companion/action/deny" };
+  approve: "/api/aura/companion/action/approve", deny: "/api/aura/companion/action/deny",
+  status: "/api/aura/companion/action/status",
+  "handoff-next": "/api/aura/companion/handoff/next", "handoff-result": "/api/aura/companion/handoff/result" };
+const CONTENT_OPS = ["action", "result"]; // a content script may only ask for a step and report it
 async function gate(op, body, sender) {
   const fromPanel = sender.id === chrome.runtime.id && sender.url && sender.url.startsWith(chrome.runtime.getURL(""));
-  if (!GATE_PATHS[op] || ((op === "approve" || op === "deny") && !fromPanel)) return { ok: false, error: "Not allowed." };
+  if (!GATE_PATHS[op] || (!fromPanel && !CONTENT_OPS.includes(op))) return { ok: false, error: "Not allowed." };
   const { auth } = await chrome.storage.session.get("auth");
   if (!auth) return { ok: false, error: "Connect to Aura first." };
   const s = await getSettings();
   try {
     const response = await fetch(`${s.auraOrigin}${GATE_PATHS[op]}`, { method: "POST", credentials: "omit",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` }, body: JSON.stringify(body) });
-    const data = await response.json().catch(() => ({}));
+    const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
     return response.ok ? { ok: true, ...data } : { ok: false, error: data.error || `Aura returned ${response.status}.` };
   } catch { return { ok: false, error: "Couldn't reach Aura, so the step was not run." }; }
 }

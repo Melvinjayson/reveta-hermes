@@ -10,6 +10,8 @@
   let described = [];
   let runTabId = null;
   let lastSnapshot = null;
+  let handoff = null; // { id, instruction, reported } for a task sent from the Aura chat
+  let polling = null; // the chat-approval wait for the current step
 
   async function activeTab() {
     const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -131,16 +133,61 @@
     const live = status && !["done", "stopped", "failed"].includes(status);
     $("run").hidden = !plan || Boolean(snapshot);
     $("stop").hidden = !live;
-    $("approve").hidden = status !== "awaiting_approval";
+    $("approve").hidden = status !== "awaiting_approval" || Boolean(handoff);
     $("resume").hidden = status !== "waiting_for_user";
     const HANDOFF = { challenge: "There's a CAPTCHA. Aura never solves these: complete it yourself, then tap continue.", verification: "The page wants a verification code. Enter it yourself, then tap continue.", sign_in: "The page wants you to sign in. Do that yourself, then tap continue." };
     const text = !snapshot ? (plan ? plan.summary : "")
-      : status === "awaiting_approval" ? `Step ${snapshot.index + 1} would ${plan.steps[snapshot.index].label ? `press “${plan.steps[snapshot.index].label}”` : "do something consequential"}. Approve it to continue, or Stop.`
+      : status === "awaiting_approval" ? `Step ${snapshot.index + 1} would ${plan.steps[snapshot.index].label ? `press “${plan.steps[snapshot.index].label}”` : "do something consequential"}. ${handoff ? "Approve it in your Aura chat, or Stop." : "Approve it to continue, or Stop."}`
       : status === "waiting_for_user" ? HANDOFF[snapshot.handoff] || "Your turn on the page."
       : status === "done" ? "Done." : status === "stopped" ? snapshot.reason || "Stopped." : status === "failed" ? `Stopped: ${snapshot.error}` : `Working on step ${snapshot.index + 1} of ${snapshot.total}…`;
     $("run-status").textContent = text;
     renderSteps(snapshot);
+    if (handoff) followHandoff(snapshot);
   }
+
+  // ---- Chat-to-browser handoff (off unless the owner switched it on in Aura).
+  function gate(op, body) { return send({ type: "gate", op, body }).catch(() => ({ ok: false })); }
+  function showHandoff() {
+    $("handoff").hidden = !handoff;
+    if (handoff) $("handoff-text").textContent = handoff.instruction;
+  }
+  async function reportHandoff(ok, summary) {
+    if (!handoff || handoff.reported) return;
+    handoff.reported = true;
+    await gate("handoff-result", { id: handoff.id, ok, summary: String(summary || "").slice(0, 2000) });
+    handoff = null;
+    showHandoff();
+  }
+  async function pollHandoff() {
+    if (!auth || handoff || plan) return;
+    const next = await gate("handoff-next", {});
+    if (next && next.ok && next.id) { handoff = { id: next.id, instruction: String(next.instruction || "") }; showHandoff(); }
+  }
+  function followHandoff(snapshot) {
+    const status = snapshot && snapshot.status;
+    if (["done", "stopped", "failed"].includes(status)) {
+      const outcome = status === "done" ? "Done" : status === "failed" ? `Stopped: ${snapshot.error}` : snapshot.reason || "Stopped";
+      reportHandoff(status === "done", `${plan ? plan.summary + " — " : ""}${outcome}. Page: ${tab ? tab.title : ""}`);
+      return;
+    }
+    if (status !== "awaiting_approval" || !snapshot.approvalId || polling === snapshot.approvalId) return;
+    polling = snapshot.approvalId;
+    const wait = async () => {
+      if (!handoff || !lastSnapshot || lastSnapshot.approvalId !== polling) { polling = null; return; }
+      const answer = await gate("status", { approval_id: polling });
+      if (answer.ok && answer.state === "approved") { polling = null; chrome.tabs.sendMessage(runTabId, { type: "takeover-approve", index: lastSnapshot.index }); return; }
+      if (answer.ok && answer.state === "denied") { polling = null; chrome.tabs.sendMessage(runTabId, { type: "takeover-stop" }); return; }
+      setTimeout(wait, 2000);
+    };
+    wait();
+  }
+  $("handoff-start").onclick = async () => {
+    $("instruction").value = handoff.instruction;
+    await makePlan();
+    if (handoff && !plan) reportHandoff(false, $("run-status").textContent);
+  };
+  $("handoff-dismiss").onclick = () => reportHandoff(false, "Declined in the browser.");
+  setInterval(pollHandoff, 5000);
 
   async function makePlan() {
     plan = null; runTabId = null; renderRun(null);
@@ -180,7 +227,7 @@
   $("plan").onclick = makePlan;
   $("run").onclick = async () => {
     runTabId = tab.id;
-    const reply = await chrome.tabs.sendMessage(runTabId, { type: "takeover-start", plan });
+    const reply = await chrome.tabs.sendMessage(runTabId, { type: "takeover-start", plan, runId: handoff ? handoff.id : undefined });
     if (!reply || !reply.ok) $("run-status").textContent = (reply && reply.error) || "Couldn't start.";
   };
   $("approve").onclick = async () => {
