@@ -185,9 +185,17 @@ def _handle_value_command(raw_args: str = "") -> str:
     return value_cmd.handle(raw_args, _recorder.sink)
 
 
+def _handle_evidence_command(raw_args: str = "", source: Any = None, platform: str = "") -> str:
+    from . import evidence_cmd
+    return evidence_cmd.handle(raw_args, _recorder.sink, reviewer=evidence_cmd.reviewer_of(source, platform))
+
+
 def register(ctx) -> None:
     for hook_name, callback in _HOOKS.items():
         ctx.register_hook(hook_name, callback)
     ctx.register_command("venus-value", handler=_handle_value_command,
                          description="Record baseline/review minutes, delivery cost and comparison method for a run.",
                          args_hint="<record_id> [field=value ...]")
+    ctx.register_command("evidence", handler=_handle_evidence_command,
+                         description="Grade recent runs under the Data Foundry rules, or sign one off.",
+                         args_hint="[N] | signoff <run> <accept|reject|needs_more> [minutes] [note]")
