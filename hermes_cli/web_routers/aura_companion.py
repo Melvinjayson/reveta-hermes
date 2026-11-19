@@ -147,8 +147,9 @@ def allowed(user_id: str, email: str) -> bool:
     from tools.aura_owner import companion_switched_on, is_owner
 
     who = {str(user_id or "").strip().lower(), str(email or "").strip().lower()} - {""}
-    if who & (_names("AURA_COMPANION_ADMINS") | _names("AURA_COMPANION_TESTERS")):
-        return True
+    if len(os.environ.get("AURA_COMPANION_SECRET", "").strip()) >= 32:
+        return bool(who & (_names("AURA_COMPANION_ADMINS") | _names("AURA_COMPANION_TESTERS")))
+    # No deploy secret: the owner's Settings switch admits the owner account and nobody else.
     return companion_switched_on() and is_owner(user_id, email)
 
 

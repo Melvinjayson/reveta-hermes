@@ -123,10 +123,29 @@ def set_preview(companion: Optional[bool] = None, handoff: Optional[bool] = None
         save_config(config)
     result = {}
     if venus_evidence is not None:
-        from hermes_cli.plugins_cmd import dashboard_set_agent_plugin_enabled
-
-        outcome = dashboard_set_agent_plugin_enabled(VENUS_PLUGIN, enabled=bool(venus_evidence))
-        if not outcome.get("ok"):
-            raise ValueError(outcome.get("error") or "Couldn't switch the evidence plugin.")
-        result["restart_required"] = bool(outcome.get("restart_required"))
+        result["restart_required"] = _switch_venus(bool(venus_evidence))
     return {**preview_status(), **result}
+
+
+def _switch_venus(on: bool) -> bool:
+    """Write the bundled evidence plugin into ``plugins.enabled`` and load it in this process.
+
+    Like ``ensure_basic_auth_plugin_enabled_in_config`` this edits the list directly instead of the PM
+    admission transaction: the plugin is bundled and has no dependencies, and admission republishes
+    the dependency environment, which can mean a Python download on a 512 MB host. Returns whether a
+    restart is needed (switching off: its hooks stay wired until the process restarts)."""
+    from hermes_cli.config import load_config, save_config
+
+    config = load_config()
+    plugins = dict(config.get("plugins") or {}) if isinstance(config.get("plugins"), dict) else {}
+    enabled = [n for n in (plugins.get("enabled") or []) if n != VENUS_PLUGIN]
+    disabled = [n for n in (plugins.get("disabled") or []) if n != VENUS_PLUGIN]
+    (enabled if on else disabled).append(VENUS_PLUGIN)
+    was_on = _plugin_enabled(VENUS_PLUGIN)
+    config["plugins"] = {**plugins, "enabled": enabled, "disabled": disabled}
+    save_config(config)
+    if on and not was_on:
+        from hermes_cli.plugins_activation import activate_plugin_now
+
+        activate_plugin_now(VENUS_PLUGIN)
+    return was_on and not on

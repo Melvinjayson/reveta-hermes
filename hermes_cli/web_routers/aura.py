@@ -71,6 +71,41 @@ async def set_aura_provider(body: ProviderUpdate, request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+class PreviewUpdate(BaseModel):
+    companion: Optional[bool] = None
+    handoff: Optional[bool] = None
+    venus_evidence: Optional[bool] = None
+
+
+def _require_owner(request: Request) -> None:
+    """Preview switches are the owner's alone: the signed-in basic-auth account or a listed admin."""
+    _require_token(request)
+    from tools.aura_owner import is_owner
+
+    session = getattr(request.state, "session", None)
+    if session is None or not is_owner(getattr(session, "user_id", ""), getattr(session, "email", "")):
+        raise HTTPException(status_code=403, detail="Only the owner account can change preview features.")
+
+
+@router.get("/api/aura/preview")
+async def aura_preview(request: Request):
+    _require_owner(request)
+    from tools.aura_owner import preview_status
+
+    return await asyncio.to_thread(preview_status)
+
+
+@router.put("/api/aura/preview")
+async def set_aura_preview(body: PreviewUpdate, request: Request):
+    _require_owner(request)
+    from tools.aura_owner import set_preview
+
+    try:
+        return await asyncio.to_thread(set_preview, body.companion, body.handoff, body.venus_evidence)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 class CapabilityUpdate(BaseModel):
     enabled: Optional[list[str]] = None
     mode: Optional[str] = Field(default=None, max_length=32)
