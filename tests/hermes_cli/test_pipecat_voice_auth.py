@@ -75,6 +75,7 @@ async def test_cancellation_during_speech_cleanup_still_releases_decoder(monkeyp
     monkeypatch.setattr(pipecat_voice, '_ws_request_is_allowed', lambda ws: True)
     monkeypatch.setattr(pipecat_voice, 'full_duplex_enabled', lambda: True)
     monkeypatch.setattr(pipecat_voice, 'runtime_python', lambda: 'synthetic-python')
+    monkeypatch.setattr(pipecat_voice, 'speech_ffmpeg', lambda: 'synthetic-ffmpeg')
     monkeypatch.setattr(pipecat_voice.asyncio, 'create_subprocess_exec', spawn)
     task = asyncio.create_task(pipecat_voice.voice_ws(Socket()))
     await asyncio.wait_for(configured.wait(), 5)

@@ -35,10 +35,29 @@ def full_duplex_enabled() -> bool:
     return isinstance(voice, dict) and voice.get('full_duplex') is True
 
 
+def has_flite(ffmpeg: str) -> bool:
+    """Whether this ffmpeg can speak: the pipeline's TTS is its ``flite`` filter. Some builds (the
+    PM-managed ffmpeg among them) have none, and full duplex would then start and stay silent."""
+    import subprocess
+
+    try:
+        out = subprocess.run([ffmpeg, '-hide_banner', '-filters'], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return any(line.split()[1:2] == ['flite'] for line in out.splitlines() if line.strip())
+
+
+def speech_ffmpeg():
+    """The ffmpeg the speech process gets, or None when none on PATH can synthesise speech."""
+    ffmpeg = locate_command('ffmpeg')
+    return ffmpeg.command[0] if ffmpeg.found and has_flite(ffmpeg.command[0]) else None
+
+
 def voice_mode() -> dict:
-    """Which voice the composer shows. Full duplex needs the setting AND the separate speech runtime."""
+    """Which voice the composer shows. Full duplex needs the setting AND the separate speech runtime
+    (its Python and an ffmpeg with Flite); otherwise the composer keeps the browser voice."""
     enabled = full_duplex_enabled()
-    runtime = enabled and runtime_python() is not None and locate_command('ffmpeg').found
+    runtime = enabled and runtime_python() is not None and speech_ffmpeg() is not None
     return {'full_duplex': bool(runtime), 'enabled': enabled, 'runtime': bool(runtime)}
 
 
@@ -124,12 +143,12 @@ async def voice_ws(ws: WebSocket):
         await ws.close()
         return
     python = await asyncio.to_thread(runtime_python)
-    ffmpeg = await asyncio.to_thread(locate_command, 'ffmpeg')
+    ffmpeg = await asyncio.to_thread(speech_ffmpeg)
     if _active:
         await ws.send_json({'type': 'busy'})
         await ws.close()
         return
-    if python is None or not ffmpeg.found:
+    if python is None or ffmpeg is None:
         await ws.send_json({'type': 'unavailable', 'message': 'Continuous voice unavailable; use labelled turn-based voice.'})
         await ws.close()
         return
@@ -163,7 +182,7 @@ async def voice_ws(ws: WebSocket):
             cwd=ROOT, env=environment,
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL, limit=2 * MAX_FRAME)
-        process.stdin.write((json.dumps({'conversation_id': conversation, 'ffmpeg': ffmpeg.command[0]}) + '\n').encode())
+        process.stdin.write((json.dumps({'conversation_id': conversation, 'ffmpeg': ffmpeg}) + '\n').encode())
         await process.stdin.drain()
         await _proxy(ws, process, replay)
     except (WebSocketDisconnect, RuntimeError, ValueError, TimeoutError, OSError):
