@@ -1,0 +1,11 @@
+name: venus-evidence
+version: 0.1.0
+description: "Venus value evidence: one metadata-only record per Aura run (outcome, latency, tools, approvals, tokens, provider cost or unknown). Observer only; opt-in."
+author: "Reveta"
+provides_hooks:
+  - post_api_request
+  - api_request_error
+  - post_tool_call
+  - on_human_input_request
+  - on_human_input_resolved
+  - on_session_end
