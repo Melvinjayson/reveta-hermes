@@ -30,3 +30,15 @@ it('explains missing model readiness and lets a suggestion populate the real com
   )
   expect(screen.queryByText(/Aura can’t reply yet/)).toBeNull()
 })
+
+it('greets by local time of day and offers four starters', async () => {
+  const { auraGreeting, AURA_STARTERS } = await import('./empty')
+
+  expect([auraGreeting(4), auraGreeting(9), auraGreeting(13), auraGreeting(19)]).toEqual([
+    'Good evening',
+    'Good morning',
+    'Good afternoon',
+    'Good evening'
+  ])
+  expect(AURA_STARTERS).toHaveLength(4)
+})

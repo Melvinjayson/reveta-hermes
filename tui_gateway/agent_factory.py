@@ -609,7 +609,8 @@ def _startup_system_prompt(cfg: dict, task_id: str) -> str:
     """Config ephemeral system prompt + HERMES_TUI_SKILLS preload block. Hard-fails only when EVERY requested
     skill is missing (cli.py parity): a typo'd name must not auto-block the Kanban task."""
     from hermes_cli.config import resolve_ephemeral_system_prompt_from_config
-    system_prompt = resolve_ephemeral_system_prompt_from_config(cfg)
+    from tools.aura_projects import with_new_chat_project_context
+    system_prompt = with_new_chat_project_context(resolve_ephemeral_system_prompt_from_config(cfg), task_id, _get_db())
     startup_skills = _parse_tui_skills_env()
     if not startup_skills:
         return system_prompt

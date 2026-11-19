@@ -96,6 +96,7 @@ def advertised_tools(names):
     money" for a renderer or catalog tool that costs nothing but is not attested. Dispatch
     still goes through require_tool; this only keeps refused-by-construction tools out.
     """
+    from tools.aura_capabilities import unlockable_tools
     from tools.aura_product import available, owned_tool
     try:
         aura = available()
@@ -110,8 +111,11 @@ def advertised_tools(names):
         mcp = config.get("free_only", True) is False
         entries = config.get("free_tools", [])
         attested = {e.get("name") for e in entries if isinstance(e, dict)} if isinstance(entries, list) else set()
+        # With the rule off, Hermes toolsets the owner switched on (tools/aura_capabilities.py)
+        # are offered as well; enabled_toolsets already limited *names* to those toolsets.
+        unlocked = unlockable_tools() if mcp else frozenset()
         return {name for name in names
-                if owned_tool(name) or name in attested or (mcp and name.startswith("mcp_"))}
+                if owned_tool(name) or name in attested or (mcp and name.startswith("mcp_")) or name in unlocked}
     except Exception:
         return set()
 

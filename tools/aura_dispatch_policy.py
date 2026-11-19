@@ -45,6 +45,15 @@ def _config():
     return config
 
 
+def _clarify_without_approval(config):
+    """Owner setting ``aura.clarify_without_approval``; OFF unless it is literally ``true``.
+
+    Off by default, so a clarifying question still needs the approval tap. Turning it on is the
+    owner's decision; any other value (a string, 1, a missing key) keeps the approval."""
+    aura = config.get("aura") if isinstance(config, dict) else None
+    return isinstance(aura, dict) and aura.get("clarify_without_approval") is True
+
+
 def _classification(name, args, config):
     from tools.aura_product import owned_tool, classification
     if owned_tool(name):
@@ -53,6 +62,8 @@ def _classification(name, args, config):
         return "read"
     if name in _INTERNAL:
         return "internal"
+    if name == "clarify" and _clarify_without_approval(config):
+        return "internal"  # owner opted in: a clarifying question only asks the user something
     # File mutations also ask: profile-level local settings do not attest a
     # session's actual backend, nor all targets within a multi-file patch.
     # No shell allowlist: aliases, startup files and interpreters make even

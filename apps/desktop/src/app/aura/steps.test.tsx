@@ -3,14 +3,14 @@ import { expect, it } from 'vitest'
 
 import type { ChatMessage } from '@/lib/chat-messages'
 
-import { AuraSteps } from './step-history'
-import { auraSteps, stepDuration } from './steps'
+import { AuraStepList, stepElapsed } from './side-panel'
+import { auraSteps } from './steps'
 
 it('shows a backend-stamped cost refusal without trusting assistant prose', () => {
   const errorSurface = { layer: 'gateway' as const, code: 'aura_free_only_refused', retryable: false }
   const rows = auraSteps([{ id: 'blocked', role: 'assistant', parts: [], errorSurface }])
   expect(rows[0].status).toBe('Refused')
-  render(<AuraSteps steps={rows} />)
+  render(<AuraStepList steps={rows} />)
   expect(screen.getByText("This would cost money, so I didn't run it.")).toBeTruthy()
 })
 
@@ -36,9 +36,9 @@ it('retains stable trace identity and confirmed timing on history hydration', ()
   const history = messages({ exit_code: 0 }, { timestamp: 100, completedAt: 103 })
   const step = auraSteps(history)[0]
   expect(step.id).toBe('reply:call')
-  expect(stepDuration(step, 200)).toBe('3s')
+  expect(stepElapsed(step, 200)).toBe('0:03')
   expect(auraSteps(JSON.parse(JSON.stringify(history)))).toEqual([step])
-  expect(stepDuration(auraSteps(messages())[0], 200)).toBe('Timing unavailable')
+  expect(stepElapsed(auraSteps(messages())[0], 200)).toBe('')
 })
 
 it('uses generic unknown names and never exposes arbitrary credential-bearing payloads', () => {
@@ -46,8 +46,7 @@ it('uses generic unknown names and never exposes arbitrary credential-bearing pa
   const step = auraSteps(history)[0]
   expect(step.label).toBe('Used a tool')
   expect(auraSteps(messages({}, { toolName: 'constructor' }))[0].label).toBe('Used a tool')
-  const { container } = render(<AuraSteps steps={[step]} />)
-  fireEvent.click(screen.getByText('1 step'))
+  const { container } = render(<AuraStepList steps={[step]} />)
   fireEvent.click(screen.getByText('Details'))
   expect(container.textContent).not.toContain('SECRET')
   expect(screen.getByText('Success has not been confirmed.')).toBeTruthy()
@@ -60,7 +59,7 @@ it('shows why a policy refused a step and that nothing was charged, without a hi
   const approval = auraSteps(messages({ status: 'refused', aura_policy: true,
     error: 'This action did not receive a valid single-use approval, so it did not run.' }))
 
-  const { container } = render(<AuraSteps steps={[...cost, ...approval]} />)
+  const { container } = render(<AuraStepList steps={[...cost, ...approval]} />)
   expect(container.textContent).toContain('did not receive a valid single-use approval')
   expect(container.textContent).not.toContain('hidden to protect private information')
   expect(auraSteps(messages({ status: 'refused', error: 'SECRET tool output' }))[0].facts).not.toContain('SECRET tool output')

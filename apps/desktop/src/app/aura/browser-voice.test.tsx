@@ -33,7 +33,7 @@ beforeEach(() => {
 function mount() {
   const onSubmit = vi.fn().mockResolvedValue(true)
   render(<AuraBrowserVoice busy={false} disabled={false} onInterrupt={vi.fn()} onSubmit={onSubmit} sessionId="same-text-thread" />)
-  fireEvent.click(screen.getByRole('button', { name: 'Start voice' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Start voice chat' }))
 
   return { onSubmit, mic: microphones[0] }
 }
@@ -62,9 +62,9 @@ it('accepts equal words at a new result index and after recognition restarts', a
 
 it('ignores queued results after stopping or replacing the microphone', async () => {
   const { onSubmit, mic } = mount()
-  fireEvent.click(screen.getByRole('button', { name: 'Stop voice' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Stop voice chat' }))
   act(() => mic.result('late stopped result'))
-  fireEvent.click(screen.getByRole('button', { name: 'Start voice' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Start voice chat' }))
   act(() => mic.result('late replaced result'))
   expect(onSubmit).not.toHaveBeenCalled()
   act(() => microphones[1].result('current result'))

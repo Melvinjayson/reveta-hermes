@@ -1,0 +1,151 @@
+/* Thread: one reading column; user in a soft bubble on the right, Aura plain on the left. */
+.aura-chat [data-role='user'],
+.aura-chat [data-role='assistant'],
+.aura-chat [data-slot='tool-approval-stack'] {
+  width: 100%;
+  max-width: 768px;
+  margin-inline: auto;
+}
+.aura-chat .composer-human-message {
+  width: fit-content;
+  max-width: min(80%, 560px);
+  margin-left: auto;
+  padding: var(--aura-space-3) var(--aura-space-4);
+  border: 0;
+  border-radius: var(--aura-radius-large);
+  background: var(--aura-subtle);
+  color: var(--aura-ink);
+  box-shadow: none;
+}
+.aura-chat [data-role='assistant'] {
+  font-size: var(--aura-text-body);
+  line-height: 1.65;
+}
+.aura-chat [data-role='assistant'] a {
+  color: var(--aura-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Copy and retry stay visible under each answer (touch has no hover). */
+html[data-hermes-desktop-host='browser'] .aura-chat [data-slot='aui_msg-actions'] {
+  opacity: 1;
+  pointer-events: auto;
+  justify-content: flex-start;
+}
+html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop {
+  justify-content: flex-start;
+}
+.aura-chat [data-slot='aui_msg-actions'] button {
+  min-width: var(--aura-target);
+  min-height: var(--aura-target);
+  color: var(--aura-muted);
+}
+.aura-chat [data-slot='aui_msg-actions'] button:hover {
+  color: var(--aura-ink);
+  background: var(--aura-subtle);
+}
+
+/* Numbered source chips */
+.aura-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--aura-space-2);
+  padding-block: var(--aura-space-3) 0;
+}
+.aura-sources a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--aura-space-2);
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 var(--aura-space-3) 0 var(--aura-space-1);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-pill);
+  background: var(--aura-surface);
+  color: var(--aura-ink);
+  font-size: var(--aura-text-xs);
+  text-decoration: none;
+  transition: background-color var(--aura-fast) var(--aura-ease);
+}
+.aura-sources a:hover {
+  background: var(--aura-subtle);
+}
+.aura-source-number {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--aura-radius-pill);
+  background: var(--aura-subtle);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.aura-source-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.aura-source-host {
+  color: var(--aura-muted);
+}
+@media (pointer: coarse) {
+  .aura-sources a {
+    min-height: var(--aura-target);
+  }
+}
+
+/* Conversation strip above the thread (goal, counts, live status) */
+.aura-context {
+  border-bottom: 1px solid var(--aura-line);
+}
+.aura-context > * {
+  max-width: 768px;
+  margin-inline: auto;
+}
+.aura-chat [data-role='assistant'] .aura-sources a {
+  color: var(--aura-ink);
+  text-decoration: none;
+}
+@media (min-width: 640px) {
+  .aura-chat [data-slot='composer-dock'] {
+    width: min(100% - 32px, 768px);
+  }
+}
+
+/* Inline approval: a clear card in the reading column; the run waits until a tap. */
+.aura-chat [data-slot='tool-approval-card'] {
+  padding: var(--aura-space-4);
+}
+.aura-approval-intro h2 {
+  margin: 0 0 var(--aura-space-2);
+  font-size: var(--aura-text-body);
+  font-weight: 600;
+}
+.aura-approval-intro p {
+  margin: 0 0 var(--aura-space-2);
+  color: var(--aura-muted);
+  font-size: var(--aura-text-sm);
+  line-height: 1.5;
+}
+.aura-chat [data-slot='tool-approval-card'] pre {
+  margin-top: var(--aura-space-2);
+  border-radius: var(--aura-radius-control);
+  background: var(--aura-subtle);
+  font-size: var(--aura-text-sm);
+}
+.aura-chat [data-slot='tool-approval-actions'] {
+  gap: var(--aura-space-2);
+  padding-top: var(--aura-space-3);
+}
+.aura-chat [data-slot='tool-approval-actions'] button {
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-4);
+  border-radius: var(--aura-radius-control);
+}
+.aura-chat [data-approval-run] {
+  background: var(--aura-accent);
+  color: var(--aura-on-accent);
+}

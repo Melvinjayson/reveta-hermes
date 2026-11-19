@@ -69,3 +69,126 @@ async def set_aura_provider(body: ProviderUpdate, request: Request):
                                        body.per_chat_usd, body.api_key)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class CapabilityUpdate(BaseModel):
+    enabled: Optional[list[str]] = None
+    mode: Optional[str] = Field(default=None, max_length=32)
+
+
+@router.get("/api/aura/capabilities")
+async def aura_capabilities(request: Request):
+    _require_token(request)
+    from tools.aura_capabilities import status
+
+    return await asyncio.to_thread(status)
+
+
+@router.put("/api/aura/capabilities")
+async def set_aura_capabilities(body: CapabilityUpdate, request: Request):
+    """Switch Hermes toolsets on or off for NEW conversations; running ones keep their tools."""
+    _require_token(request)
+    from tools.aura_capabilities import configure, set_mode
+
+    try:
+        if body.mode is not None:
+            return await asyncio.to_thread(set_mode, body.mode)
+        return await asyncio.to_thread(configure, body.enabled or [])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class ProjectBody(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=4000)
+
+
+class ProjectMembership(BaseModel):
+    session_id: str = Field(max_length=200)
+    project_id: Optional[str] = Field(default=None, max_length=64)
+
+
+async def _projects(call, *args):
+    try:
+        return await asyncio.to_thread(call, *args)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/api/aura/projects")
+async def aura_projects(request: Request):
+    _require_token(request)
+    from tools.aura_projects import list_all
+
+    return await _projects(list_all)
+
+
+@router.post("/api/aura/projects")
+async def create_aura_project(body: ProjectBody, request: Request):
+    _require_token(request)
+    from tools.aura_projects import create
+
+    return await _projects(create, body.name or "", body.description)
+
+
+@router.patch("/api/aura/projects/{project_id}")
+async def update_aura_project(project_id: str, body: ProjectBody, request: Request):
+    _require_token(request)
+    from tools.aura_projects import update
+
+    return await _projects(update, project_id, body.name, body.description)
+
+
+@router.delete("/api/aura/projects/{project_id}")
+async def delete_aura_project(project_id: str, request: Request):
+    """Deletes the project only; its conversations stay in history."""
+    _require_token(request)
+    from tools.aura_projects import remove
+
+    return await _projects(remove, project_id)
+
+
+@router.put("/api/aura/projects/membership")
+async def set_aura_project_membership(body: ProjectMembership, request: Request):
+    _require_token(request)
+    from tools.aura_projects import assign
+
+    return await _projects(assign, body.session_id, body.project_id)
+
+
+_MEMORY_NOTES = (("memory", "MEMORY.md"), ("user", "USER.md"))
+_MEMORY_READ_CAP = 20_000
+
+
+def _read_memory_notes() -> dict:
+    from hermes_constants import get_hermes_home
+
+    root = get_hermes_home() / "memories"
+    notes = {}
+    for key, name in _MEMORY_NOTES:
+        path = root / name
+        text = path.read_text(encoding="utf-8-sig", errors="replace") if path.is_file() else ""
+        notes[key] = {"text": text[:_MEMORY_READ_CAP], "truncated": len(text) > _MEMORY_READ_CAP}
+    return notes
+
+
+@router.get("/api/aura/memory")
+async def aura_memory(request: Request):
+    """Read-only view of the built-in memory notes for the signed-in owner (reset: /api/memory/reset)."""
+    _require_token(request)
+    return await asyncio.to_thread(_read_memory_notes)
+
+
+class NextChatProject(BaseModel):
+    project_id: Optional[str] = Field(default=None, max_length=64)
+
+
+@router.put("/api/aura/projects/next-chat")
+async def set_aura_next_chat_project(body: NextChatProject, request: Request):
+    """The next NEW chat starts in this project: it is filed there and gets the notes once."""
+    _require_token(request)
+    from tools.aura_projects import set_next_chat
+
+    return await _projects(set_next_chat, body.project_id)

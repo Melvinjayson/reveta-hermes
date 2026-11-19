@@ -205,20 +205,19 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
   const label = active ? (busy ? 'Thinking' : status) : 'Voice off'
 
   return (
-    <div aria-label="Voice" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+    <div aria-label="Voice chat" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
       <button
         aria-describedby="aura-browser-voice-hint"
-        aria-label={active ? 'Stop voice' : 'Start voice'}
+        aria-label={active ? 'Stop voice chat' : 'Start voice chat'}
         aria-pressed={active}
         className="aura-voice-toggle"
         disabled={disabled || !supported}
         onClick={active ? stop : start}
-        title={active ? 'Stop voice' : 'Start voice'}
         type="button"
       >
         {active ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
         <span aria-hidden="true" className="aura-voice-dot" />
-        <span className="aura-voice-label">{active ? label : 'Voice'}</span>
+        <span className="aura-voice-label">{active ? label : 'Voice chat'}</span>
       </button>
       {active && (
         <button
@@ -238,7 +237,6 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
               listen()
             }
           }}
-          title="Interrupt and listen"
           type="button"
         >
           <Square aria-hidden="true" size={16} />
