@@ -226,19 +226,23 @@ def _cost_block(routes: dict, estimator: CostEstimator) -> dict:
         return {"amount_usd": None, "status": "unknown", "source": "none"}
     total, statuses, sources = Decimal(0), set(), set()
     for (model, provider, base_url), usage in routes.items():
-        if usage.calls_without_usage:
-            return {"amount_usd": None, "status": "unknown", "source": "missing_usage"}
-        if usage.reported_calls == usage.tokens["requests"]:
+        if not usage.calls_without_usage and usage.reported_calls == usage.tokens["requests"]:
             total += usage.reported_usd
             statuses.add("reported")
             sources.add("provider_reported")
             continue
         amount, status, source = estimator(model, provider, base_url, dict(usage.tokens))
+        # A subscription-included route costs nothing per call whatever the token counts, so a
+        # call without usage leaves it known; any priced route needs every call's usage.
+        if usage.calls_without_usage and status != "included":
+            return {"amount_usd": None, "status": "unknown", "source": "missing_usage"}
         if amount is None:
             return {"amount_usd": None, "status": "unknown", "source": source or "none"}
         total += amount
         statuses.add(status)
         sources.add(source)
+    if len(statuses) > 1:
+        statuses.discard("included")  # a $0 route does not make a reported or estimated total less exact
     status = statuses.pop() if len(statuses) == 1 else "estimated"
     return {"amount_usd": str(total), "status": status, "source": ",".join(sorted(sources))}
 
