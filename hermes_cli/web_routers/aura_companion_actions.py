@@ -40,8 +40,9 @@ ACTION_PATH = "/api/aura/companion/action"
 APPROVE_PATH = ACTION_PATH + "/approve"
 DENY_PATH = ACTION_PATH + "/deny"
 RESULT_PATH = ACTION_PATH + "/result"
+STATUS_PATH = ACTION_PATH + "/status"
 AUDIT_PATH = "/api/aura/companion/audit"
-PUBLIC_PATHS = (ACTION_PATH, APPROVE_PATH, DENY_PATH, RESULT_PATH)
+PUBLIC_PATHS = (ACTION_PATH, APPROVE_PATH, DENY_PATH, RESULT_PATH, STATUS_PATH)
 
 # Mirrors CONSEQUENTIAL in apps/aura-companion/lib/policy.js; a test keeps the two identical.
 CONSEQUENTIAL = re.compile(
@@ -189,6 +190,28 @@ def decide(who: str, approval_id: str, approve: bool, now: Optional[float] = Non
         db.close()
 
 
+def approval_state(who: str, approval_id: str) -> Optional[str]:
+    """``pending``, ``approved``, ``denied`` or ``used`` for this person's approval; None if unknown."""
+    db = _db()
+    try:
+        row = db.execute("SELECT state FROM companion_approvals WHERE id=? AND who=?", (approval_id, who)).fetchone()
+        return row[0] if row else None
+    finally:
+        db.close()
+
+
+def _handoff_approval(who: str, approval_id: str) -> bool:
+    """Whether this approval belongs to a chat handoff, whose steps are approved only in the chat."""
+    from hermes_cli.web_routers.aura_companion_handoff import is_handoff_run
+
+    db = _db()
+    try:
+        row = db.execute("SELECT run_id FROM companion_approvals WHERE id=? AND who=?", (approval_id, who)).fetchone()
+    finally:
+        db.close()
+    return bool(row) and is_handoff_run(row[0])
+
+
 def record_result(who: str, grant: str, ok: bool, error: str = "") -> bool:
     """Spend a grant once and record what happened. A second use is refused."""
     from hermes_cli.web_routers.aura_companion import redact
@@ -247,6 +270,10 @@ async def companion_action(request: Request):
     who, body, error = await _caller(request, ActionBody)
     if error:
         return error
+    from hermes_cli.web_routers.aura_companion_handoff import run_allowed
+
+    if not await asyncio.to_thread(run_allowed, who, body.run_id):
+        return JSONResponse({"error": "This task was stopped in the Aura chat."}, status_code=409)
     return JSONResponse(await asyncio.to_thread(request_action, who, body), headers=_NO_STORE)
 
 
@@ -254,6 +281,8 @@ async def _decision(request: Request, approve: bool):
     who, body, error = await _caller(request, DecisionBody)
     if error:
         return error
+    if await asyncio.to_thread(_handoff_approval, who, body.approval_id):
+        return JSONResponse({"error": "Aura sent this task from the chat: approve or deny it there."}, status_code=409)
     if not await asyncio.to_thread(decide, who, body.approval_id, approve):
         return JSONResponse({"error": "That approval has expired or was already used."}, status_code=409)
     return JSONResponse({"ok": True}, headers=_NO_STORE)
@@ -267,6 +296,17 @@ async def companion_action_approve(request: Request):
 @router.post(DENY_PATH)
 async def companion_action_deny(request: Request):
     return await _decision(request, False)
+
+
+@router.post(STATUS_PATH)
+async def companion_action_status(request: Request):
+    who, body, error = await _caller(request, DecisionBody)
+    if error:
+        return error
+    state = await asyncio.to_thread(approval_state, who, body.approval_id)
+    if state is None:
+        return JSONResponse({"error": "Unknown approval."}, status_code=404)
+    return JSONResponse({"state": state}, headers=_NO_STORE)
 
 
 @router.post(RESULT_PATH)

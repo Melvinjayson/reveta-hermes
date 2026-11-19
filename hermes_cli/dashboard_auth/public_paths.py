@@ -33,4 +33,8 @@ PUBLIC_API_PATHS: frozenset[str] = frozenset({
     "/api/aura/companion/action",
     "/api/aura/companion/action/approve",
     "/api/aura/companion/action/deny",
-    "/api/aura/companion/action/result"})
+    "/api/aura/companion/action/result",
+    "/api/aura/companion/action/status",
+    # Chat-to-browser handoff (aura_companion_handoff.py): the extension's pick-up and report, same key.
+    "/api/aura/companion/handoff/next",
+    "/api/aura/companion/handoff/result"})
