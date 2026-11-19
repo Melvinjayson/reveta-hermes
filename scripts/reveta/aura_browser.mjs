@@ -63,8 +63,9 @@ try {
     await editor.fill('Help me plan the launch.')
     await expect(send).toBeEnabled({ timeout: 60000 })
     await send.click()
-    await expect(approval).toContainText('clarify', { timeout: 60000 })
-    await approval.getByRole('button', { name: /^Approve/ }).click()
+    // Decision F: the question appears with no approval card in front of it.
+    await expect(page.getByText('Founders').first()).toBeVisible({ timeout: 60000 })
+    await expect(approval).toHaveCount(0)
     await page.getByText('Founders').first().click()
     await page.screenshot({ path: `${output}/clarify-mobile.png` })
     await page.getByRole('button', { name: /Confirm and continue/ }).click()
@@ -76,7 +77,7 @@ try {
     await page.screenshot({ path: `${output}/browser-approval-mobile.png` })
     await approval.getByRole('button', { name: 'Change', exact: true }).click()
     await expect(page.getByText('Stub output: browser step declined.')).toBeVisible({ timeout: 60000 })
-    console.log('PASS: unlocked clarify asks first then shows its choices; click-and-type browser waits for approval and Change runs nothing.')
+    console.log('PASS: unlocked clarify shows its choices with no approval tap; click-and-type browser waits for approval and Change runs nothing.')
   } else if (launch.product) {
     await productFlow(page, expect, output)
   } else if (launch.costBlocked) {

@@ -70,6 +70,8 @@ def browser_session(
         # as on the live service. Manual approval still gates every non-read action.
         config["aura"]["enabled"] = True
         config["aura"]["free_only"] = False
+        # As generated for Aura: clarifying questions skip the approval tap (decision F).
+        config["aura"]["clarify_without_approval"] = aura_settings({})["aura"]["clarify_without_approval"]
         config["tools"] = {"tool_search": {"enabled": "off"}}
         config["platform_toolsets"] = {p: ["aura", "todo", "clarify", "browser", "terminal"] for p in ("cli", "api_server")}
         config["browser"] = aura_settings({**os.environ, "HERMES_HOME": str(home)})["browser"]
