@@ -359,3 +359,80 @@ export function AuraConnectorsSection() {
     </section>
   )
 }
+
+interface PreviewStatus {
+  companion: boolean
+  handoff: boolean
+  venus_evidence: boolean
+  restart_required?: boolean
+}
+
+const PREVIEW_SWITCHES: { key: keyof Omit<PreviewStatus, 'restart_required'>; label: string; note: string }[] = [
+  {
+    key: 'venus_evidence',
+    label: 'Run evidence (Venus)',
+    note: 'Records counts, durations and outcomes for each run, never what was said. Type /venus-value in a chat to add your time comparison.'
+  },
+  {
+    key: 'companion',
+    label: 'Browser companion',
+    note: 'Lets the Aura Companion extension connect to this account. Planning uses your paid model and its limits from Model.'
+  },
+  {
+    key: 'handoff',
+    label: 'Send tasks to your browser',
+    note: 'Adds a Your browser card to chats. Needs the companion on. Steps that send, submit, buy or delete still ask here first.'
+  }
+]
+
+/** Owner-only preview switches (`/api/aura/preview`). Anyone else sees why they can't change them. */
+export function AuraPreviewSection() {
+  const { data, error, setError } = useResource<PreviewStatus>('/api/aura/preview')
+  const [status, setStatus] = useState<PreviewStatus | null>(null)
+  const current = status ?? data
+
+  const flip = (key: keyof Omit<PreviewStatus, 'restart_required'>) =>
+    call<PreviewStatus>('/api/aura/preview', 'PUT', { [key]: !current?.[key] })
+      .then(setStatus)
+      .catch(err => setError(errorText(err)))
+
+  return (
+    <section aria-labelledby="aura-settings-preview">
+      <h3 id="aura-settings-preview">Preview</h3>
+      <p className="aura-capability-note">
+        Early features for the owner account only. They stay off for everyone else, and they reset if the server&apos;s
+        disk is wiped (Render free does this after a quiet spell): switch them on again here.
+      </p>
+      {error && <p role="alert">{error}</p>}
+      {!current && !error && <p role="status">Loading preview features…</p>}
+      {current && (
+        <ul className="aura-settings-list">
+          {PREVIEW_SWITCHES.map(item => (
+            <li key={item.key}>
+              <div className="aura-settings-item">
+                <div className="aura-settings-item-main">
+                  <span className="aura-tool-name">{item.label}</span>
+                  <span className="aura-muted">{item.note}</span>
+                </div>
+                <input
+                  aria-label={`${item.label} enabled`}
+                  checked={current[item.key]}
+                  className="aura-switch"
+                  disabled={item.key === 'handoff' && !current.companion && !current.handoff}
+                  onChange={() => void flip(item.key)}
+                  role="switch"
+                  type="checkbox"
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {current?.restart_required && (
+        <p className="aura-muted" role="status">
+          Run evidence is off for new settings; the running server keeps recording until it restarts.
+        </p>
+      )}
+    </section>
+  )
+}
