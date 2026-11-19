@@ -14,6 +14,7 @@ import time
 from typing import Any, Optional
 
 from . import evidence as ev
+from . import lineage
 from .storage import EvidenceSink, JsonlDailySink
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,7 @@ class EvidenceRecorder:
             record["buffer"]["unattributed_events"] = self._unattributed
             if not record["model"]:
                 record["model"] = ev.safe_name(kw.get("model"))
+            lineage.envelope(record)
             self._write(record)
         return record
 
