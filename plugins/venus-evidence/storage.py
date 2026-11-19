@@ -7,7 +7,7 @@ import json
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Optional, Protocol
+from typing import Callable, Iterator, Optional, Protocol
 
 from .evidence import PLUGIN_NAME
 
@@ -15,6 +15,9 @@ from .evidence import PLUGIN_NAME
 class EvidenceSink(Protocol):
     def write(self, record: dict) -> None:
         """Persist one record or raise; callers buffer on failure."""
+
+    def read_all(self) -> Iterator[dict]:
+        """Every stored record, oldest first (amendments resolve against these)."""
 
 
 class JsonlDailySink:
@@ -34,6 +37,18 @@ class JsonlDailySink:
         line = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         with self._lock, self.path_for().open("a", encoding="utf-8") as fh:
             fh.write(line + "\n")
+
+    def read_all(self) -> Iterator[dict]:
+        root = self._root()
+        for path in sorted(root.glob("evidence-*.jsonl")):
+            with path.open(encoding="utf-8") as fh:
+                for line in fh:
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        continue  # a torn line from a crashed append; the rest of the file is intact
+                    if isinstance(record, dict):
+                        yield record
 
 
 def _default_root() -> Path:

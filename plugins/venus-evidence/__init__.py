@@ -178,6 +178,14 @@ _HOOKS = {
 }
 
 
+def _handle_value_command(raw_args: str = "") -> str:
+    from . import value_cmd
+    return value_cmd.handle(raw_args, _recorder.sink)
+
+
 def register(ctx) -> None:
     for hook_name, callback in _HOOKS.items():
         ctx.register_hook(hook_name, callback)
+    ctx.register_command("venus-value", handler=_handle_value_command,
+                         description="Record baseline/review minutes, delivery cost and comparison method for a run.",
+                         args_hint="<record_id> [field=value ...]")
