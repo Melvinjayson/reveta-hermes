@@ -51,8 +51,9 @@
     let approval = null; // { index, target } single-use
     let handoff = null;
     let error = null;
+    let approvalId = null; // the server's pending approval for the current step
 
-    function snapshot() { return { status, index, total: steps.length, step: steps[index] || null, handoff, error }; }
+    function snapshot() { return { status, index, total: steps.length, step: steps[index] || null, handoff, error, approvalId }; }
     function terminal() { return status === "stopped" || status === "done" || status === "failed"; }
 
     return {
@@ -76,8 +77,17 @@
         status = "ready";
         return true;
       },
+      /** The server read the current step as consequential (or holds its approval): wait for the person. */
+      requireApproval(id) {
+        if (terminal() || !steps[index]) return;
+        steps[index] = { ...steps[index], consequential: true };
+        approvalId = String(id || "");
+        approval = null;
+        status = "awaiting_approval";
+      },
       completed(stepIndex) {
         if (terminal() || stepIndex !== index) return;
+        approvalId = null;
         index++;
         if (index >= steps.length) status = "done";
       },

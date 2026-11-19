@@ -74,6 +74,24 @@ async function optOut(host) {
   return { ok: true };
 }
 
+// Server-side take-over gate (hermes_cli/web_routers/aura_companion_actions.py). Every step is asked for and
+// reported; approve/deny come only from the side panel. Any failure reads as "not granted".
+const GATE_PATHS = { action: "/api/aura/companion/action", result: "/api/aura/companion/action/result",
+  approve: "/api/aura/companion/action/approve", deny: "/api/aura/companion/action/deny" };
+async function gate(op, body, sender) {
+  const fromPanel = sender.id === chrome.runtime.id && sender.url && sender.url.startsWith(chrome.runtime.getURL(""));
+  if (!GATE_PATHS[op] || ((op === "approve" || op === "deny") && !fromPanel)) return { ok: false, error: "Not allowed." };
+  const { auth } = await chrome.storage.session.get("auth");
+  if (!auth) return { ok: false, error: "Connect to Aura first." };
+  const s = await getSettings();
+  try {
+    const response = await fetch(`${s.auraOrigin}${GATE_PATHS[op]}`, { method: "POST", credentials: "omit",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` }, body: JSON.stringify(body) });
+    const data = await response.json().catch(() => ({}));
+    return response.ok ? { ok: true, ...data } : { ok: false, error: data.error || `Aura returned ${response.status}.` };
+  } catch { return { ok: false, error: "Couldn't reach Aura, so the step was not run." }; }
+}
+
 async function handle(message, sender) {
   switch (message.type) {
     case "connect": {
@@ -102,6 +120,7 @@ async function handle(message, sender) {
     case "set-origin": if (globalThis.AURA_ORIGINS.includes(message.value)) { await saveSettings({ auraOrigin: message.value }); await chrome.storage.session.remove("auth"); } return { ok: true };
     case "delete-entry": await chrome.storage.local.set({ trail: (await getTrail()).filter((e) => e.id !== message.id) }); return { ok: true };
     case "delete-all": await chrome.storage.local.remove("trail"); return { ok: true };
+    case "gate": return gate(String(message.op || ""), message.body || {}, sender);
     case "disconnect": await chrome.storage.session.remove("auth"); return { ok: true };
     case "state": return { settings: await getSettings(), trail: await getTrail() };
     default: return { ok: false };
@@ -112,7 +131,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   // Content scripts may only report captures, read their site's status and pause; everything else is the side panel's.
   // Decided by the sender's URL, not by sender.tab: the side panel opened in a tab is still an extension page.
   const fromContent = !(sender.id === chrome.runtime.id && sender.url && sender.url.startsWith(chrome.runtime.getURL("")));
-  if (fromContent && !["capture", "site-status", "set-paused", "connect"].includes(message && message.type)) return false;
+  if (fromContent && !["capture", "site-status", "set-paused", "connect", "gate"].includes(message && message.type)) return false;
   handle(message || {}, sender).then(reply, (error) => reply({ ok: false, error: String(error && error.message || error) }));
   return true;
 });

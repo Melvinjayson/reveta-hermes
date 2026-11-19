@@ -183,7 +183,13 @@
     const reply = await chrome.tabs.sendMessage(runTabId, { type: "takeover-start", plan });
     if (!reply || !reply.ok) $("run-status").textContent = (reply && reply.error) || "Couldn't start.";
   };
-  $("approve").onclick = () => runTabId && lastSnapshot && chrome.tabs.sendMessage(runTabId, { type: "takeover-approve", index: lastSnapshot.index });
+  $("approve").onclick = async () => {
+    if (!runTabId || !lastSnapshot || !lastSnapshot.approvalId) return;
+    // Recorded on Aura's server first; the page only continues once the server has the approval.
+    const decided = await send({ type: "gate", op: "approve", body: { approval_id: lastSnapshot.approvalId } });
+    if (!decided || !decided.ok) { $("answer").textContent = (decided && decided.error) || "Aura's server didn't record the approval."; return; }
+    chrome.tabs.sendMessage(runTabId, { type: "takeover-approve", index: lastSnapshot.index });
+  };
   $("resume").onclick = async () => {
     const reply = runTabId && await chrome.tabs.sendMessage(runTabId, { type: "takeover-resume" });
     if (reply && !reply.ok) $("run-status").textContent = "The page still needs you. Finish it, then tap continue.";

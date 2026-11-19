@@ -125,15 +125,45 @@
       setNativeValue(entry.el, option.value);
     }
   }
+  async function sha256(value) {
+    if (typeof value !== "string") return "";
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  /** What the server records and classifies; the typed value travels only as a hash. */
+  async function gateBody(current, step, index) {
+    const entry = step.target ? elementMap.get(step.target) : null;
+    const d = entry ? describe(entry.el) : {};
+    return { run_id: current.id, index, action: step.action, target: step.target || "", host: location.hostname,
+      value_sha256: await sha256(step.value), consequential: Boolean(step.consequential),
+      element: { label: String(d.label || "").slice(0, 200), name: String(d.name || "").slice(0, 200),
+        domId: String(d.id || "").slice(0, 200), type: String(d.type || ""), tag: String(d.tag || ""), inForm: Boolean(d.inForm) } };
+  }
+  function gate(op, body) { return chrome.runtime.sendMessage({ type: "gate", op, body }).catch(() => ({ ok: false })); }
+  function halt(current, message) { current.state.fail(message); report(); run = null; render(); }
   async function drive() {
     const current = run;
     while (current && run === current) {
       const blocker = Policy.detectHandoff(pageSignals());
       if (blocker && current.state.snapshot().status !== "waiting_for_user") { current.state.handOff(blocker); report(); return; }
       const step = current.state.next();
+      const snap = current.state.snapshot();
+      if (!step && snap.status === "awaiting_approval" && !snap.approvalId) {
+        // Open the server-side approval the person's tap will answer.
+        const asked = await gate("action", await gateBody(current, snap.step, snap.index));
+        if (run !== current) return;
+        if (!asked.ok || asked.status !== "approval_required") { halt(current, asked.error || "Aura's server didn't open an approval."); return; }
+        current.state.requireApproval(asked.approval_id);
+      }
       report();
       if (!step) { if (["done", "failed", "stopped"].includes(current.state.snapshot().status)) { run = null; render(); } return; }
-      try { perform(step); } catch (error) { current.state.fail(error.message); report(); run = null; render(); return; }
+      const asked = await gate("action", await gateBody(current, step, step.index));
+      if (run !== current) return;
+      if (asked.ok && asked.status === "approval_required") { current.state.requireApproval(asked.approval_id); report(); return; }
+      if (!asked.ok || asked.status !== "granted") { halt(current, asked.error || "Aura's server didn't allow that step."); return; }
+      try { perform(step); } catch (error) { await gate("result", { grant: asked.grant, ok: false, error: error.message }); halt(current, error.message); return; }
+      const reported = await gate("result", { grant: asked.grant, ok: true });
+      if (!reported.ok) { halt(current, "Aura's server didn't record that step, so Aura stopped."); return; }
       await sleep(STEP_DELAY_MS);
       if (run !== current) return; // stopped while waiting
       current.state.completed(step.index);
@@ -153,7 +183,7 @@
       }
       case "takeover-start": {
         if (run) { reply({ ok: false, error: "Aura is already acting here." }); return false; }
-        run = { state: Takeover.createRun(message.plan) };
+        run = { id: crypto.randomUUID().replace(/-/g, ""), state: Takeover.createRun(message.plan) };
         render();
         reply({ ok: true });
         drive();
