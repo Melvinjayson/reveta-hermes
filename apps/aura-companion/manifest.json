@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Aura Companion (test build)",
+  "version": "0.2.0",
+  "description": "Aura follows you on the sites you switch on, keeps context in your browser, and acts on a page only when you ask.",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "scripting", "sidePanel", "tabs"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "host_permissions": ["https://aura-zero.onrender.com/*", "http://127.0.0.1:9119/*"],
+  "background": { "service_worker": "background.js" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "action": { "default_title": "Open Aura Companion" },
+  "content_scripts": [
+    {
+      "matches": ["https://aura-zero.onrender.com/aura/companion/connect*", "http://127.0.0.1:9119/aura/companion/connect*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'none'" }
+}

@@ -1,0 +1,19 @@
+body { font: 13px/1.4 system-ui, sans-serif; margin: 0; padding: 12px; color: #111; background: #fafafa; }
+header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.tag { font-size: 11px; background: #fde68a; border-radius: 4px; padding: 1px 6px; }
+section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+h2 { font-size: 13px; margin: 0 0 6px; }
+.row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+button { font: inherit; border: 1px solid #111; background: #111; color: #fff; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+button.quiet { background: #fff; color: #111; }
+button.danger { background: #b91c1c; border-color: #b91c1c; }
+button:disabled { opacity: .4; cursor: default; }
+textarea, select { font: inherit; width: 100%; box-sizing: border-box; margin: 4px 0; }
+select { width: auto; }
+.hint { color: #555; font-size: 12px; margin: 4px 0; }
+.answer { white-space: pre-wrap; margin-top: 8px; }
+#steps li.consequential { color: #b91c1c; }
+#steps li.current { font-weight: 600; }
+#trail { list-style: none; padding: 0; margin: 6px 0; max-height: 200px; overflow: auto; }
+#trail li { display: flex; justify-content: space-between; gap: 6px; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+#trail button { padding: 0 6px; font-size: 11px; }
