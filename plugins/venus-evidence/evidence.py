@@ -11,13 +11,16 @@ Unknown stays unknown: a cost with no reported or estimable price is ``None`` wi
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Callable, Optional
+
+logger = logging.getLogger(__name__)
 
 SCHEMA = "venus.evidence.v1"
 PLUGIN_NAME = "venus-evidence"
@@ -39,7 +42,7 @@ _NAME_RE = re.compile(r"[\x00-\x1f\x7f]+")
 
 
 def utc_iso(epoch: Optional[float] = None) -> str:
-    moment = datetime.fromtimestamp(epoch, timezone.utc) if epoch is not None else datetime.now(timezone.utc)
+    moment = datetime.fromtimestamp(epoch, UTC) if epoch is not None else datetime.now(UTC)
     return moment.isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
@@ -56,7 +59,7 @@ def safe_token(value: Any, limit: int = 32) -> str:
 
 def _ms(seconds: Any) -> Optional[int]:
     try:
-        return max(0, int(round(float(seconds) * 1000)))
+        return max(0, round(float(seconds) * 1000))
     except (TypeError, ValueError):
         return None
 
@@ -201,7 +204,8 @@ def usage_pricing_estimator(model: str, provider: str, base_url: str, tokens: di
             cache_read_tokens=tokens["cache_read"], cache_write_tokens=tokens["cache_write"],
             reasoning_tokens=tokens["reasoning"], request_count=tokens["requests"])
         result = estimate_usage_cost(model, usage, provider=provider or None, base_url=base_url or None)
-    except Exception:
+    except Exception:  # pricing lookups can fail many ways; an unpriced run is "unknown", not a crash
+        logger.debug("venus-evidence cost estimate failed", exc_info=True)
         return None, "unknown", "none"
     if result.amount_usd is None or result.status not in ("estimated", "included", "actual"):
         return None, "unknown", str(result.source or "none")

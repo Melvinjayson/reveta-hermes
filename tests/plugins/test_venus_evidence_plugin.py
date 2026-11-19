@@ -166,7 +166,7 @@ class TestUnknownIsNotZero:
                             "base_url": "https://api.anthropic.com", "api_duration": 1.0,
                             "usage": {"input_tokens": 1_000_000, "output_tokens": 0}})
         cost = _end(rec)["cost"]
-        assert cost["status"] == "estimated" and Decimal(cost["amount_usd"]) == Decimal("5")
+        assert cost["status"] == "estimated" and Decimal(cost["amount_usd"]) == 5
 
     def test_missing_baseline_leaves_value_unknown(self):
         mod = _load()

@@ -164,7 +164,6 @@ def _observer(method_name: str):
             getattr(_recorder, method_name)(kwargs)
         except Exception:
             logger.debug("venus-evidence %s failed", method_name, exc_info=True)
-        return None
     callback.__name__ = f"_venus_{method_name}"
     return callback
 

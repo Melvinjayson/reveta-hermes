@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Callable, Optional, Protocol
 
@@ -27,7 +27,7 @@ class JsonlDailySink:
         self._lock = threading.Lock()
 
     def path_for(self, day: Optional[datetime] = None) -> Path:
-        day = day or datetime.now(timezone.utc)
+        day = day or datetime.now(UTC)
         return self._root() / f"evidence-{day:%Y-%m-%d}.jsonl"
 
     def write(self, record: dict) -> None:
