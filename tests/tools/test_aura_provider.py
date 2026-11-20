@@ -25,10 +25,6 @@ def home(tmp_path, monkeypatch):
         (tmp_path / "config.yaml").write_text(json.dumps({"aura": aura}))
 
     write()
-    # The route's per-day/per-chat caps are what these tests check; the Aura budget
-    # (tools/aura_budget.py, tested in test_aura_budget.py) is switched on and out of the way.
-    from tools.aura_budget import update_budget_limit
-    update_budget_limit(limit_usd=1000, paid_enabled=True, actor="test")
     try:
         yield write
     finally:
@@ -46,8 +42,7 @@ def _usage(inp, out):
 
 def test_exact_paid_route_runs_under_caps(home):
     request = {"model": PAID["model"], "messages": []}
-    # The budget bounds the route's cost: output is capped so the reservation is a ceiling.
-    assert require_agent_model(_agent(), request) == {**request, "max_tokens": 4096}
+    assert require_agent_model(_agent(), request) == request
 
 
 @pytest.mark.parametrize("change", [
@@ -76,7 +71,7 @@ def test_recorded_spend_stops_the_chat_then_the_day(home):
     with pytest.raises(FreeOnlyRefused, match="This chat reached"):
         require_agent_model(agent, request)
     other = _agent(session_id="chat-2")
-    assert require_agent_model(other, request) == {**request, "max_tokens": 4096}
+    assert require_agent_model(other, request) == request
     aura_provider.record(other, _usage(0, 100_000))
     with pytest.raises(FreeOnlyRefused, match="today"):
         require_agent_model(_agent(session_id="chat-3"), request)

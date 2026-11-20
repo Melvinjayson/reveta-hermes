@@ -12,7 +12,6 @@ value that is not ``true`` fails closed.
 from __future__ import annotations
 
 import hashlib
-import inspect
 import json
 from urllib.parse import urlsplit
 
@@ -212,48 +211,12 @@ def _paid_route_request(config, provider, endpoint, request, chat):
         check(paid, chat)
     except SpendCapReached as exc:
         raise FreeOnlyRefused(str(exc)) from exc
-    return _legacy_paid_reservation(paid, request, chat)
-
-
-def _legacy_paid_reservation(paid, request, chat):
-    """The owner's OpenAI/Anthropic route also spends from the one Aura budget (tools.aura_budget)."""
-    from tools.aura_budget import BudgetRefused
-    from tools.aura_paid_requests import reserve
-    from tools.aura_provider import price
-
-    try:
-        entry = price(paid["provider"], paid["model"])
-        return reserve({**request}, session_id=chat or "", model=paid["model"], tier="owner_route",
-                       prompt_per_million=float(entry.input_cost_per_million),
-                       completion_per_million=float(entry.output_cost_per_million),
-                       max_output_tokens=paid.get("max_output_tokens", 4096), openrouter=False)
-    except BudgetRefused as exc:
-        raise FreeOnlyRefused(exc.user_message) from exc
-    except ValueError as exc:
-        raise FreeOnlyRefused() from exc
-
-
-def _routed_request(config, provider, endpoint, request, chat=None):
-    """tools.aura_model_routing's verdict; it runs first so free_only: false cannot skip it."""
-    from tools.aura_model_routing import PaidRequestRefused, RouteRefused, guard
-
-    if not isinstance(request, dict):
-        return None
-    try:
-        return guard({"aura": config}, provider, endpoint, request, chat=chat)
-    except (RouteRefused, PaidRequestRefused) as exc:
-        raise FreeOnlyRefused(exc.user_message) from exc
+    return {**request}
 
 
 def require_model(provider, endpoint, request, *, api_mode="chat_completions", chat=None):
     """Check the final SDK payload; return a copy with provider fallbacks disabled."""
     config = settings()
-    routed = _routed_request(config, provider, endpoint, request, chat)
-    if routed is not None:
-        # The free test route: pinned to zero price; with the rule on it must also be allowlisted.
-        request = routed
-        if config.get("free_only", True) is False:
-            return routed
     if isinstance(request, dict) and api_mode in {"chat_completions", "codex_responses", "anthropic_messages"}:
         paid = _paid_route_request(config, provider, endpoint, request, chat)
         if paid is not None:
@@ -276,14 +239,10 @@ def require_model(provider, endpoint, request, *, api_mode="chat_completions", c
 
 
 def require_agent_model(agent, request):
-    from tools.aura_paid_requests import adopt
-
-    request = require_model(
+    return require_model(
         agent.provider, agent.base_url, request, api_mode=agent.api_mode,
         chat=getattr(agent, "session_id", None),
     )
-    adopt(agent)  # a paid request's reservation is settled when its usage (or failure) arrives
-    return request
 
 
 def require_aux_model(client, request, provider=None, api_mode=None):
@@ -300,36 +259,11 @@ def require_aux_model(client, request, provider=None, api_mode=None):
 
 def guarded_aux_callback(client, callback, provider=None, api_mode=None):
     def execute(request):
-        from tools.aura_paid_requests import reported_cost, take_pending, _settle
-
         request = require_aux_model(client, request, provider, api_mode)
-        reservation = take_pending()
         seal_client(client)
-        if reservation is None:
-            return callback(request)
-        try:
-            result = callback(request)
-        except BaseException:
-            _settle(reservation, None)  # an auxiliary call that failed may still have been billed
-            raise
-        if inspect.isawaitable(result):
-            return _settled_later(result, reservation)
-        _settle(reservation, reported_cost(getattr(result, "usage", None)))
-        return result
+        return callback(request)
 
     return execute
-
-
-async def _settled_later(awaitable, reservation):
-    from tools.aura_paid_requests import reported_cost, _settle
-
-    try:
-        result = await awaitable
-    except BaseException:
-        _settle(reservation, None)
-        raise
-    _settle(reservation, reported_cost(getattr(result, "usage", None)))
-    return result
 
 
 def seal_client(client):

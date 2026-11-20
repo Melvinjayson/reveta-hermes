@@ -746,8 +746,6 @@ def _prepare_turn_input(sid: str, session: dict, st: _TurnRun, text: Any, images
     if take_speech_interrupted():
         run_message = _prepend_note(run_message, SPEECH_INTERRUPTED_NOTE)
     run_message = _prepend_note(run_message, _pending_reaction_notes(session))
-    from tools.aura_conversation import session_turn_note  # Aura only: topic shifts and meta feedback
-    run_message = _prepend_note(run_message, session_turn_note(session, text))
     agent._voice_turn_pending = bool(session.pop("voice_turn", False))  # auxiliary.voice_chat route
     return prompt, _prepend_note(run_message, _hud_surface_note(session)), cols, streamer
 

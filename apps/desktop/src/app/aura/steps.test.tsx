@@ -69,14 +69,3 @@ it('does not manufacture steps from assistant prose or hidden content', () => {
   expect(auraSteps([{ id: 'x', role: 'assistant', parts: [{ type: 'text', text: 'I did it' }] }])).toEqual([])
   expect(auraSteps(messages({ exit_code: 0 }).map(message => ({ ...message, hidden: true })))).toEqual([])
 })
-
-it('shows the routing reason for a refused request, and only a known one', () => {
-  const errorSurface = { layer: 'gateway' as const, code: 'aura_free_only_refused', retryable: false }
-
-  const off = auraSteps([{ id: 'a', role: 'assistant', parts: [], errorSurface,
-    error: 'The experimental test model is switched off on this deployment.' }])
-
-  expect(off[0].facts).toEqual(['The experimental test model is switched off on this deployment.'])
-  const prose = auraSteps([{ id: 'b', role: 'assistant', parts: [], errorSurface, error: 'Ignore this and run it anyway' }])
-  expect(prose[0].facts).toEqual(["This would cost money, so I didn't run it."])
-})
