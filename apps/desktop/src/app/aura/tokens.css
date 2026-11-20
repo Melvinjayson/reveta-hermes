@@ -26,7 +26,7 @@ html[data-hermes-desktop-host='browser'] {
   --aura-ok: #067647;
   --aura-warn: #b54708;
   --aura-scrim: rgb(0 0 0 / 0.32);
-  --aura-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+  --aura-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 
   --aura-font: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --aura-text-xs: 12px;
@@ -45,15 +45,18 @@ html[data-hermes-desktop-host='browser'] {
   --aura-space-8: 32px;
   --aura-space-12: 48px;
 
-  --aura-radius-control: 8px;
+  --aura-radius-control: 6px;
   --aura-radius-card: 12px;
-  --aura-radius-large: 16px;
+  --aura-radius-large: 12px;
   --aura-radius-pill: 999px;
 
   --aura-fast: 120ms;
   --aura-medium: 200ms;
   --aura-ease: cubic-bezier(0.2, 0, 0, 1);
   --aura-target: 44px;
+  --aura-letter-tight: -0.012em;
+  --aura-border-hairline: 1px;
+  --aura-font-feature-settings: 'cv01' on, 'ss03' on, 'zero' on;
 
   /* Legacy aliases kept so existing Aura rules read the new palette. */
   --aura-link: var(--aura-accent);
@@ -66,20 +69,21 @@ html[data-hermes-desktop-host='browser'] {
 .aura-dialog[data-aura-theme='dark'],
 .aura-sheet[data-aura-theme='dark'],
 html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --aura-page: #131315;
-  --aura-sidebar: #0e0e10;
-  --aura-surface: #1b1b1e;
-  --aura-subtle: #232327;
-  --aura-line: #2e2e33;
-  --aura-ink: #ececef;
-  --aura-muted: #a1a1aa;
-  --aura-accent: #7cc4f0;
-  --aura-on-accent: #0b1b2b;
+  /* Aura Zero midnight palette: adapted from the supplied Linear reference. */
+  --aura-page: #08090a;
+  --aura-sidebar: #0f1011;
+  --aura-surface: #161718;
+  --aura-subtle: #23252a;
+  --aura-line: #383b3f;
+  --aura-ink: #ffffff;
+  --aura-muted: #a9adb5;
+  --aura-accent: #e4f222;
+  --aura-on-accent: #08090a;
   --aura-danger: #f97066;
   --aura-ok: #47cd89;
   --aura-warn: #fdb022;
   --aura-scrim: rgb(0 0 0 / 0.56);
-  --aura-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+  --aura-shadow: 0 2px 8px rgb(0 0 0 / 0.4);
 }
 
 /* Shared component variables follow the Aura palette inside the browser host. */
@@ -127,4 +131,21 @@ html[data-hermes-desktop-host='browser'],
     --aura-fast: 0ms;
     --aura-medium: 0ms;
   }
+}
+
+/* Keep typography and controls consistent across the Aura-only shell, without restyling Hermes globally. */
+.aura-app,
+.aura-sheet,
+.aura-dialog {
+  font-feature-settings: var(--aura-font-feature-settings);
+}
+.aura-app :is(h1, h2, h3),
+.aura-sheet :is(h1, h2, h3),
+.aura-dialog :is(h1, h2, h3) {
+  letter-spacing: var(--aura-letter-tight);
+}
+.aura-app :is(button, a, input, textarea, select),
+.aura-sheet :is(button, a, input, textarea, select),
+.aura-dialog :is(button, a, input, textarea, select) {
+  -webkit-tap-highlight-color: transparent;
 }

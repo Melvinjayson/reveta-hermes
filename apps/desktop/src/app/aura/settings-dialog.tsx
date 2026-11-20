@@ -119,7 +119,7 @@ export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignO
           {section === 'Account' && (
             <section aria-labelledby="aura-settings-account">
               <h3 id="aura-settings-account">Account</h3>
-              <p>Signing out ends this browser’s access. Your conversations stay saved.</p>
+              <p>Signing out ends this browser’s access. Conversation recovery after a server restart depends on durable server storage.</p>
               <button className="aura-button aura-button-secondary" onClick={onSignOut} type="button">
                 Sign out
               </button>
