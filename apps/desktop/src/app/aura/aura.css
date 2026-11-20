@@ -529,6 +529,7 @@
  * The UI consumes existing state, never microphone data. Animations transform/
  * fade compositor layers only; no extra GPU canvas, shader or network asset. */
 .aura-voice .aura-kinetic-orb {
+  animation: none;
   --orb-cadence: 7s;
   --orb-strength: 1;
   position: relative;
