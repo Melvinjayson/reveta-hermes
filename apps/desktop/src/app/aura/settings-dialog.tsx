@@ -1,8 +1,10 @@
+import { useStore } from '@nanostores/react'
 import { useEffect, useRef, useState } from 'react'
 
 import { X } from '@/lib/icons'
 
 import { AuraModelSettings } from './model-settings'
+import { $auraSettingsRequest } from './settings-request'
 import {
   AuraConnectorsSection,
   AuraJobsSection,
@@ -29,6 +31,13 @@ interface AuraSettingsDialogProps {
 export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignOut, signOutError }: AuraSettingsDialogProps) {
   const dialog = useRef<HTMLDialogElement>(null)
   const [section, setSection] = useState<Section>('Appearance')
+  const requested = useStore($auraSettingsRequest)
+
+  useEffect(() => {
+    if (open && requested) {
+      setSection(requested)
+    }
+  }, [open, requested])
 
   useEffect(() => {
     const node = dialog.current
