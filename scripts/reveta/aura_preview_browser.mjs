@@ -111,13 +111,14 @@ try {
   await expect(card.getByText('Pro plan is $20 a month.')).toBeVisible()
   ok('handoff: chat -> companion key picks it up once -> result shown as unchecked page content')
 
-  // 6. The companion's model call: free_only is false and no paid route is set, so planning refuses.
+  // 6. The companion's model call: this home keeps free_only on with an attested free fake model, so
+  //    planning runs on the free route (the paid route is owner-and-cap gated; see the unit tests).
   const ask = await fetch(`${url}/api/aura/companion/ask`, { method: 'POST', headers: key,
     body: JSON.stringify({ messages: [{ role: 'user', content: 'Plan it' }],
       page: { intent: 'takeover', url: 'https://example.test/', title: 'T', excerpt: 'x' } }) })
-  expect(ask.status).toBe(503)
-  expect((await ask.json()).error).toContain('model policy refused')
-  ok('companion planning refuses without a paid route and caps (no spend)')
+  expect(ask.status).toBe(200)
+  expect((await ask.json()).content.length).toBeGreaterThan(0)
+  ok('companion planning answers on the free route with the owner key')
 } catch (error) {
   console.log(`FAIL ${error.message.split('\n').slice(0, 6).join(' | ')}`)
   await page.screenshot({ path: path.join(home, '..', 'failure.png'), fullPage: true }).catch(() => {})

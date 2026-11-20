@@ -4,7 +4,7 @@
 Signs in as the basic-auth owner (as on Render), switches on Settings -> Preview (run evidence,
 companion, browser handoff), chats, checks the evidence record on disk, runs /venus-value, drives the
 chat-to-browser handoff with the companion's key (the extension's side over HTTP), and checks the
-companion's planning call refuses without a paid route. Run:
+companion's planning call answers on the free route. Run:
 
     AURA_CHROMIUM=/opt/pw-browsers/chromium python scripts/reveta/aura_preview_browser.py
 """

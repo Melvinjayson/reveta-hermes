@@ -41,7 +41,7 @@ def has_flite(ffmpeg: str) -> bool:
     import subprocess
 
     try:
-        out = subprocess.run([ffmpeg, '-hide_banner', '-filters'], capture_output=True, text=True, timeout=10,
+        out = subprocess.run([ffmpeg, '-hide_banner', '-filters'], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=10,
                              check=False).stdout
     except (OSError, subprocess.SubprocessError):
         return False
