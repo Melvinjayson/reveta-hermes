@@ -98,28 +98,6 @@ function statusOf(part: { result?: unknown; isError?: boolean; interrupted?: boo
   return 'Result received'
 }
 
-const COST_REFUSAL = "This would cost money, so I didn't run it."
-
-// tools/aura_model_routing.py REASONS: the only other refusal sentences a Refused row may show.
-const ROUTING_REFUSALS = new Set([
-    'Budget reached. Aura did not send this request.',
-  'Model not permitted. Aura only uses the models set up for it.',
-  'Model unavailable. No permitted model can take this request right now.',
-  'Requested capability unavailable on the permitted models.',
-  'The experimental test model is switched off on this deployment.',
-  "Paid routing isn't switched on for this deployment.",
-  "Aura couldn't check its budget, so it didn't send this paid request.",
-  'Paid models are switched off in Settings → Model.',
-  "Aura couldn't bound this request's cost, so it didn't send it."
-])
-
-/** The backend's own routing reason when it is one of the known sentences; never other text. */
-function refusalReason(error: string | undefined): string {
-  const text = (error ?? '').trim()
-
-  return ROUTING_REFUSALS.has(text) ? text : COST_REFUSAL
-}
-
 /** A conservative projection: arbitrary payloads, commands and URLs may contain
  * credentials. Details exposes only allowlisted outcome facts, never raw text. */
 export function auraSteps(messages: ChatMessage[]): AuraStep[] {
@@ -127,7 +105,7 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
     if (message.errorSurface?.code === 'aura_free_only_refused') {
       return [{ id: `${message.id}:cost-refusal`, label: 'Reply request', status: 'Refused' as const,
         timestamp: message.timestamp, completedAt: message.completedAt,
-        facts: [refusalReason(message.error)] }]
+        facts: ["This would cost money, so I didn't run it."] }]
     }
 
     if (message.role !== 'assistant') {return []}

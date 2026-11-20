@@ -21,7 +21,7 @@ interface AuraProjectDialogProps {
   titleOf: (session: SessionInfo) => string
   onClose: () => void
   onOpenChat: (session: SessionInfo) => void
-  onNewChat: (projectId: string) => Promise<boolean>
+  onNewChat: (projectId: string) => void
 }
 
 export function AuraProjectDialog({ projectId, sessions, theme, titleOf, onClose, onOpenChat, onNewChat }: AuraProjectDialogProps) {
@@ -117,21 +117,8 @@ export function AuraProjectDialog({ projectId, sessions, theme, titleOf, onClose
             <section aria-labelledby="aura-project-chats">
               <div className="aura-project-row">
                 <h3 id="aura-project-chats">Chats</h3>
-                <button
-                  className="aura-button aura-button-secondary"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true)
-
-                    try {
-                      await onNewChat(project.id)
-                    } finally {
-                      setBusy(false)
-                    }
-                  }}
-                  type="button"
-                >
-                  {busy ? 'Preparing chat…' : 'New chat in this project'}
+                <button className="aura-button aura-button-secondary" onClick={() => onNewChat(project.id)} type="button">
+                  New chat in this project
                 </button>
               </div>
               {members.length ? (

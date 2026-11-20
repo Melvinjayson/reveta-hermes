@@ -79,8 +79,6 @@ def handle_api_error(
     if agent.thinking_callback:
         agent.thinking_callback("")
 
-    from tools.aura_paid_requests import settle_failed
-    settle_failed(agent, api_error)  # a paid request that failed: release on a 4xx refusal, else keep it
     from tools.aura_free_only import FreeOnlyRefused
     if isinstance(api_error, FreeOnlyRefused):
         refusal = api_error.user_message

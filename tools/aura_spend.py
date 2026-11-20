@@ -82,17 +82,7 @@ def complex_workflow(args):
     # One token per UTF-8 byte + protocol overhead conservatively bounds input;
     # no thinking, caching, tools or automatic retries on this opt-in subrequest.
     estimated = cost(entry, len(task.encode()) + 1024, maximum)
-    from tools import aura_budget
-    try:
-        budget = aura_budget.authorize_or_reserve(session_id=workspace().name, model=model,
-                                                  tier="anthropic_tool", estimated_usd=float(estimated))
-    except aura_budget.BudgetRefused as exc:
-        return json.dumps({'status': 'refused', 'error': exc.user_message})
-    try:
-        ident = reserve(cfg, model, estimated)
-    except BaseException:
-        aura_budget.release_reservation(budget.request_id, not_sent=True)
-        raise
+    ident = reserve(cfg, model, estimated)
     bound = {**args, 'provider': 'anthropic', 'model': model, 'estimated_usd': str(estimated), 'caps': cfg}
     digest = hashlib.sha256((str(get_hermes_home().resolve()) + _canonical(bound)).encode()).hexdigest()
     description = (f'Opt-in Anthropic · {model}. Estimated maximum ${estimated:.6f}. '
@@ -102,7 +92,6 @@ def complex_workflow(args):
         approved = _approve('Anthropic complex workflow', bound, digest, description=description)
         if not approved or spend_config() != cfg:
             settle(ident, 0, 'declined')
-            aura_budget.release_reservation(budget.request_id, not_sent=True)
             return json.dumps({'status': 'refused', 'error': 'Anthropic request was not approved or its caps changed'})
         from agent.anthropic_adapter import build_anthropic_client
         with build_anthropic_client(key, base_url='https://api.anthropic.com', timeout=90).with_options(max_retries=0) as client:
@@ -111,7 +100,6 @@ def complex_workflow(args):
         usage = result.usage
         actual = cost(entry, usage.input_tokens, usage.output_tokens)
         settle(ident, actual, 'completed')
-        aura_budget.reconcile(budget.request_id, float(actual), basis='provider token usage × bundled rate')
         return json.dumps({'success': True, 'provider': 'anthropic', 'model': model,
                            'text': '\n'.join(block.text for block in result.content if block.type == 'text'),
                            'cost_usd': str(actual), 'cost_basis': 'actual provider token usage × bundled rate snapshot',
@@ -119,5 +107,4 @@ def complex_workflow(args):
     except Exception:
         # A transport error may occur after billing; retain the reservation.
         settle(ident, None, 'usage_unknown')
-        aura_budget.reconcile(budget.request_id, None)
         raise

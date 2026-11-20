@@ -290,9 +290,9 @@ export function AuraLocalTalk({ busy, disabled, onSubmit }: Props) {
 
   return (
     <div className="aura-local">
-      <button aria-expanded={open} aria-label="On-device" aria-pressed={open} className="aura-local-toggle" disabled={disabled} onClick={toggle} type="button">
-        <Cpu aria-hidden="true" size={16} />
-        <span>On-device</span>
+      <button aria-expanded={open} aria-pressed={open} className="aura-local-toggle" disabled={disabled} onClick={toggle} type="button">
+        <Cpu size={16} />
+        On-device
       </button>
       {open && (
         <section aria-label="On-device conversation" className="aura-local-panel">

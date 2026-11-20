@@ -111,16 +111,14 @@ def charge(chat: str, provider: str, model: str, usd: float) -> None:
                    (uuid.uuid4().hex, chat or "", _today(), provider, model, float(usd)))
 
 
-def record(agent, usage) -> Optional[float]:
-    """Add one main-model call's cost to the ledger when it ran on the paid route; return it."""
+def record(agent, usage) -> None:
+    """Add one main-model call's cost to the ledger when it ran on the paid route."""
     paid = route()
     if not matches(paid, agent.provider, agent.base_url, agent.model):
-        return None
+        return
     tokens = {name: int(getattr(usage, name, 0) or 0) for name in
               ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")}
-    usd = usd_for(paid, **tokens)
-    charge(agent.session_id or "", paid["provider"], paid["model"], usd)
-    return usd
+    charge(agent.session_id or "", paid["provider"], paid["model"], usd_for(paid, **tokens))
 
 
 def usd_for(paid: dict, input_tokens: int = 0, output_tokens: int = 0, cache_read_tokens: int = 0,
@@ -155,10 +153,7 @@ def status() -> dict:
     paid = route(config)
     day, _ = totals()
     model = config.get("model") or {}
-    from tools.aura_model_routing import status as routing_status
-
     return {"paid_route": paid, "active_model": {"provider": model.get("provider"), "model": model.get("default")},
-            "routing": routing_status(config),
             "spent_today_usd": round(day, 4),
             "keys": {key: bool((env.get(spec["env"]) or "").strip()) for key, spec in PROVIDERS.items()},
             "gemini_key": bool((env.get("GEMINI_API_KEY") or env.get("GOOGLE_API_KEY") or "").strip()),
@@ -186,18 +181,6 @@ def configure(provider: str, model: str = "", per_day_usd: Any = None, per_chat_
     if provider == "gemini":
         aura.pop("paid_route", None)
         config["model"] = aura_settings({**load_env(), **os.environ})["model"]
-    elif provider == "openrouter_test":
-        # Explicit choice only; the next boot returns to the free default (aura_config.merge_owner_settings).
-        from tools.aura_model_routing import OPENROUTER_BASE_URL, RouteRefused, test_route
-
-        try:
-            route = test_route(config)
-        except RouteRefused as exc:
-            raise ValueError(exc.user_message) from exc
-        if not (load_env().get("OPENROUTER_API_KEY") or "").strip():
-            raise ValueError("add OPENROUTER_API_KEY to the deployment first")
-        aura.pop("paid_route", None)
-        config["model"] = {"provider": "openrouter", "default": route.model, "base_url": OPENROUTER_BASE_URL}
     else:
         spec = PROVIDERS.get(provider)
         if spec is None or model not in spec["models"]:
