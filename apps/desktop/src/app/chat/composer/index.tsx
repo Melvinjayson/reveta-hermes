@@ -1497,12 +1497,10 @@ export function ChatBar({
                   />
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
-                  {isBrowserHostedDesktop() && (
-                    <div className="aura-composer-modes" aria-label="Conversation options" role="group">
-                      <AuraVoiceMode busy={busy} disabled={disabled} gateway={gateway} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />
-                      <AuraLocalTalk busy={busy} disabled={disabled} onSubmit={onSubmit} />
-                    </div>
-                  )}
+                  {isBrowserHostedDesktop() && <div className="aura-composer-modes" aria-label="Conversation options" role="group">
+                    <AuraVoiceMode busy={busy} disabled={disabled} gateway={gateway} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />
+                    <AuraLocalTalk busy={busy} disabled={disabled} onSubmit={onSubmit} />
+                  </div>}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
                   <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))} data-aura-composer-grid>
