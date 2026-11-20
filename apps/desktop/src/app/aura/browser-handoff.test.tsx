@@ -84,9 +84,12 @@ it('shows the result as page content and only puts it in the draft when asked', 
 
 it('preserves the browser task draft and exposes an error when submission fails', async () => {
   api.mockImplementation(async ({ path, method }: { path: string; method: string }) => {
-    if (path.endsWith('/status')) return { enabled: true }
-    if (path.startsWith('/api/aura/companion/handoff?')) return { handoff: null }
-    if (method === 'POST') throw new Error('Companion unavailable')
+    if (path.endsWith('/status')) {return { enabled: true }}
+
+    if (path.startsWith('/api/aura/companion/handoff?')) {return { handoff: null }}
+
+    if (method === 'POST') {throw new Error('Companion unavailable')}
+
     return { ok: true }
   })
   render(<AuraBrowserHandoff />)
@@ -102,9 +105,12 @@ it('preserves the browser task draft and exposes an error when submission fails'
 it('blocks duplicate browser task submissions while the first is pending', async () => {
   let finish!: (result: { ok: boolean }) => void
   api.mockImplementation(({ path, method }: { path: string; method: string }) => {
-    if (path.endsWith('/status')) return Promise.resolve({ enabled: true })
-    if (path.startsWith('/api/aura/companion/handoff?')) return Promise.resolve({ handoff: null })
-    if (method === 'POST') return new Promise(resolve => { finish = resolve })
+    if (path.endsWith('/status')) {return Promise.resolve({ enabled: true })}
+
+    if (path.startsWith('/api/aura/companion/handoff?')) {return Promise.resolve({ handoff: null })}
+
+    if (method === 'POST') {return new Promise(resolve => { finish = resolve })}
+
     return Promise.resolve({ ok: true })
   })
   render(<AuraBrowserHandoff />)

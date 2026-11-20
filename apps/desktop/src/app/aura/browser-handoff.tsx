@@ -73,6 +73,7 @@ export function AuraBrowserHandoff() {
 
     try {
       const data = await call<{ handoff: BrowserHandoff | null }>(`${BASE}?session_id=${encodeURIComponent(sessionId)}`)
+
       if (activeSession.current === sessionId) {
         setHandoff(data?.handoff ?? null)
       }
@@ -101,13 +102,14 @@ export function AuraBrowserHandoff() {
 
   // One mutation at a time: retries and approval clicks must not dispatch twice while pending.
   const act = async (path: string, body: unknown): Promise<boolean> => {
-    if (actionInFlight.current) return false
+    if (actionInFlight.current) {return false}
     actionInFlight.current = true
     setBusy(true)
     const originatingSession = sessionId
 
     try {
       await call(path, 'POST', body)
+
       if (activeSession.current === originatingSession) {
         setError('')
         await reload()
@@ -179,7 +181,7 @@ export function AuraBrowserHandoff() {
 
             if (instruction.length >= 3) {
               void act(BASE, { session_id: sessionId, instruction }).then(ok => {
-                if (ok) setDraft(current => current.trim() === instruction ? '' : current)
+                if (ok) {setDraft(current => current.trim() === instruction ? '' : current)}
               })
             }
           }}

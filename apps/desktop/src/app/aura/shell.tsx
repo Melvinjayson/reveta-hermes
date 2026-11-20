@@ -357,9 +357,10 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         onClose={() => setProject(null)}
         onNewChat={async id => {
           // Do not open an unscoped chat if project context could not be saved.
-          if (!(await startAuraProjectChat(id))) return false
+          if (!(await startAuraProjectChat(id))) {return false}
           setProject(null)
           newChat()
+
           return true
         }}
         onOpenChat={session => {

@@ -122,6 +122,7 @@ export function AuraProjectDialog({ projectId, sessions, theme, titleOf, onClose
                   disabled={busy}
                   onClick={async () => {
                     setBusy(true)
+
                     try {
                       await onNewChat(project.id)
                     } finally {
