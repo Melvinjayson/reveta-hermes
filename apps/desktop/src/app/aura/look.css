@@ -1,0 +1,182 @@
+/* Aura look, after Melvin's dark-mode reference (20 Nov 2026): true-black page, one violet
+ * accent, a glowing mark over the greeting, violet user bubbles, outlined answer cards and
+ * numbered step badges. Tokens only; layout and behaviour live in home/thread/shell.css.
+ * Decorative glow is dark-only and never takes layout space. */
+
+/* Home hero */
+.aura-app .aura-empty-head {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+.aura-app .aura-empty-mark {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 6px;
+}
+.aura-app .aura-empty-mark img {
+  width: 72px;
+  height: 84px;
+  filter: drop-shadow(0 0 28px var(--aura-glow));
+}
+.aura-app .aura-empty h1 {
+  font-size: clamp(30px, 5vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.aura-app .aura-empty-name {
+  color: var(--aura-accent);
+}
+.aura-app .aura-greeting {
+  font-size: var(--aura-text-lg);
+  color: var(--aura-muted);
+}
+.aura-app[data-aura-theme='dark'] .aura-empty-head::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 44px;
+  left: 50%;
+  width: min(760px, 92vw);
+  height: 170px;
+  transform: translateX(-50%);
+  border-top: 2px solid color-mix(in srgb, var(--aura-accent) 75%, transparent);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  box-shadow: 0 -14px 44px -10px var(--aura-glow), inset 0 22px 44px -26px var(--aura-glow);
+  -webkit-mask-image: linear-gradient(to bottom, #000 25%, transparent 80%), linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+  mask-image: linear-gradient(to bottom, #000 25%, transparent 80%), linear-gradient(to right, transparent, #000 25%, #000 75%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  pointer-events: none;
+}
+
+/* Starters: Create / Build / Explore */
+.aura-app .aura-suggestions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding-inline: 20px;
+  border-radius: 14px;
+  font-size: var(--aura-text-body);
+  font-weight: 500;
+}
+.aura-app[data-aura-theme='dark'] .aura-suggestions button {
+  border-color: color-mix(in srgb, var(--aura-ink) 22%, transparent);
+  background: transparent;
+}
+.aura-app[data-aura-theme='dark'] .aura-suggestions button:hover {
+  border-color: var(--aura-accent);
+  background: var(--aura-accent-soft);
+}
+
+/* Thread: violet user bubble, outlined answer card, numbered step badges */
+.aura-app .aura-chat .composer-human-message {
+  border-radius: 20px;
+  background: var(--aura-accent-strong);
+  color: var(--aura-on-accent-strong);
+}
+.aura-app[data-aura-theme='dark'] .aura-chat .composer-human-message {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aura-accent) 45%, transparent), 0 8px 28px -12px var(--aura-glow);
+}
+.aura-app .aura-chat .composer-human-message :is(a, code) {
+  color: inherit;
+}
+@media (min-width: 640px) {
+  .aura-app .aura-chat [data-role='assistant'] {
+    padding: 20px 24px 8px;
+    border: 1px solid var(--aura-line);
+    border-radius: 20px;
+    background: var(--aura-surface);
+  }
+}
+.aura-app .aura-chat [data-role='assistant'] ol:not([start]) {
+  counter-reset: aura-step;
+  padding-left: 0;
+  list-style: none;
+}
+.aura-app .aura-chat [data-role='assistant'] ol:not([start]) > li {
+  position: relative;
+  min-height: 28px;
+  padding-left: 42px;
+  counter-increment: aura-step;
+}
+.aura-app .aura-chat [data-role='assistant'] ol:not([start]) > li::before {
+  content: counter(aura-step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--aura-accent-strong);
+  color: var(--aura-on-accent-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Composer: rounded pill, violet edge and round send in dark */
+@media (min-width: 640px) {
+  .aura-app .aura-chat [data-slot='composer-surface'] {
+    border-radius: 28px;
+  }
+}
+.aura-app[data-aura-theme='dark'] .aura-chat [data-slot='composer-surface'] {
+  border-color: color-mix(in srgb, var(--aura-accent) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--aura-accent) 12%, transparent), 0 10px 40px -18px var(--aura-glow);
+}
+.aura-app .aura-chat [data-slot='composer-surface'] button[type='submit'] {
+  border-radius: 50%;
+}
+.aura-app .aura-chat [data-slot='composer-surface'] button[type='submit']:not(:disabled) {
+  background: var(--aura-accent-strong);
+  color: var(--aura-on-accent-strong);
+}
+
+/* Sidebar: New chat is the one accented action; history sits under "Recent" */
+.aura-app[data-aura-theme='dark'] .aura-nav-actions > .aura-nav-item:first-child {
+  border: 1px solid color-mix(in srgb, var(--aura-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--aura-accent-strong) 28%, transparent);
+}
+.aura-app[data-aura-theme='dark'] .aura-nav-actions > .aura-nav-item:first-child:hover {
+  background: color-mix(in srgb, var(--aura-accent-strong) 40%, transparent);
+}
+.aura-app .aura-recent-label {
+  margin-top: var(--aura-space-4);
+}
+.aura-app .aura-history-group {
+  font-size: var(--aura-text-xs);
+  opacity: 0.8;
+}
+
+/* Phones: a smaller hero so the starters stay above the docked composer */
+@media (max-width: 639px) {
+  .aura-app .aura-empty-mark {
+    width: 64px;
+    height: 64px;
+  }
+  .aura-app .aura-empty-mark img {
+    width: 52px;
+    height: 60px;
+  }
+  .aura-app .aura-empty h1 {
+    font-size: clamp(26px, 8vw, 32px);
+  }
+  .aura-app .aura-greeting {
+    font-size: var(--aura-text-body);
+  }
+  .aura-app[data-aura-theme='dark'] .aura-empty-head::before {
+    top: 34px;
+    height: 110px;
+  }
+  .aura-app .aura-suggestions button {
+    min-height: 44px;
+    padding-inline: 16px;
+    font-size: var(--aura-text-md);
+  }
+}

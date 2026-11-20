@@ -31,7 +31,7 @@ try {
   await page.locator('input[name=username]').fill(user)
   await page.locator('input[name=password]').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible({ timeout: 60000 })
+  await expect(page.getByRole('heading', { name: 'Hi, I’m Aura.' })).toBeVisible({ timeout: 60000 })
   ok('owner signs in behind the gate')
 
   // 2. Settings -> Preview: everything starts off; the owner switches all three on.

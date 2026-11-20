@@ -21,8 +21,8 @@ it('explains missing model readiness and lets a suggestion populate the real com
   )
 
   expect(screen.getByRole('status').textContent).toContain('Aura can’t reply yet')
-  fireEvent.click(screen.getByRole('button', { name: /Plan my next step/ }))
-  expect(requestComposerInsert).toHaveBeenCalledWith('Plan my next step')
+  fireEvent.click(screen.getByRole('button', { name: 'Build' }))
+  expect(requestComposerInsert).toHaveBeenCalledWith('Help me build ')
   rerender(
     <AuraReadiness value={true}>
       <AuraEmpty />
@@ -31,14 +31,10 @@ it('explains missing model readiness and lets a suggestion populate the real com
   expect(screen.queryByText(/Aura can’t reply yet/)).toBeNull()
 })
 
-it('greets by local time of day and offers four starters', async () => {
-  const { auraGreeting, AURA_STARTERS } = await import('./empty')
-
-  expect([auraGreeting(4), auraGreeting(9), auraGreeting(13), auraGreeting(19)]).toEqual([
-    'Good evening',
-    'Good morning',
-    'Good afternoon',
-    'Good evening'
-  ])
-  expect(AURA_STARTERS).toHaveLength(4)
+it('introduces Aura and offers Create, Build and Explore', () => {
+  render(<AuraEmpty />)
+  expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hi, I’m Aura.')
+  expect(screen.getByText('How can I help you today?')).toBeTruthy()
+  const starters = screen.getByLabelText('Conversation starters')
+  expect([...starters.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Create', 'Build', 'Explore'])
 })

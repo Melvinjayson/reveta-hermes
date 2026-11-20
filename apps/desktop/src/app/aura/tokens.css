@@ -22,6 +22,9 @@ html[data-hermes-desktop-host='browser'] {
   --aura-accent: #5546e8;
   --aura-on-accent: #ffffff;
   --aura-accent-soft: color-mix(in srgb, var(--aura-accent) 10%, transparent);
+  --aura-accent-strong: var(--aura-accent);
+  --aura-on-accent-strong: #ffffff;
+  --aura-glow: transparent;
   --aura-danger: #b42318;
   --aura-ok: #067647;
   --aura-warn: #b54708;
@@ -66,15 +69,18 @@ html[data-hermes-desktop-host='browser'] {
 .aura-dialog[data-aura-theme='dark'],
 .aura-sheet[data-aura-theme='dark'],
 html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --aura-page: #0b0f1f;
-  --aura-sidebar: #090c17;
-  --aura-surface: #15192a;
-  --aura-subtle: #20253a;
-  --aura-line: #31364d;
+  --aura-page: #000000;
+  --aura-sidebar: #050507;
+  --aura-surface: #0c0b12;
+  --aura-subtle: #1a1824;
+  --aura-line: #2c2938;
   --aura-ink: #ececef;
   --aura-muted: #a1a1aa;
   --aura-accent: #a98cff;
   --aura-on-accent: #0b1b2b;
+  /* Filled violet (user bubble, step badges, send): white text on it is 5.8:1. */
+  --aura-accent-strong: #6d3df5;
+  --aura-glow: rgb(124 77 255 / 0.55);
   --aura-danger: #f97066;
   --aura-ok: #47cd89;
   --aura-warn: #fdb022;

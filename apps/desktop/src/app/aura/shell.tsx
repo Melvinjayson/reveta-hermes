@@ -3,6 +3,7 @@ import './aura.css'
 import './shell.css'
 import './home.css'
 import './thread.css'
+import './look.css'
 import './panel.css'
 
 import { useStore } from '@nanostores/react'
@@ -106,9 +107,10 @@ function AuraNav({ activeId, projects, sessions, onProject, onClose, onCollapse,
           ))}
           {projects && !projects.length && <p className="aura-empty-note">Group related chats into a project.</p>}
         </section>
+        {history.length > 0 && <h3 className="aura-section-label aura-recent-label">Recent</h3>}
         {history.map(section => (
           <section aria-label={section.group} key={section.group}>
-            <h3 className="aura-section-label">{section.group}</h3>
+            <h4 className="aura-section-label aura-history-group">{section.group}</h4>
             {section.entries.map(({ session, title }) => (
               <AuraConversationRow
                 current={session.id === activeId}
