@@ -84,6 +84,8 @@ def record_response_usage(
     # must remain observable.
     agent.session_api_calls += 1
     if not (hasattr(response, 'usage') and response.usage):
+        from tools.aura_paid_requests import settle_agent_call
+        settle_agent_call(agent, None)  # no reported cost: a paid reservation keeps its full amount
         if getattr(compressor, "awaiting_real_usage_after_compression", False):
             # No usage -> cannot adjudicate the prior compaction; consume the
             # pending verdict so later readings aren't charged to it and
@@ -104,11 +106,14 @@ def record_response_usage(
     # OWN model rate and added as dollars below.
     aggregator_usage = canonical_usage
     _moa_client, canonical_usage, _moa_ref_cost = _fold_moa_usage(agent, canonical_usage)
+    _legacy_usd = None
     try:
         from tools.aura_provider import record as _record_aura_spend
-        _record_aura_spend(agent, canonical_usage)
+        _legacy_usd = _record_aura_spend(agent, canonical_usage)
     except Exception:
         logger.exception("Aura paid-route spend was not recorded")
+    from tools.aura_paid_requests import settle_agent_call
+    settle_agent_call(agent, response.usage, _legacy_usd)
     prompt_tokens = canonical_usage.prompt_tokens
     completion_tokens = canonical_usage.output_tokens
     total_tokens = canonical_usage.total_tokens

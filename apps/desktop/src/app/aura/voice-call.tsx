@@ -10,6 +10,7 @@ import { resolveSiblingWsUrl } from '@/lib/sibling-ws-url'
 import { sanitizeTextForSpeech } from '@/lib/speech-text'
 
 import { AuraBrowserVoice } from './browser-voice'
+import { AuraConversationOrb } from './conversation-orb'
 
 interface Props {
   busy: boolean
@@ -255,6 +256,15 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
       return
     }
 
+    // Release queued playback before closing the context so stale speech cannot outlive the call.
+    for (const node of current.playing) {
+      node.onended = null
+      node.stop()
+    }
+
+    current.playing.clear()
+    current.playAt = 0
+    current.ws.onmessage = null
     current.ws.onclose = null
     current.ws.close()
     current.processor.disconnect()
@@ -592,7 +602,7 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           <img alt="" className="aura-voice-brand" src="brand/aura-mark.svg" />
           <span className="aura-voice-kicker">Aura · Live conversation</span>
           <h2>{label === 'Hearing you' ? 'I’m listening' : label === 'Thinking' ? 'One moment…' : label === 'Speaking' ? 'Aura is speaking' : label === 'Reconnecting' ? 'Reconnecting…' : label === 'Muted' ? 'Microphone muted' : 'Go ahead, I’m listening'}</h2>
-          <div aria-hidden="true" className="aura-voice-orb"><img alt="" src="brand/aura-mark.svg" /></div>
+          <AuraConversationOrb status={label} />
           <p className="aura-voice-caption">Talk naturally. You can interrupt at any time.</p>
         </div>
       )}
