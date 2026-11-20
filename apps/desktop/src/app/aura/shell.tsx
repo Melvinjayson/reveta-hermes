@@ -347,9 +347,12 @@ export function AuraShell({ actions, children }: AuraShellProps) {
       <AuraToolsDialog theme={resolvedMode} />
       <AuraProjectDialog
         onClose={() => setProject(null)}
-        onNewChat={id => {
+        onNewChat={async id => {
+          // Do not open an unscoped chat if project context could not be saved.
+          if (!(await startAuraProjectChat(id))) return false
           setProject(null)
-          void startAuraProjectChat(id).then(newChat)
+          newChat()
+          return true
         }}
         onOpenChat={session => {
           setProject(null)
