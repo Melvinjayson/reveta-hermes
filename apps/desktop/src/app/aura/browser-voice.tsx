@@ -206,6 +206,15 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
 
   return (
     <div aria-label="Voice chat" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+      {active && (
+        <div className="aura-voice-stage">
+          <img alt="" className="aura-voice-brand" src="brand/aura-mark.svg" />
+          <span className="aura-voice-kicker">Aura · Browser voice</span>
+          <h2>{label === 'Speaking' ? 'Aura is speaking' : label === 'Thinking' ? 'One moment…' : label === 'Listening' ? 'Go ahead, I’m listening' : label}</h2>
+          <div aria-hidden="true" className="aura-voice-orb"><img alt="" src="brand/aura-mark.svg" /></div>
+          <p className="aura-voice-caption">Turn-based voice. Tap interrupt to speak while Aura responds.</p>
+        </div>
+      )}
       <button
         aria-describedby="aura-browser-voice-hint"
         aria-label={active ? 'Stop voice chat' : 'Start voice chat'}

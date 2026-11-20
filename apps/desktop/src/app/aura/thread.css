@@ -149,3 +149,47 @@ html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop
   background: var(--aura-accent);
   color: var(--aura-on-accent);
 }
+
+/* Mobile-first reading surface: clean white answer cards, comfortable spacing and no sideways scrolling. */
+@media (max-width: 639px) {
+  .aura-chat [data-role='user'],
+  .aura-chat [data-role='assistant'] {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 12px;
+    overflow-wrap: anywhere;
+  }
+  .aura-chat .composer-human-message {
+    max-width: 88%;
+    padding: 12px 16px;
+    border-radius: 18px 18px 6px 18px;
+  }
+  .aura-chat [data-role='assistant'] {
+    line-height: 1.6;
+  }
+  .aura-chat [data-slot='composer-dock'] {
+    width: 100%;
+    max-width: 100%;
+    padding-inline: 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .aura-chat [data-slot='composer-surface'] {
+    min-width: 0;
+    border-radius: 26px;
+    box-shadow: 0 4px 20px rgb(0 0 0 / 0.06);
+  }
+  .aura-chat [data-slot='composer-surface'] button {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  .aura-chat [data-slot='composer-bounds'] {
+    background: var(--aura-page);
+    min-width: 0;
+  }
+  .aura-chat [contenteditable='true'] { min-width: 0; font-size: 16px; }
+}
+.aura-app[data-aura-theme='dark'] .aura-chat [data-role='assistant'] {
+  background: transparent;
+}
