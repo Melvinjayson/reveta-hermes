@@ -8,6 +8,7 @@ import { chatMessageText } from '@/lib/chat-messages'
 import { PipecatVoice, type VoiceEvent } from '@/lib/pipecat-voice'
 import { sanitizeTextForSpeech } from '@/lib/speech-text'
 
+import { AuraConversationOrb } from './conversation-orb'
 import { AuraVoice } from './voice-call'
 
 interface Props {
@@ -194,10 +195,29 @@ export function AuraPipecatVoice(props: Props) {
   // The speech edge is down or refused: the default live voice takes over, unchanged.
   if (fallback) { return <AuraVoice {...props} /> }
 
-  return <div aria-label="Continuous voice" className="flex flex-wrap items-center gap-2 text-xs">
-    <button aria-pressed={active} className="rounded-full border px-3 py-2" disabled={props.disabled && !active}
-      onClick={() => { if (active) { stop() } else { void start() } }}
-      type="button">{active ? 'Mic on' : 'Voice'}</button>
-    <span role="status">{status}</span><span aria-live="polite" className="w-full">{partial}</span>
-  </div>
+  return (
+    <div aria-label="Continuous voice" className="aura-voice" data-aura-voice={active ? status : 'off'} role="group">
+      {active && (
+        <div className="aura-voice-stage">
+          <img alt="" className="aura-voice-brand" src="brand/aura-mark.svg" />
+          <span className="aura-voice-kicker">Aura · Continuous conversation</span>
+          <h2>{status === 'Speaking' ? 'Aura is speaking' : status === 'Thinking' ? 'One moment…' : 'Go ahead, I’m listening'}</h2>
+          <AuraConversationOrb status={status} />
+          <p className="aura-voice-caption">Talk naturally. You can interrupt at any time.</p>
+        </div>
+      )}
+      <button
+        aria-label={active ? 'End voice chat' : 'Start voice chat'}
+        aria-pressed={active}
+        className="aura-voice-toggle"
+        disabled={props.disabled && !active}
+        onClick={() => { if (active) { stop() } else { void start() } }}
+        type="button"
+      >
+        {active ? 'End conversation' : 'Voice chat'}
+      </button>
+      <span aria-live="polite" className="sr-only" role="status">{status}</span>
+      {active && partial && <p aria-label="Live transcript" className="aura-voice-heard">{partial}</p>}
+    </div>
+  )
 }
