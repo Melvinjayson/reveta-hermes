@@ -179,7 +179,7 @@ export function AuraBrowserHandoff() {
 
             if (instruction.length >= 3) {
               void act(BASE, { session_id: sessionId, instruction }).then(ok => {
-                if (ok) setDraft('')
+                if (ok) setDraft(current => current.trim() === instruction ? '' : current)
               })
             }
           }}
