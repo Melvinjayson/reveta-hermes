@@ -80,7 +80,7 @@ export async function voiceModeFlow(page, expect, output) {
   if (body?.full_duplex !== false || body?.enabled !== false) {
     throw new Error(`Default mode should be off, got ${JSON.stringify(body)}`)
   }
-  await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible({ timeout: 60000 })
+  await expect(page.getByRole('heading', { name: 'Hi, I’m Aura.' })).toBeVisible({ timeout: 60000 })
   await expect(voice.getByRole('button', { name: 'Start voice chat' })).toBeVisible({ timeout: 60000 })
   // Trial click: passes only once nothing (the CONNECTING overlay) covers the control.
   await voice.getByRole('button', { name: 'Start voice chat' }).click({ trial: true, timeout: 60000 })

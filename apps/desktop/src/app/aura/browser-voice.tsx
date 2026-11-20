@@ -7,6 +7,8 @@ import type { ChatBarProps } from '@/app/chat/composer/types'
 import { chatMessageText } from '@/lib/chat-messages'
 import { sanitizeTextForSpeech } from '@/lib/speech-text'
 
+import { AuraConversationOrb } from './conversation-orb'
+
 interface RecognitionResult {
   isFinal: boolean
   0: { transcript: string }
@@ -211,7 +213,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
           <img alt="" className="aura-voice-brand" src="brand/aura-mark.svg" />
           <span className="aura-voice-kicker">Aura · Browser voice</span>
           <h2>{label === 'Speaking' ? 'Aura is speaking' : label === 'Thinking' ? 'One moment…' : label === 'Listening' ? 'Go ahead, I’m listening' : label}</h2>
-          <div aria-hidden="true" className="aura-voice-orb"><img alt="" src="brand/aura-mark.svg" /></div>
+          <AuraConversationOrb status={label} />
           <p className="aura-voice-caption">Turn-based voice. Tap interrupt to speak while Aura responds.</p>
         </div>
       )}

@@ -24,6 +24,7 @@ def main() -> None:
     root.mkdir(parents=True)
     for name in (
         "hermes_cli", "hermes_platform", "pm", "agent", "tools", "gateway", "tui_gateway", "cron", "plugins",
+        "reveta_ecosystem",  # hermes_cli/web_routers/reveta.py imports it at dashboard start
     ):
         shutil.copytree(repository / name, root / name,
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
