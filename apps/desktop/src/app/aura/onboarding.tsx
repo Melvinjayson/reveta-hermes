@@ -45,6 +45,8 @@ export function AuraOnboarding({ theme }: { theme: string }) {
 
     if (open && node && !node.open) {
       node.showModal()
+      // Start on the primary action, not on Skip, which is first in DOM order.
+      node.querySelector<HTMLButtonElement>('.aura-onboarding-next')?.focus()
     }
   }, [open])
 

@@ -48,3 +48,10 @@ it('shows nothing for an account that already finished', async () => {
   const { container } = render(<AuraOnboarding theme="dark" />)
   await waitFor(() => expect(container.innerHTML).toBe(''))
 })
+
+it('opens on the primary action rather than Skip', async () => {
+  serve(vi.fn().mockResolvedValue({ completed: false, storage_durable: false }))
+  render(<AuraOnboarding theme="dark" />)
+  const next = await screen.findByRole('button', { name: 'Next' })
+  await waitFor(() => expect(document.activeElement).toBe(next))
+})

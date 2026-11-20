@@ -19,6 +19,12 @@ const sizes = { mobile: { width: 390, height: 844 }, desktop: { width: 1440, hei
 const shot = (page, name) => page.screenshot({ path: `${output}/${name}.png` })
 const editor = page => page.locator('[contenteditable="true"]:visible').first()
 
+// The first-run welcome is covered by aura_browser.mjs; screens past it skip it.
+async function skipWelcome(page) {
+  const skip = page.locator('dialog.aura-onboarding').getByRole('button', { name: 'Skip', exact: true })
+  await skip.click({ timeout: 15000 }).catch(() => undefined)
+}
+
 async function send(page, text) {
   await editor(page).fill(text)
   const button = page.locator('form').getByRole('button', { name: 'Send', exact: true })
@@ -57,6 +63,7 @@ try {
   const page = await browser.newPage({ viewport: sizes.mobile, colorScheme: 'light', reducedMotion: 'reduce' })
   await page.goto(url)
   await expect(editor(page)).toBeVisible({ timeout: 60000 })
+  await skipWelcome(page)
   await settle(page)
   await shot(page, 'home-mobile')
 

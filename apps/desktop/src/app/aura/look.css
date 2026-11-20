@@ -455,6 +455,7 @@
 /* First-run welcome */
 .aura-dialog.aura-onboarding {
   width: min(92vw, 440px);
+  height: fit-content;
   max-height: min(88dvh, 640px);
   padding: 0;
   border: 1px solid var(--aura-line);
