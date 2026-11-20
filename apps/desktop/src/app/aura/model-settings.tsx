@@ -156,7 +156,7 @@ export function AuraModelSettings({ onSaved }: { onSaved?: () => void }) {
         </button>
       )}
       {message && <p role="status">{message}</p>}
-      <p>Your key is stored on your Aura server and never shown again. Aura stops replying when a limit is reached.</p>
+      <p>Your key is sent to your Aura server and is not displayed again here. Retention across server restarts requires durable secret storage; a successful save does not verify that durability. Aura stops replying when a configured limit is reached.</p>
     </form>
   )
 }
