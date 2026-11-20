@@ -265,3 +265,20 @@ async def set_aura_budget(body: BudgetUpdate, request: Request):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except BudgetRefused as exc:
         raise HTTPException(status_code=503, detail=exc.user_message) from exc
+
+
+@router.get("/api/aura/onboarding")
+async def aura_onboarding(request: Request):
+    """Whether this account finished the welcome, and whether the server keeps data across restarts."""
+    _require_token(request)
+    from tools.aura_onboarding import status
+
+    return await asyncio.to_thread(status)
+
+
+@router.put("/api/aura/onboarding")
+async def finish_aura_onboarding(request: Request):
+    _require_token(request)
+    from tools.aura_onboarding import complete
+
+    return await asyncio.to_thread(complete)

@@ -2,7 +2,7 @@
  "counts": {
   "http": {
    "keep-host-wide": 1,
-   "undecided": 362
+   "undecided": 364
   },
   "rpc": {
    "authority": 107,
@@ -56,6 +56,7 @@
   {"current_path": "hermes_cli.web_routers.aura_companion_handoff:handoff_latest", "decision": "undecided", "handler": "GET /api/aura/companion/handoff", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura_companion_handoff:handoff_status", "decision": "undecided", "handler": "GET /api/aura/companion/handoff/status", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_memory", "decision": "undecided", "handler": "GET /api/aura/memory", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:aura_onboarding", "decision": "undecided", "handler": "GET /api/aura/onboarding", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_preview", "decision": "undecided", "handler": "GET /api/aura/preview", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_projects", "decision": "undecided", "handler": "GET /api/aura/projects", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:aura_provider", "decision": "undecided", "handler": "GET /api/aura/provider", "kind": "http", "ref": ""},
@@ -348,6 +349,7 @@
   {"current_path": "hermes_cli.web_routers.webapp:redeem_window_ticket", "decision": "undecided", "handler": "POST /webapp/window-session", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:set_aura_budget", "decision": "undecided", "handler": "PUT /api/aura/budget", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:set_aura_capabilities", "decision": "undecided", "handler": "PUT /api/aura/capabilities", "kind": "http", "ref": ""},
+  {"current_path": "hermes_cli.web_routers.aura:finish_aura_onboarding", "decision": "undecided", "handler": "PUT /api/aura/onboarding", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:set_aura_preview", "decision": "undecided", "handler": "PUT /api/aura/preview", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:set_aura_project_membership", "decision": "undecided", "handler": "PUT /api/aura/projects/membership", "kind": "http", "ref": ""},
   {"current_path": "hermes_cli.web_routers.aura:set_aura_next_chat_project", "decision": "undecided", "handler": "PUT /api/aura/projects/next-chat", "kind": "http", "ref": ""},

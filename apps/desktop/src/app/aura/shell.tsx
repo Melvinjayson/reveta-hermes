@@ -29,6 +29,7 @@ import { AuraConversationRow } from './conversation-row'
 import { AuraDictation } from './dictation'
 import { groupHistory } from './history'
 import { AuraModelChip } from './model-chip'
+import { AuraOnboarding } from './onboarding'
 import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
 import { AuraProjectDialog } from './project-dialog'
 import { $auraProjects, type AuraProject, loadAuraProjects, startAuraProjectChat } from './projects'
@@ -352,6 +353,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
       <Contribute area={COMPOSER_AREAS.actions} id="aura:dictation">
         <AuraDictation />
       </Contribute>
+      <AuraOnboarding theme={resolvedMode} />
       <AuraToolsDialog theme={resolvedMode} />
       <AuraProjectDialog
         onClose={() => setProject(null)}
