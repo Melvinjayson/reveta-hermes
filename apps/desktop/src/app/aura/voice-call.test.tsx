@@ -205,3 +205,25 @@ it('mutes the microphone track and shows it, then ends the call cleanly', async 
   expect(screen.getByRole('button', { name: 'Start voice chat' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Mute microphone' })).toBeNull()
 })
+
+
+it('releases queued server audio and detaches socket messages when the call ends', async () => {
+  const audioStop = vi.fn()
+  vi.stubGlobal('AudioContext', class {
+    sampleRate = 48000
+    destination = {}
+    currentTime = 0
+    resume = async () => undefined
+    close = async () => undefined
+    createMediaStreamSource = () => ({ connect: vi.fn() })
+    createScriptProcessor = () => ({ connect: vi.fn(), disconnect: vi.fn() })
+    createBuffer = () => ({ duration: 0.1, getChannelData: () => new Float32Array(2) })
+    createBufferSource = () => ({ connect: vi.fn(), start: vi.fn(), stop: audioStop, onended: null })
+  })
+  const { ws } = await startCall()
+  act(() => ws.onmessage?.({ data: new Int16Array([0, 100]).buffer }))
+  fireEvent.click(screen.getByRole('button', { name: 'End voice chat' }))
+  expect(audioStop).toHaveBeenCalledTimes(1)
+  expect(ws.onmessage).toBeNull()
+  expect(track.stop).toHaveBeenCalled()
+})
