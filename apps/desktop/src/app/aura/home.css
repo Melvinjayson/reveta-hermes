@@ -114,3 +114,53 @@
     display: none;
   }
 }
+
+/* Home on a phone: reserve space for the composer and avoid suggestions
+   being hidden behind it. A slim horizontally scrollable chip row replaces
+   the long stack of oversized starter buttons. */
+@media (max-width: 639px) {
+  .aura-app .aura-empty {
+    gap: 10px;
+    padding: 16px 14px 156px;
+    max-width: 100%;
+    min-width: 0;
+    margin: auto;
+  }
+  .aura-app .aura-empty-mark {
+    width: 40px;
+    height: 40px;
+  }
+  .aura-app .aura-empty-mark img {
+    width: 30px;
+    height: 36px;
+  }
+  .aura-app .aura-empty h1 {
+    font-size: clamp(22px, 6vw, 26px);
+    line-height: 1.22;
+    max-width: 320px;
+  }
+  .aura-app .aura-suggestions {
+    width: min(100%, 340px);
+    max-width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-top: 4px;
+    padding-bottom: 4px;
+  }
+  .aura-app .aura-suggestions::-webkit-scrollbar {
+    display: none;
+  }
+  .aura-app .aura-suggestions button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 40px;
+    padding-inline: 14px;
+    font-size: 13px;
+  }
+}
