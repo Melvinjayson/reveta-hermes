@@ -197,7 +197,10 @@ def aura_settings(env: dict[str, str]) -> dict:
         "browser": browser_settings(env),
         # No Python-toolchain probe: it spawns pip/python subprocesses (9 s on an 8-core VM) that the
         # first turn after every restart waits on (up to 10 s), for a hint Aura's tools don't need.
-        "agent": {"system_prompt": AURA_SYSTEM_PROMPT, "environment_probe": False},
+        # A provider outage must fail fast and say so: one retry and one recovery cycle (Hermes
+        # defaults 3 and 5 meant ~20 calls and 4-5 minutes on a single 503; docs/aura/model-routing.md).
+        "agent": {"system_prompt": AURA_SYSTEM_PROMPT, "environment_probe": False,
+                  "api_max_retries": 2, "auto_recovery_cycles": 1},
         "approvals": {
             "mode": "manual",
             "cron_mode": "deny",
