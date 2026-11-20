@@ -80,11 +80,12 @@ class PreviewUpdate(BaseModel):
 def _require_owner(request: Request) -> None:
     """Preview switches are the owner's alone: the signed-in basic-auth account or a listed admin."""
     _require_token(request)
-    from tools.aura_owner import is_owner
+    from tools.aura_owner import caller_is_owner
 
     session = getattr(request.state, "session", None)
-    if session is None or not is_owner(getattr(session, "user_id", ""), getattr(session, "email", "")):
-        raise HTTPException(status_code=403, detail="Only the owner account can change preview features.")
+    if not caller_is_owner(getattr(request.app.state, "auth_required", False), getattr(session, "user_id", ""),
+                           getattr(session, "email", "")):
+        raise HTTPException(status_code=403, detail="Only the owner account can change this.")
 
 
 @router.get("/api/aura/preview")

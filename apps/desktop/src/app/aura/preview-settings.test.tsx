@@ -30,9 +30,9 @@ it('lets the owner switch run evidence on through the preview route', async () =
 })
 
 it('shows the refusal to anyone but the owner and offers no switches', async () => {
-  api.mockRejectedValue(new Error('403: {"detail": "Only the owner account can change preview features."}'))
+  api.mockRejectedValue(new Error('403: {"detail": "Only the owner account can change this."}'))
   render(<AuraPreviewSection />)
 
-  expect((await screen.findByRole('alert')).textContent).toBe('Only the owner account can change preview features.')
+  expect((await screen.findByRole('alert')).textContent).toBe('Only the owner account can change this.')
   expect(screen.queryByRole('switch')).toBeNull()
 })

@@ -50,6 +50,12 @@ def is_owner(user_id: str, email: str = "") -> bool:
     return bool(owner) and owner in who
 
 
+def caller_is_owner(auth_required: bool, user_id: str = "", email: str = "") -> bool:
+    """Owner check for a caller that already passed the sign-in gate. Without the gate (the local
+    loopback desktop) the only caller is the machine's owner."""
+    return not auth_required or is_owner(user_id, email)
+
+
 def _companion() -> dict:
     from hermes_cli.config import load_config_readonly
 

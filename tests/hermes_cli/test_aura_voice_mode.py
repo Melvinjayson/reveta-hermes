@@ -25,9 +25,14 @@ def _app(monkeypatch):
     return app
 
 
+def _found(*paths):
+    """A resolver answer: each path a present candidate, in probe order (PATH first, then known dirs)."""
+    return SimpleNamespace(candidates=[SimpleNamespace(value=p, present=True) for p in paths])
+
+
 def _runtime_installed(monkeypatch):
     monkeypatch.setattr(pipecat_voice, "runtime_python", lambda: "synthetic-python")
-    monkeypatch.setattr(pipecat_voice, "locate_command", lambda name: SimpleNamespace(found=True, command=[name]))
+    monkeypatch.setattr(pipecat_voice, "locate_command", lambda name, **kw: _found(name))
     monkeypatch.setattr(pipecat_voice, "has_flite", lambda ffmpeg: True)
 
 
@@ -83,18 +88,28 @@ def test_an_ffmpeg_without_flite_keeps_the_browser_voice(monkeypatch, tmp_path):
     monkeypatch.setattr(pipecat_voice, "runtime_python", lambda: "synthetic-python")
     for with_flite, expected in ((False, False), (True, True)):
         ffmpeg = _fake_ffmpeg(tmp_path, with_flite)
-        monkeypatch.setattr(pipecat_voice, "locate_command", lambda name, f=ffmpeg: SimpleNamespace(found=True, command=[f]))
+        monkeypatch.setattr(pipecat_voice, "locate_command", lambda name, f=ffmpeg, **kw: _found(f))
         assert pipecat_voice.has_flite(ffmpeg) is with_flite
         assert pipecat_voice.speech_ffmpeg() == (ffmpeg if with_flite else None)
         assert pipecat_voice.voice_mode() == {"full_duplex": expected, "enabled": True, "runtime": expected}
     # The socket refuses before starting the speech process, so nothing runs silently.
     with TestClient(_app(monkeypatch)) as client:
-        monkeypatch.setattr(pipecat_voice, "locate_command",
-                            lambda name: SimpleNamespace(found=True, command=[_fake_ffmpeg(tmp_path, False)]))
+        monkeypatch.setattr(pipecat_voice, "locate_command", lambda name, **kw: _found(_fake_ffmpeg(tmp_path, False)))
         with client.websocket_connect("/api/audio/pipecat") as ws:
             frame = ws.receive_json()
     assert frame["type"] == "unavailable"
     assert pipecat_voice._active is False
+
+
+@pytest.mark.platforms("posix")
+def test_the_distribution_ffmpeg_with_flite_is_used_when_pm_ffmpeg_comes_first_on_path(monkeypatch, tmp_path):
+    """The image symlinks PM's ffmpeg (no flite) into /usr/local/bin; Debian's /usr/bin/ffmpeg can speak."""
+    plain, flite = _fake_ffmpeg(tmp_path, False), _fake_ffmpeg(tmp_path, True)
+    seen = {}
+    monkeypatch.setattr(pipecat_voice, "locate_command",
+                        lambda name, known_dirs=(): seen.setdefault("dirs", known_dirs) and _found(plain, flite))
+    assert pipecat_voice.speech_ffmpeg() == flite
+    assert "/usr/bin" in seen["dirs"]
 
 
 def test_a_missing_or_broken_ffmpeg_is_not_a_speech_runtime(tmp_path):

@@ -49,9 +49,39 @@ def has_flite(ffmpeg: str) -> bool:
 
 
 def speech_ffmpeg():
-    """The ffmpeg the speech process gets, or None when none on PATH can synthesise speech."""
-    ffmpeg = locate_command('ffmpeg')
-    return ffmpeg.command[0] if ffmpeg.found and has_flite(ffmpeg.command[0]) else None
+    """The first ffmpeg that can synthesise speech, or None. The image puts the PM-managed ffmpeg (no
+    ``flite``) first on PATH, so the distribution's ``/usr/bin/ffmpeg`` is probed after it."""
+    found = locate_command('ffmpeg', known_dirs=('/usr/bin',))
+    for candidate in found.candidates:
+        if candidate.present and has_flite(candidate.value):
+            return candidate.value
+    return None
+
+
+MIN_HEADROOM = 280 * 1024 * 1024  # PR #16 measured the speech process tree at ~273 MiB RSS.
+_CGROUP_FILES = (('/sys/fs/cgroup/memory.current', '/sys/fs/cgroup/memory.max'),  # cgroup v2
+                 ('/sys/fs/cgroup/memory/memory.usage_in_bytes', '/sys/fs/cgroup/memory/memory.limit_in_bytes'))
+
+
+def memory_headroom():
+    """Bytes left under this container's memory limit, or None when there is no readable limit."""
+    for current_path, limit_path in _CGROUP_FILES:
+        try:
+            current = int(Path(current_path).read_text(encoding='utf-8-sig').strip())
+            limit = Path(limit_path).read_text(encoding='utf-8-sig').strip()
+        except (OSError, ValueError):
+            continue
+        # cgroup v2 says "max"; v1 reports a huge number when unlimited.
+        if limit == 'max' or int(limit) >= 1 << 60:
+            return None
+        return int(limit) - current
+    return None
+
+
+def owner_call(auth_required: bool, identity: dict) -> bool:
+    from tools.aura_owner import caller_is_owner
+
+    return caller_is_owner(auth_required, str(identity.get('user_id') or ''), str(identity.get('email') or ''))
 
 
 def voice_mode() -> dict:
@@ -123,10 +153,18 @@ async def _stop_speech(process):
             await asyncio.wait_for(process.wait(), timeout=3)
 
 
+def _request_owner(request: Request) -> bool:
+    session = getattr(request.state, 'session', None)
+    return owner_call(getattr(request.app.state, 'auth_required', False),
+                      {'user_id': getattr(session, 'user_id', ''), 'email': getattr(session, 'email', '')})
+
+
 @router.get('/api/aura/voice/mode')
 async def aura_voice_mode(request: Request):
     _require_token(request)
-    return await asyncio.to_thread(voice_mode)
+    mode = await asyncio.to_thread(voice_mode)
+    # Full duplex is the owner's alone: everyone else keeps the browser voice.
+    return mode if _request_owner(request) else {'full_duplex': False, 'enabled': False, 'runtime': False}
 
 
 def set_full_duplex(enabled: bool) -> dict:
@@ -145,6 +183,8 @@ def set_full_duplex(enabled: bool) -> dict:
 @router.put('/api/aura/voice/mode')
 async def aura_voice_mode_set(request: Request):
     _require_token(request)
+    if not _request_owner(request):
+        raise HTTPException(status_code=403, detail='Only the owner account can change this.')
     body = await request.json()
     if not isinstance(body, dict) or not isinstance(body.get('full_duplex'), bool):
         raise HTTPException(status_code=422, detail='full_duplex must be true or false.')
@@ -165,6 +205,10 @@ async def voice_ws(ws: WebSocket):
         await ws.send_json({'type': 'unavailable', 'message': 'Full-duplex voice is off in Settings.'})
         await ws.close()
         return
+    if not owner_call(getattr(ws.app.state, 'auth_required', False), getattr(ws, '_hermes_auth_identity', None) or {}):
+        await ws.send_json({'type': 'unavailable', 'message': 'Full-duplex voice is for the owner account only.'})
+        await ws.close()
+        return
     python = await asyncio.to_thread(runtime_python)
     ffmpeg = await asyncio.to_thread(speech_ffmpeg)
     if _active:
@@ -173,6 +217,13 @@ async def voice_ws(ws: WebSocket):
         return
     if python is None or ffmpeg is None:
         await ws.send_json({'type': 'unavailable', 'message': 'Continuous voice unavailable; use labelled turn-based voice.'})
+        await ws.close()
+        return
+    headroom = await asyncio.to_thread(memory_headroom)
+    if headroom is not None and headroom < MIN_HEADROOM:
+        # A speech process on top would risk the whole service being killed for memory.
+        await ws.send_json({'type': 'unavailable', 'message': "The server doesn't have enough free memory for a "
+                            'voice call right now. Aura keeps the browser voice; try again later.'})
         await ws.close()
         return
     _active = True

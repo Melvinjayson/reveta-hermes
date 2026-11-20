@@ -61,6 +61,7 @@ async def test_cancellation_during_speech_cleanup_still_releases_decoder(monkeyp
 
     class Socket:
         query_params = {}
+        app = SimpleNamespace(state=SimpleNamespace(auth_required=False))  # loopback: the machine's owner
         async def accept(self, **kwargs):
             pass
         async def receive_json(self):
@@ -76,6 +77,7 @@ async def test_cancellation_during_speech_cleanup_still_releases_decoder(monkeyp
     monkeypatch.setattr(pipecat_voice, 'full_duplex_enabled', lambda: True)
     monkeypatch.setattr(pipecat_voice, 'runtime_python', lambda: 'synthetic-python')
     monkeypatch.setattr(pipecat_voice, 'speech_ffmpeg', lambda: 'synthetic-ffmpeg')
+    monkeypatch.setattr(pipecat_voice, '_CGROUP_FILES', ())
     monkeypatch.setattr(pipecat_voice.asyncio, 'create_subprocess_exec', spawn)
     task = asyncio.create_task(pipecat_voice.voice_ws(Socket()))
     await asyncio.wait_for(configured.wait(), 5)
