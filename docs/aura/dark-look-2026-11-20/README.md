@@ -1,6 +1,6 @@
 # Aura dark look — after the reference (20 Nov 2026)
 
-`reference.png` is the target Melvin supplied. Screens are headless Chromium, fake model,
+`reference.jpg` is the target Melvin supplied. Screens are headless Chromium, fake model,
 real local webapp; not a physical Android device.
 
 Adopted: true-black dark page, violet glow arc and larger mark over "Hi, I’m Aura.",
