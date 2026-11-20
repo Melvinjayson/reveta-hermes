@@ -1,13 +1,13 @@
 import { useStore } from '@nanostores/react'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { requestComposerFocus, requestComposerInsert, requestComposerSubmit } from '@/app/chat/composer/focus'
 import { chatMessageText } from '@/lib/chat-messages'
 import { $busy, $messages } from '@/store/session'
 
 import { AuraCard } from './card'
-import { AuraFiles } from './files'
+import { auraFiles } from './files'
 import {
   $auraDismissedGoals,
   $auraGoalKey,
@@ -17,8 +17,8 @@ import {
   dismissAuraGoal,
   saveAuraGoal
 } from './goals'
+import { clock, openAuraPanel } from './panel-store'
 import { auraSources } from './sources'
-import { AuraSteps } from './step-history'
 import { auraSteps } from './steps'
 
 interface AuraConversationCardsProps {
@@ -52,6 +52,18 @@ function GoalEditor({ initial, onDone }: { initial: string; onDone: (text: null 
   )
 }
 
+function LiveClock({ since }: { since: number }) {
+  const [now, setNow] = useState(() => Date.now() / 1000)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now() / 1000), 1000)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return <time className="aura-strip-time">{clock(now - since)}</time>
+}
+
 export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
   const messages = useStore($messages)
   const busy = useStore($busy)
@@ -82,12 +94,10 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
     }
   }
 
-  const counts = [
-    steps.length > 0 && `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}${running ? `, ${running} running` : ''}`,
-    sources.length > 0 && `${sources.length} ${sources.length === 1 ? 'source' : 'sources'}`
-  ].filter(Boolean)
-
-  const showPanel = Boolean(goal || steps.length || sources.length || resumed || editing)
+  const files = new Set(auraFiles(messages).map(file => file.path)).size
+  const plural = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`
+  const showPanel = Boolean(goal || resumed || editing)
+  const live = steps.findLast(step => step.status === 'Running')
 
   const finishEdit = (text: null | string) => {
     if (text && key) {
@@ -132,7 +142,6 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
           <summary>
             <span>{resumed ? 'Pick up where you left off' : goal ? 'Goal' : 'This chat'}</span>
             {goal && <span className="aura-context-goal">{goal}</span>}
-            {counts.length > 0 && <span className="aura-context-counts">{counts.join(' · ')}</span>}
             <ChevronDown aria-hidden="true" size={16} />
           </summary>
           <div className="aura-context-body">
@@ -168,30 +177,39 @@ export function AuraConversationCards({ resumed }: AuraConversationCardsProps) {
                 </p>
               </AuraCard>
             )}
-            {sources.length > 0 && (
-              <details className="aura-context-sources">
-                <summary>Sources in this conversation</summary>
-                {sources.map(([url, label]) => (
-                  <AuraCard key={url} kind="source" title={label}>
-                    <p>{new URL(url).hostname} · Date not provided</p>
-                    <p>Referenced in Aura’s reply. Open the source to check the original.</p>
-                    <a href={url} rel="noreferrer" target="_blank">
-                      {new URL(url).hostname}
-                    </a>
-                  </AuraCard>
-                ))}
-              </details>
-            )}
-            <AuraSteps steps={steps} />
           </div>
         </details>
       )}
-      <AuraFiles messages={messages} />
-      {busy && (
-        <p aria-live="polite" className="aura-context-status" role="status">
-          {steps.findLast(step => step.status === 'Running')?.label.concat('…') ?? 'Waiting for Aura’s response.'} You can
-          stop it below.
-        </p>
+      {(steps.length > 0 || sources.length > 0 || files > 0 || busy) && (
+        <div aria-label="This chat" className="aura-strip" role="group">
+          {busy ? (
+            <button className="aura-strip-live" onClick={() => openAuraPanel('work')} type="button">
+              <span aria-hidden="true" className="aura-live-dot" />
+              <span aria-live="polite" className="aura-context-status" role="status">
+                {live ? `${live.label}…` : 'Working…'}
+              </span>
+              {live?.timestamp !== undefined && <LiveClock since={live.timestamp} />}
+              <span className="sr-only">You can stop it below.</span>
+            </button>
+          ) : (
+            steps.length > 0 && (
+              <button onClick={() => openAuraPanel('work')} type="button">
+                {plural(steps.length, 'step')}
+                {running ? `, ${running} running` : ''}
+              </button>
+            )
+          )}
+          {sources.length > 0 && (
+            <button onClick={() => openAuraPanel('sources')} type="button">
+              {plural(sources.length, 'source')}
+            </button>
+          )}
+          {files > 0 && (
+            <button onClick={() => openAuraPanel('files')} type="button">
+              {plural(files, 'file')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

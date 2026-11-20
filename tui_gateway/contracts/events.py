@@ -886,3 +886,13 @@ __all__ = [
     "TurnStatus", "VoicePartialPayload", "VoiceStatusPayload",
     "VoiceTranscriptPayload", "WakeDetectedPayload",
 ]
+
+
+class VoicePlayedPayload(Payload):
+    turn_id: str
+    message_index: int
+    text: str
+    interrupted: bool
+
+
+event("message.voice_played", VoicePlayedPayload, doc="Acknowledged speech prefix in this chat turn, never generated-only text.")

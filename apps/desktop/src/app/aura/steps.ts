@@ -17,12 +17,28 @@ const STEP_NAMES = {
   aura_browser: 'Read a page in the browser',
   aura_file: 'Work with a conversation file',
   aura_computer: 'Run a command in Aura’s workspace',
-  aura_complex: 'Anthropic complex workflow'
+  aura_complex: 'Anthropic complex workflow',
+  memory: 'Update memory',
+  session_search: 'Search past chats',
+  skills_list: 'Look up skills',
+  skill_view: 'Read a skill',
+  skill_manage: 'Change a skill',
+  delegate_task: 'Hand off to a subagent',
+  cronjob_manage: 'Change a scheduled job',
+  clarify: 'Ask you a question',
+  process_manage: 'Manage a background task',
+  browser_exec: 'Use the browser',
+  browser_cdp: 'Use the browser',
+  browser_dialog: 'Answer a browser dialog',
+  vision_analyze: 'Look at an image',
+  image_generate: 'Create an image'
 }
 
 export interface AuraStep {
   id: string
   label: string
+  /** Tool name for the activity icon; absent for non-tool steps. */
+  tool?: string
   status: StepStatus
   timestamp?: number
   completedAt?: number
@@ -131,22 +147,8 @@ export function auraSteps(messages: ChatMessage[]): AuraStep[] {
 
       return [{
         id: `${message.id}:${part.toolCallId ?? index}`,
-        label, status, timestamp: part.timestamp, completedAt: part.completedAt, facts, detail
+        label, tool: part.toolName, status, timestamp: part.timestamp, completedAt: part.completedAt, facts, detail
       }]
     })
   })
-}
-
-export function stepDuration(step: AuraStep, now: number): string {
-  if (step.timestamp === undefined) {
-    return 'Timing unavailable'
-  }
-
-  const end = step.completedAt ?? (step.status === 'Running' ? now : undefined)
-
-  if (end === undefined) {
-    return 'Timing unavailable'
-  }
-
-  return `${Math.max(0, Math.floor(end - step.timestamp))}s`
 }

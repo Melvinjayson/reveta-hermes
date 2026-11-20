@@ -586,20 +586,19 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
   const label = voiceLabel(active, muted, busy, status)
 
   return (
-    <div aria-label="Voice" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+    <div aria-label="Voice chat" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
       <button
         aria-describedby="aura-voice-hint"
-        aria-label={active ? 'End voice' : 'Start voice'}
+        aria-label={active ? 'End voice chat' : 'Start voice chat'}
         aria-pressed={active}
         className="aura-voice-toggle"
         disabled={disabled}
         onClick={active ? stop : start}
-        title={active ? 'End voice' : 'Start voice'}
         type="button"
       >
         {active ? <PhoneOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
         <span aria-hidden="true" className="aura-voice-dot" />
-        <span className="aura-voice-label">{active ? label : 'Voice'}</span>
+        <span className="aura-voice-label">{active ? label : 'Voice chat'}</span>
       </button>
       {active && (
         <button
@@ -607,7 +606,6 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
           aria-pressed={muted}
           className="aura-voice-icon"
           onClick={toggleMute}
-          title={muted ? 'Unmute microphone' : 'Mute microphone'}
           type="button"
         >
           {muted ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
@@ -624,7 +622,6 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
             call.current?.ws.send(JSON.stringify({ type: 'interrupt' }))
             setStatus('Interrupted')
           }}
-          title="Stop speaking"
           type="button"
         >
           <Square aria-hidden="true" size={16} />

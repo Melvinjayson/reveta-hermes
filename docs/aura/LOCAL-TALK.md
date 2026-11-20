@@ -1,4 +1,4 @@
-# On-device conversation prototype (opt-in)
+# Aura Zero on-device conversation prototype (opt-in)
 
 Branch `aura/local-talk-prototype`, based on the live branch `aura/working-product-20261111` at `e2e7c1ac18`.
 Off by default. Nothing changes for anyone who hasn't opened `?aura-local=1`.

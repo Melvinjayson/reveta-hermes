@@ -1,5 +1,17 @@
 /* global window */
 import { readFileSync } from 'node:fs'
+import { installVoiceFixture } from './aura_pipecat_browser.mjs'
+
+async function openPanel(page, tab) {
+  if (!(await page.locator('.aura-panel-tabs').isVisible().catch(() => false))) {
+    await page.getByRole('button', { name: 'Open side panel', exact: true }).click()
+  }
+  await page.getByRole('tab', { name: tab, exact: true }).click()
+}
+
+async function closePanel(page) {
+  await page.getByRole('button', { name: 'Close panel', exact: true }).click()
+}
 
 /** Run against the real Webapp/gateway; only speech hardware and the model are fakes. */
 export async function productFlow(page, expect, output) {
@@ -22,6 +34,7 @@ export async function productFlow(page, expect, output) {
       state
     }
   })
+  const fixture = await installVoiceFixture(page)
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
   await editor.fill('Research HTTP client requests and give me a one-page brief')
@@ -32,10 +45,10 @@ export async function productFlow(page, expect, output) {
   const approval = page.locator('[data-aura-card=approval]')
   await expect(approval).toContainText('pwd', { timeout: 180000 })
   await approval.getByRole('button', { name: /^Approve/ }).click()
-  await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible({ timeout: 180000 })
-  await page.locator('.aura-context-panel').evaluate(node => (node.open = true))
+  await expect(page.getByRole('group', { name: 'This chat' }).getByRole('button', { name: '1 file', exact: true })).toBeVisible({ timeout: 180000 })
+  await expect(page.locator('[data-role=assistant]').last()).toContainText('Brief ready', { timeout: 180000 })
+  await openPanel(page, 'Work')
   const steps = page.locator('.aura-steps')
-  await steps.locator(':scope > summary').click()
   await expect(steps.locator('[data-aura-step=Done]')).toHaveCount(5)
   await expect(steps).toContainText('Run a command in Aura’s workspace')
   const terminal = steps.locator('[data-aura-step=Done]').filter({ hasText: 'Run a command in Aura’s workspace' })
@@ -46,7 +59,9 @@ export async function productFlow(page, expect, output) {
   await expect(steps).toContainText('nodejs/node')
   await expect(steps).toContainText('curl/curl')
   await steps.screenshot({ path: `${output}/product-steps-mobile.png` })
+  await closePanel(page)
   await expect(page.locator('[data-role=assistant]').last()).toContainText('Brief ready')
+  await openPanel(page, 'Files')
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Download brief.md', exact: true }).click()
@@ -56,19 +71,25 @@ export async function productFlow(page, expect, output) {
   for (const text of ['# HTTP client requests', 'https://raw.githubusercontent.com/python/cpython', 'https://raw.githubusercontent.com/nodejs/node', 'https://raw.githubusercontent.com/curl/curl']) {
     if (!bytes.includes(text)) { throw new Error(`Brief lacks expected citation/content: ${text}`) }
   }
+  await page.getByRole('button', { name: /brief\.md/ }).first().click()
+  await expect(page.locator('.aura-file-preview')).toContainText('HTTP client requests', { timeout: 30000 })
+  await page.screenshot({ path: `${output}/product-file-preview-mobile.png` })
+  await closePanel(page)
   await page.screenshot({ path: `${output}/product-research-mobile.png` })
   await page.reload()
-  await page.locator('.aura-context-panel').evaluate(node => (node.open = true))
+  await openPanel(page, 'Files')
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible({ timeout: 60000 })
+  await page.getByRole('tab', { name: 'Work' }).click()
   await expect(page.locator('[data-aura-step=Done]')).toHaveCount(5)
-  await page.getByRole('button', { name: 'New conversation', exact: true }).first().click()
+  await closePanel(page)
+  await page.getByRole('button', { name: 'New chat', exact: true }).first().click()
   await page.getByRole('button', { name: 'Open menu', exact: true }).click()
-  await page.getByRole('dialog').locator('.aura-conversations section button').first().click()
-  await page.locator('.aura-context-panel').evaluate(node => (node.open = true))
+  await page.getByRole('dialog', { name: 'Aura menu' }).locator('.aura-conversation-open').first().click()
+  await openPanel(page, 'Files')
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible()
+  await closePanel(page)
 
-  await page.locator('.aura-context-panel > summary').click()
-  const voice = page.locator('.aura-browser-voice')
+  const voice = page.getByRole('group', { name: 'Voice chat' })
   // Chromium's synthetic microphone exercises device access only. Recognition
   // and speech playback below remain explicit fakes, not a live STT/TTS claim.
   const audioTracks = await page.evaluate(async () => {
@@ -76,8 +97,7 @@ export async function productFlow(page, expect, output) {
     try { return stream.getAudioTracks().length } finally { stream.getTracks().forEach(track => track.stop()) }
   })
   expect(audioTracks).toBe(1)
-  await expect(voice).toContainText('Full duplex unavailable')
-  await voice.getByRole('button', { name: 'Start voice', exact: true }).click()
+  await voice.getByRole('button', { name: 'Start voice chat', exact: true }).click()
   await expect(voice, 'voice listens immediately after enabling').toHaveAttribute('data-aura-voice', 'Listening')
   await page.evaluate(() => window.auraVoiceFixture.interim('What should I remember'))
   await expect(voice.getByLabel('Live transcript')).toContainText('What should I remember')
@@ -97,6 +117,9 @@ export async function productFlow(page, expect, output) {
   await expect(voice).toHaveAttribute('data-aura-voice', 'off')
   await page.reload()
   await expect(page.locator('[data-role=user]').last()).toContainText('What should I remember from the brief?')
+  await openPanel(page, 'Files')
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible()
+  await closePanel(page)
   console.log('PASS: mobile research plan → three real sources → Hermes file adapter → cited download → reload/reopen; fake speech UI listening/transcript/thinking/speaking/barge-in/denial, same chat context.')
+
 }

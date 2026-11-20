@@ -716,7 +716,7 @@ class SessionAuthority:
         self._require_admission_open(queue_only=queue_only)
         if (request.intent != 'queue' or not {'text'} <= set(request.payload) <= {
                 'text', 'attachments', 'finite', 'unattended', 'surface', 'voice_context', 'interrupted',
-                'voice_turn', 'display_kind', 'title_preview', 'turn_author', 'api_text', 'model_override', 'clarify_batch'}
+                'voice_turn', 'voice_recording_id', 'display_kind', 'title_preview', 'turn_author', 'api_text', 'model_override', 'clarify_batch'}
                 or not isinstance(request.payload['text'], str)):
             raise RuntimeStoreError('invalid_params')
         from gateway.session_ingress_media import admit_attachments
@@ -931,7 +931,7 @@ class SessionAuthority:
         self._schedule(ref)
         return self._receipt(row)
 
-    async def interrupt(self, actor, ref, generation):
+    async def interrupt(self, actor, ref, generation, *, preserve_running_tools=False):
         self.authorize(actor, ref, 'session:control')
         handle = self._handle(ref)
         if handle.execution_generation != generation:
@@ -956,9 +956,16 @@ class SessionAuthority:
                     self.delivered_stops[ref.session_id] = generation
         # Stop hard-cancels this turn (aborts compression too). Background delegations are not the
         # turn: they keep running and report back; `/stop` and session close/reset end them.
-        from agent.interrupt_compat import request_hard_interrupt
+        from agent.interrupt_compat import request_hard_interrupt, request_voice_interrupt
         if agent is not None:
-            request_hard_interrupt(agent)
+            if preserve_running_tools:
+                if not request_voice_interrupt(agent):
+                    raise RuntimeStoreError('voice_interrupt_unsupported')
+            else:
+                request_hard_interrupt(agent)
+        if preserve_running_tools:
+            from gateway.session_server_requests import withdraw
+            withdraw(live.event_stream, ref.session_id, 'approval')
         return self._handle(ref)
 
     def _classic_turn_holds(self, route):

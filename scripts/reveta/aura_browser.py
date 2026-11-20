@@ -27,6 +27,8 @@ def browser_session(
     cost_blocked: bool = False,
     product: bool = False,
     retired_model: bool = False,
+    capabilities: bool = False,
+    voice_mode: bool = False,
 ) -> int:
     from tests.fakes.fake_llm_provider import write_hermes_home
 
@@ -57,6 +59,25 @@ def browser_session(
         config['browser']['executable_path'] = '/usr/bin/chromium'
         config['browser'].setdefault('chromium_args', []).extend(['--no-sandbox', '--disable-dev-shm-usage'])
         prepare_test_browser_trust(home)
+        with (home / "config.yaml").open("w", encoding="utf-8") as output:
+            yaml.dump(config, output)
+    if capabilities:
+        from ruamel.yaml import YAML
+        from scripts.reveta.aura_config import aura_settings
+
+        yaml = YAML()
+        config = yaml.load((home / "config.yaml").read_text(encoding="utf-8-sig"))
+        # Owner-unlocked Hermes toolsets (tools/aura_capabilities.py) with the free-only rule off,
+        # as on the live service. Manual approval still gates every non-read action.
+        config["aura"]["enabled"] = True
+        config["aura"]["free_only"] = False
+        # As generated for Aura: clarifying questions skip the approval tap (decision F).
+        config["aura"]["clarify_without_approval"] = aura_settings({})["aura"]["clarify_without_approval"]
+        config["tools"] = {"tool_search": {"enabled": "off"}}
+        config["platform_toolsets"] = {p: ["aura", "todo", "clarify", "browser", "terminal"] for p in ("cli", "api_server")}
+        config["browser"] = aura_settings({**os.environ, "HERMES_HOME": str(home)})["browser"]
+        config["browser"]["executable_path"] = "/usr/bin/chromium"
+        config["browser"].setdefault("chromium_args", []).extend(["--no-sandbox", "--disable-dev-shm-usage"])
         with (home / "config.yaml").open("w", encoding="utf-8") as output:
             yaml.dump(config, output)
     if cost_blocked:
@@ -128,6 +149,8 @@ def browser_session(
                     "costBlocked": cost_blocked,
                     "product": product,
                     "retiredModel": retired_model,
+                    "capabilities": capabilities,
+                    "voiceMode": voice_mode,
                 }
             ),
             text=True,
@@ -170,6 +193,7 @@ def main() -> int:
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--product-only', action='store_true')
+    parser.add_argument('--voice-mode-only', action='store_true')
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="aura-browser-") as directory:
         target = Path(directory) / "synthetic-action-count.json"
@@ -206,6 +230,8 @@ def main() -> int:
         try:
             if args.product_only:
                 return product_scenario(directory, target)
+            if args.voice_mode_only:
+                return voice_mode_scenario(directory, target)
             return run_scenarios(directory, target, command)
         finally:
             action_server.shutdown()
@@ -224,6 +250,10 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
             raise AssertionError('Retired model was retried or a fallback was called')
 
     result = product_scenario(directory, target)
+    if result:
+        return result
+
+    result = capabilities_scenario(directory, target)
     if result:
         return result
 
@@ -259,6 +289,37 @@ def run_scenarios(directory: str, target: Path, command: str) -> int:
         return browser_session(
             Path(directory) / "no-model", fake.base_url, target, no_model=True
         )
+
+
+def capabilities_scenario(directory: str, target: Path) -> int:
+    """Unlocked clarify and click-and-type browser: both reach the user only through manual approval."""
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text, ToolCall
+
+    with FakeLLMServer([
+        ToolCall('clarify', {'questions': [{'question': 'Which audience first?', 'choices': ['Founders', 'Students']}]},
+                 text='One quick question first.'),
+        Text('Stub output: founders it is.'),
+        ToolCall('browser_exec', {'code': 'print(1)'}, text='I will open the page and type into its search box.'),
+        Text('Stub output: browser step declined.'),
+    ]) as fake:
+        result = browser_session(Path(directory) / 'capabilities', fake.base_url, target, capabilities=True)
+        if result:
+            return result
+        offered = {tool['function']['name'] for tool in fake.main_requests()[0].get('tools', [])}
+        if not {'clarify', 'browser_exec'} <= offered:
+            raise AssertionError(f'Unlocked tools were not offered: {sorted(offered)}')
+        last = fake.main_requests()[-1]['messages']
+        tool_results = [str(m.get('content')) for m in last if m.get('role') == 'tool']
+        if not tool_results or not any('refused' in text or 'did not run' in text or 'denied' in text.lower()
+                                       for text in tool_results[-1:]):
+            raise AssertionError('Declined browser step did not come back as refused')
+        return 0
+def voice_mode_scenario(directory: str, target: Path) -> int:
+    """Default config (full duplex off): live voice by default; selector and fallback (PR #16)."""
+    from tests.fakes.fake_llm_provider import FakeLLMServer, Text
+
+    with FakeLLMServer([Text('Stub output: noted.')] * 4) as fake:
+        return browser_session(Path(directory) / 'voice-mode', fake.base_url, target, voice_mode=True)
 
 
 def product_scenario(directory: str, target: Path) -> int:

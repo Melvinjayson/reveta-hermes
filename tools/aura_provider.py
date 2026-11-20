@@ -116,15 +116,21 @@ def record(agent, usage) -> None:
     paid = route()
     if not matches(paid, agent.provider, agent.base_url, agent.model):
         return
-    entry = price(paid["provider"], paid["model"])
-    tokens = {name: Decimal(int(getattr(usage, name, 0) or 0)) for name in
+    tokens = {name: int(getattr(usage, name, 0) or 0) for name in
               ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")}
+    charge(agent.session_id or "", paid["provider"], paid["model"], usd_for(paid, **tokens))
+
+
+def usd_for(paid: dict, input_tokens: int = 0, output_tokens: int = 0, cache_read_tokens: int = 0,
+            cache_write_tokens: int = 0) -> float:
+    """Cost of one call on the paid route at the bundled price snapshot."""
+    entry = price(paid["provider"], paid["model"])
     read_rate = entry.cache_read_cost_per_million or entry.input_cost_per_million
     write_rate = entry.cache_write_cost_per_million or entry.input_cost_per_million
-    usd = (tokens["input_tokens"] * entry.input_cost_per_million
-           + tokens["output_tokens"] * entry.output_cost_per_million
-           + tokens["cache_read_tokens"] * read_rate + tokens["cache_write_tokens"] * write_rate) / 1_000_000
-    charge(agent.session_id or "", paid["provider"], paid["model"], float(usd))
+    usd = (Decimal(input_tokens) * entry.input_cost_per_million
+           + Decimal(output_tokens) * entry.output_cost_per_million
+           + Decimal(cache_read_tokens) * read_rate + Decimal(cache_write_tokens) * write_rate) / 1_000_000
+    return float(usd)
 
 
 def options() -> list[dict]:

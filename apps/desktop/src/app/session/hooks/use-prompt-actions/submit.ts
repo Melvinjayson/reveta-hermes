@@ -1099,6 +1099,7 @@ export function useSubmitPrompt(deps: SubmitPromptDeps) {
           ...(options?.surface && { surface: options.surface }),
           ...(options?.surface && options.voiceContext && { voice_context: options.voiceContext }),
           ...(options?.voiceTurn && { voice_turn: true }),
+          ...(options?.voiceRecordingId && { voice_recording_id: options.voiceRecordingId }),
           // A queue drain is a "run after" message, never a live-turn
           // correction. The flag tells the gateway's busy path to hold it for
           // the next turn untouched — without it, losing the settle race

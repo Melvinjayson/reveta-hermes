@@ -36,10 +36,10 @@ export interface SiblingWsRoute {
   profile?: null | string
 }
 
-type AudioSocketPath = '/api/audio/speak-stream' | '/api/audio/transcribe-stream' | '/api/audio/voice-call'
+type AudioSocketPath = '/api/audio/speak-stream' | '/api/audio/transcribe-stream' | '/api/audio/voice-call' | '/api/audio/pipecat'
 
 const isAudioSocketPath = (path: string): path is AudioSocketPath =>
-  path === '/api/audio/speak-stream' || path === '/api/audio/transcribe-stream' || path === '/api/audio/voice-call'
+  path === '/api/audio/speak-stream' || path === '/api/audio/transcribe-stream' || path === '/api/audio/voice-call' || path === '/api/audio/pipecat'
 
 /**
  * Resolve `ws(s)://<gateway>/<path>` for `route`. `stripGatewayCredential`

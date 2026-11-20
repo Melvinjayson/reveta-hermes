@@ -13,6 +13,9 @@ from pathlib import Path
 import re
 import sys
 
+# tools/ lives at the repository root; this script runs as scripts/reveta/aura_config.py.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 DEFAULT_FREE_GEMINI_MODEL = "gemini-3.8-flash"
 
 # Identity slot #1 (HERMES_HOME/SOUL.md). Without it the stock "You are Hermes Agent, built by Nous Research"
@@ -80,9 +83,17 @@ def write_soul(home: Path) -> bool:
     return True
 
 
+# Owner settings with a default: the generated value applies until the owner sets a boolean of their own.
+# Decision F (18 Nov 2026): clarifying questions appear without an approval tap; every other
+# consequential tool still asks (tools/aura_dispatch_policy.py).
+AURA_OWNER_DEFAULTS = {"clarify_without_approval": True}
+
 COMPOSIO_MCP_URL = "https://connect.composio.dev/mcp"
 # Composio's remote sandboxes run open-ended code off-box; Aura has its own workspace tool.
 COMPOSIO_EXCLUDED_TOOLS = ["COMPOSIO_REMOTE_WORKBENCH", "COMPOSIO_REMOTE_BASH_TOOL"]
+
+
+COMPOSIO_SERVERS = ("composio",)
 
 
 def mcp_settings(env: dict[str, str]) -> dict:
@@ -135,6 +146,7 @@ def aura_settings(env: dict[str, str]) -> dict:
             "free_only": False,
             "free_models": free_models,
             "free_tools": [],
+            **AURA_OWNER_DEFAULTS,
             "anthropic": {
                 "model": env.get("AURA_ANTHROPIC_MODEL", "claude-sonnet-4-5"),
                 "per_chat_usd": _cap(env.get("AURA_ANTHROPIC_PER_CHAT_USD", "0")),
@@ -160,9 +172,32 @@ def aura_settings(env: dict[str, str]) -> dict:
             "enabled": True,
             "host": "0.0.0.0",
             "port": 10000,
-            "public_url": "https://aura-zero.onrender.com",
+            "public_url": public_url(env),
         },
     }
+
+
+DEFAULT_PUBLIC_URL = "https://aura-zero.onrender.com"
+
+
+def public_url(env: dict[str, str]) -> str:
+    """The address browsers use. It pins the webapp's Origin check and sign-in callback, so a host
+    other than Render sets ``AURA_PUBLIC_URL``. A malformed value stops the boot rather than serving
+    with an Origin allowlist nobody chose."""
+    raw = env.get("AURA_PUBLIC_URL", "").strip()
+    if not raw:
+        return DEFAULT_PUBLIC_URL
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(raw.rstrip("/"))
+    try:
+        port = parts.port
+    except ValueError:
+        port = 0
+    if (parts.scheme not in {"http", "https"} or not parts.hostname or port == 0 or parts.username
+            or parts.password or parts.query or parts.fragment or parts.path):
+        raise ValueError("AURA_PUBLIC_URL must be an http(s) origin such as https://aura.example.org")
+    return f"{parts.scheme}://{parts.netloc}"
 
 
 def browser_settings(env: dict[str, str]) -> dict:
@@ -174,6 +209,58 @@ def browser_settings(env: dict[str, str]) -> dict:
     if proxy.hostname and proxy.port and not (proxy.username or proxy.password):
         browser["chromium_args"] = [f"--proxy-server={proxy.scheme}://{proxy.hostname}:{proxy.port}"]
     return browser
+
+
+def merge_owner_settings(config: dict, settings: dict) -> dict:
+    """Apply the generated settings over an existing config.yaml without losing what the owner set in the app.
+
+    Generated keys win (model defaults, free-only policy, approvals, prompt, webapp). The owner keeps:
+    the paid route and its model (Settings -> Model, tools/aura_provider.py); every ``aura.*`` key the
+    generator does not set (such as ``voice``), and a boolean of their own for each key in
+    ``AURA_OWNER_DEFAULTS``; the capability switches
+    from Tools (tools/aura_capabilities.py) in ``platform_toolsets``; and MCP servers with their on/off
+    switch (Settings -> Connectors). Composio follows the environment: without its key it is removed.
+    """
+    old_aura = config.get("aura") if isinstance(config.get("aura"), dict) else {}
+    old_model = config.get("model")
+    old_toolsets = config.get("platform_toolsets") if isinstance(config.get("platform_toolsets"), dict) else {}
+    unlocked = _unlocked_toolsets(old_toolsets)
+    servers = config.get("mcp_servers") if isinstance(config.get("mcp_servers"), dict) else {}
+    owner_servers = {name: servers.pop(name) for name in list(servers) if name in COMPOSIO_SERVERS}
+    config.update(settings)
+    for key, value in old_aura.items():
+        if key not in config["aura"] or (key in AURA_OWNER_DEFAULTS and isinstance(value, bool)):
+            config["aura"][key] = value
+    if isinstance(old_aura.get("paid_route"), dict) and isinstance(old_model, dict):
+        config["model"] = old_model
+    else:
+        config["aura"].pop("paid_route", None)
+    # Generated servers (Composio) return only while their key is in the environment.
+    for name, generated in (settings.get("mcp_servers") or {}).items():
+        owner = owner_servers.get(name)
+        enabled = owner.get("enabled") if isinstance(owner, dict) else None
+        servers[name] = {**generated, **({"enabled": enabled} if isinstance(enabled, bool) else {})}
+    if servers:
+        config["mcp_servers"] = servers
+    else:
+        config.pop("mcp_servers", None)
+    from tools.aura_capabilities import BASE_TOOLSETS
+
+    for platform, toolsets in config["platform_toolsets"].items():
+        owner = old_toolsets.get(platform) if isinstance(old_toolsets.get(platform), list) else []
+        rest = [name for name in toolsets if name not in BASE_TOOLSETS]
+        rest += [name for name in owner if name in servers and name not in rest]
+        # Same order as tools/aura_capabilities.configure: base, unlocked, then MCP servers.
+        config["platform_toolsets"][platform] = [*BASE_TOOLSETS, *unlocked.get(platform, ()), *rest]
+    return config
+
+
+def _unlocked_toolsets(platform_toolsets: dict) -> dict[str, list[str]]:
+    """Per platform, the owner's switched-on capabilities, limited to those Tools can switch on."""
+    from tools.aura_capabilities import CAPABILITIES
+
+    return {platform: [name for name in CAPABILITIES if name in names]
+            for platform, names in platform_toolsets.items() if isinstance(names, list)}
 
 
 def _cap(value: str) -> float:
@@ -206,15 +293,7 @@ def main() -> int:
             config = {}
         if not isinstance(config, dict):
             raise ValueError("Existing configuration must be a mapping")
-        # Keep the owner's paid route from Aura Settings across restarts (tools/aura_provider.py).
-        paid = (config.get("aura") or {}).get("paid_route")
-        paid_model = config.get("model")
-        config.update(settings)
-        if "mcp_servers" not in settings and isinstance(config.get("mcp_servers"), dict):
-            config["mcp_servers"].pop("composio", None)  # key removed from the environment
-        if isinstance(paid, dict) and isinstance(paid_model, dict):
-            config["aura"]["paid_route"] = paid
-            config["model"] = paid_model
+        config = merge_owner_settings(config, settings)
         args.write.parent.mkdir(parents=True, exist_ok=True)
         Path(settings['terminal']['cwd']).mkdir(parents=True, exist_ok=True)
         with args.write.open("w", encoding="utf-8") as output:

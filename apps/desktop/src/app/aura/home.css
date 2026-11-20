@@ -1,0 +1,116 @@
+/* Home: greeting, composer, starters. On wide screens the composer sits at the
+ * vertical centre with the greeting above and starters below; phones keep it docked. */
+.aura-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--aura-space-4);
+  width: min(100%, 720px);
+  margin: auto;
+  padding: var(--aura-space-6) var(--aura-space-4);
+  text-align: center;
+  color: var(--aura-ink);
+}
+.aura-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+}
+.aura-empty-mark img {
+  width: 36px;
+  height: 42px;
+  object-fit: contain;
+}
+.aura-greeting {
+  margin: 0;
+  font-size: var(--aura-text-md);
+  color: var(--aura-muted);
+}
+.aura-empty h1 {
+  margin: 0;
+  font-size: var(--aura-text-xl);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.aura-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--aura-space-2);
+  margin-top: var(--aura-space-2);
+}
+.aura-suggestions button {
+  min-height: var(--aura-target);
+  padding: 0 var(--aura-space-4);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-pill);
+  background: var(--aura-surface);
+  color: var(--aura-ink);
+  font-size: var(--aura-text-sm);
+  transition: background-color var(--aura-fast) var(--aura-ease), border-color var(--aura-fast) var(--aura-ease);
+}
+.aura-suggestions button:hover {
+  background: var(--aura-subtle);
+}
+.aura-notice {
+  margin: 0;
+  padding: var(--aura-space-3) var(--aura-space-4);
+  border: 1px solid var(--aura-line);
+  border-radius: var(--aura-radius-card);
+  font-size: var(--aura-text-sm);
+}
+.aura-empty [role='status'] {
+  font-size: var(--aura-text-sm);
+  color: var(--aura-muted);
+}
+
+/* Dictation mic beside send */
+.aura-dictation-button[data-listening] {
+  background: var(--aura-accent-soft);
+  color: var(--aura-accent);
+}
+
+@media (min-width: 640px) {
+  .aura-empty h1 {
+    font-size: var(--aura-text-2xl);
+  }
+  .aura-chat div:has(> .aura-empty) {
+    padding-top: 0 !important;
+  }
+  .aura-empty {
+    grid-template-rows: 1fr var(--composer-measured-height, 120px) 1fr;
+    gap: 0;
+    min-height: 100%;
+    padding-block: 0;
+  }
+  .aura-empty-head {
+    display: grid;
+    justify-items: center;
+    align-content: end;
+    gap: var(--aura-space-3);
+    padding-bottom: var(--aura-space-6);
+  }
+  .aura-empty-foot {
+    display: grid;
+    justify-items: center;
+    align-content: start;
+    gap: var(--aura-space-3);
+    padding-top: var(--aura-space-4);
+  }
+  .aura-chat:has(.aura-empty) [data-slot='composer-dock'] {
+    bottom: calc(50% - var(--composer-measured-height, 120px) / 2);
+    width: min(100% - 32px, 720px);
+  }
+}
+@media (max-width: 639px) {
+  .aura-empty-head,
+  .aura-empty-foot {
+    display: contents;
+  }
+}
+@media (max-width: 639px) {
+  .aura-empty-composer-slot {
+    display: none;
+  }
+}

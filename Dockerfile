@@ -78,7 +78,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/opt/hermes/tools
 # user cannot apt-get it later (no root, and the root fs resets on restart).
 RUN apt-get -o Acquire::Retries=3 update && \
     apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-    ca-certificates curl iputils-ping python3 python-is-python3 gcc g++ make cmake python3-dev python3-venv libffi-dev libolm-dev libatomic1 procps git openssh-client docker-cli xz-utils tmux \
+    ca-certificates curl iputils-ping python3 python-is-python3 gcc g++ make cmake python3-dev python3-venv libffi-dev libolm-dev libatomic1 procps ffmpeg git openssh-client docker-cli xz-utils tmux \
     libasound2t64 libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 libcairo2 libcups2t64 libdbus-1-3 libgbm1 libglib2.0-0t64 libnspr4 libnss3 libpango-1.0-0 libx11-6 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -313,6 +313,15 @@ RUN "$(python3 -c 'from pm.install import uv_launcher; print(uv_launcher("uv"))'
       --python /usr/local/bin/python3 --target /opt/aura-voice/site \
       "pipecat-ai[silero,websocket]==1.16.0" \
     && test -d /opt/aura-voice/site/pipecat
+
+# Full-duplex voice (hermes_cli/web_routers/pipecat_voice.py) runs its speech in a child process on
+# this separate sealed runtime, isolated from the agent's dependency graph. The Silero VAD and
+# pocketsphinx models ship inside their wheels, so nothing downloads at run time. The server never
+# imports it: the child starts only when the owner opens a full-duplex call and is killed when it ends.
+# Debian's ffmpeg above is the one with the flite filter the pipeline speaks through.
+COPY hermes_cli/aura_voice_runtime /opt/hermes/voice-deps
+RUN python3 -m pm.build_env --source /opt/hermes/voice-deps --python /usr/local/bin/python3 \
+    --cache /opt/hermes/uv-cache --out /opt/hermes/.voice-runtime --no-install-project --sealed
 
 # Icons render on the runtime environment: Pillow and resvg-py are core
 # dependencies. A stage of its own so the frontend stage keeps building its

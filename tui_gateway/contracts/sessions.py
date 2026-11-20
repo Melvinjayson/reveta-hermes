@@ -606,6 +606,7 @@ method("session.compress", params=SessionCompressParams, result=SessionCompressR
 
 class SessionInterruptParams(SessionParams):
     expected_hosted_task_id: str | None = None  # only interrupt if this hosted task is the running one
+    preserve_running_tools: bool = False
 
 
 class InterruptStatus(WireEnum):

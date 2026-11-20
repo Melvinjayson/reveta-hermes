@@ -1,0 +1,130 @@
+/* Aura design tokens: one neutral palette, one accent, light and dark.
+ * Spec: docs/aura/redesign-spec.md §4. Every Aura surface reads these; the shared
+ * --ui-* / shadcn variables are mapped onto them so shared components follow. */
+@font-face {
+  font-family: Inter;
+  src: url('/fonts/aura/inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.aura-app,
+.aura-sheet,
+.aura-dialog,
+html[data-hermes-desktop-host='browser'] {
+  --aura-page: #ffffff;
+  --aura-sidebar: #f7f7f8;
+  --aura-surface: #ffffff;
+  --aura-subtle: #f2f2f4;
+  --aura-line: #e4e4e8;
+  --aura-ink: #18181b;
+  --aura-muted: #5f5f68;
+  --aura-accent: #1f6fb5;
+  --aura-on-accent: #ffffff;
+  --aura-accent-soft: color-mix(in srgb, var(--aura-accent) 10%, transparent);
+  --aura-danger: #b42318;
+  --aura-ok: #067647;
+  --aura-warn: #b54708;
+  --aura-scrim: rgb(0 0 0 / 0.32);
+  --aura-shadow: 0 8px 24px rgb(0 0 0 / 0.08);
+
+  --aura-font: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --aura-text-xs: 12px;
+  --aura-text-sm: 13px;
+  --aura-text-md: 14px;
+  --aura-text-body: 16px;
+  --aura-text-lg: 18px;
+  --aura-text-xl: 24px;
+  --aura-text-2xl: 30px;
+
+  --aura-space-1: 4px;
+  --aura-space-2: 8px;
+  --aura-space-3: 12px;
+  --aura-space-4: 16px;
+  --aura-space-6: 24px;
+  --aura-space-8: 32px;
+  --aura-space-12: 48px;
+
+  --aura-radius-control: 8px;
+  --aura-radius-card: 12px;
+  --aura-radius-large: 16px;
+  --aura-radius-pill: 999px;
+
+  --aura-fast: 120ms;
+  --aura-medium: 200ms;
+  --aura-ease: cubic-bezier(0.2, 0, 0, 1);
+  --aura-target: 44px;
+
+  /* Legacy aliases kept so existing Aura rules read the new palette. */
+  --aura-link: var(--aura-accent);
+  --aura-send-ink: var(--aura-on-accent);
+  --aura-sky: var(--aura-accent);
+}
+
+.aura-app[data-aura-theme='dark'],
+.aura-app[data-aura-theme='dark'] .aura-sheet,
+.aura-dialog[data-aura-theme='dark'],
+.aura-sheet[data-aura-theme='dark'],
+html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
+  --aura-page: #131315;
+  --aura-sidebar: #0e0e10;
+  --aura-surface: #1b1b1e;
+  --aura-subtle: #232327;
+  --aura-line: #2e2e33;
+  --aura-ink: #ececef;
+  --aura-muted: #a1a1aa;
+  --aura-accent: #7cc4f0;
+  --aura-on-accent: #0b1b2b;
+  --aura-danger: #f97066;
+  --aura-ok: #47cd89;
+  --aura-warn: #fdb022;
+  --aura-scrim: rgb(0 0 0 / 0.56);
+  --aura-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
+}
+
+/* Shared component variables follow the Aura palette inside the browser host. */
+html[data-hermes-desktop-host='browser'],
+.aura-app {
+  --foreground: var(--aura-ink) !important;
+  --background: var(--aura-page) !important;
+  --midground: var(--aura-accent) !important;
+  --primary: var(--aura-accent) !important;
+  --primary-foreground: var(--aura-on-accent) !important;
+  --ui-text-primary: var(--aura-ink) !important;
+  --ui-text-secondary: var(--aura-muted) !important;
+  --ui-text-tertiary: var(--aura-muted) !important;
+  --ui-text-quaternary: var(--aura-muted) !important;
+  --font-sans: var(--aura-font);
+  --popover: var(--aura-surface);
+  --popover-foreground: var(--aura-ink);
+  --card: var(--aura-surface);
+  --card-foreground: var(--aura-ink);
+  --muted: var(--aura-subtle);
+  --muted-foreground: var(--aura-muted);
+  --secondary: var(--aura-subtle);
+  --secondary-foreground: var(--aura-ink);
+  --accent: var(--aura-subtle);
+  --accent-foreground: var(--aura-ink);
+  --border: var(--aura-line);
+  --ring: var(--aura-accent);
+}
+
+.aura-app {
+  --ui-chat-surface-background: var(--aura-page);
+  --ui-bg-chrome: var(--aura-page);
+  --dt-user-bubble: var(--aura-subtle);
+  --dt-input: var(--aura-surface);
+  --dt-composer-ring: var(--aura-accent);
+  --composer-fill: var(--aura-surface);
+  --ui-composer-background: var(--aura-surface);
+  --ui-control-active-background: var(--aura-subtle);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-app,
+  .aura-sheet,
+  .aura-dialog {
+    --aura-fast: 0ms;
+    --aura-medium: 0ms;
+  }
+}

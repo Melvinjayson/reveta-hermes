@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Aura Companion</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <strong>Aura Companion</strong>
+    <span class="tag">test build</span>
+  </header>
+
+  <section id="account"></section>
+
+  <section>
+    <h2>This site</h2>
+    <p id="site-status" role="status"></p>
+    <div class="row">
+      <button id="follow" type="button" hidden>Follow this site</button>
+      <button id="unfollow" type="button" hidden>Stop following</button>
+      <button id="unblock" type="button" class="quiet" hidden>Remove from blocked list</button>
+    </div>
+    <label class="row"><input id="paused" type="checkbox"> Pause everywhere</label>
+  </section>
+
+  <section>
+    <h2>Ask about this page</h2>
+    <div class="row">
+      <button id="insight" type="button">Insights</button>
+    </div>
+    <textarea id="ask" rows="2" placeholder="Ask Aura about this page…" maxlength="2000"></textarea>
+    <button id="ask-send" type="button">Ask</button>
+    <div id="answer" class="answer" aria-live="polite"></div>
+  </section>
+
+  <section>
+    <h2>Take over</h2>
+    <div id="handoff" class="answer" hidden>
+      <p><strong>From your Aura chat:</strong> <span id="handoff-text"></span></p>
+      <div class="row">
+        <button id="handoff-start" type="button">Plan it here</button>
+        <button id="handoff-dismiss" type="button">Not now</button>
+      </div>
+    </div>
+    <p class="hint">Aura acts here only when you ask. Anything that sends, submits, posts, buys, pays or deletes waits for your approval. Press Stop or Esc any time.</p>
+    <textarea id="instruction" rows="2" placeholder="e.g. Fill the search box with ‘Dublin co-working’ and search" maxlength="1000"></textarea>
+    <button id="plan" type="button">Plan it</button>
+    <ol id="steps"></ol>
+    <div class="row">
+      <button id="run" type="button" hidden>Run</button>
+      <button id="approve" type="button" hidden>Approve this step</button>
+      <button id="resume" type="button" hidden>I'm done, continue</button>
+      <button id="stop" type="button" class="danger" hidden>Stop</button>
+    </div>
+    <p id="run-status" role="status"></p>
+  </section>
+
+  <section>
+    <h2>What Aura has kept</h2>
+    <p class="hint">Stored only in this browser. Sent to Aura only when you tap Insights, Ask or Plan.</p>
+    <label class="row">Keep for
+      <select id="retention"><option value="1h">1 hour</option><option value="1d">1 day</option><option value="7d">7 days</option></select>
+    </label>
+    <ul id="trail"></ul>
+    <button id="delete-all" type="button" class="danger">Delete everything</button>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="lib/redact.js"></script>
+  <script src="lib/policy.js"></script>
+  <script src="lib/takeover.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
