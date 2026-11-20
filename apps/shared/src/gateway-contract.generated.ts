@@ -3660,6 +3660,7 @@ export interface SessionInterruptParams {
   session_id: string
   profile?: string | null
   expected_hosted_task_id?: string | null
+  preserve_running_tools?: boolean
 }
 export interface SessionInterruptResult {
   status: InterruptStatus
@@ -5242,10 +5243,11 @@ export interface CanonicalSessionListRow {
   resolved_id?: string | null
   root_title?: string | null
 }
-export interface CanonicalControlParams {
+export interface CanonicalInterruptParams {
   profile?: string | null
   session_id: string
   execution_generation: number
+  preserve_running_tools?: boolean
 }
 export interface CanonicalSessionHandle {
   ref: CanonicalSessionRef
@@ -5254,6 +5256,18 @@ export interface CanonicalSessionHandle {
   revision: number
   execution_generation: number
   execution_state: 'idle' | 'running' | 'waiting' | 'unknown' | 'terminal'
+}
+export interface CanonicalVoiceRecordParams {
+  profile?: string | null
+  session_id: string
+  turn_id: string
+  message_index: number
+  text: string
+  interrupted?: boolean
+}
+export interface CanonicalVoiceRecordResult {
+  text: string
+  interrupted: boolean
 }
 export interface CanonicalCorrectionParams {
   profile?: string | null
@@ -5316,6 +5330,7 @@ export interface CanonicalSubmitParams {
   voice_context?: string | null
   interrupted?: boolean
   voice_turn?: boolean
+  voice_recording_id?: string | null
   display_kind?: 'hidden' | null
   title_preview?: string | null
   turn_author?: CanonicalTurnAuthor | null
@@ -6181,6 +6196,12 @@ export interface PetHatchProgressPayload {
 }
 /** ``change_watcher._CHANGE_WATCHES`` payload fn — ``{}`` for every watch except pet.changed. */
 export type ChangeSignalPayload = Record<string, unknown>
+export interface VoicePlayedPayload {
+  turn_id: string
+  message_index: number
+  text: string
+  interrupted: boolean
+}
 export type ConnectorErrorReason = 'INVALID_PARAMS' | 'NOT_OWNER' | 'UNSUPPORTED_RUNTIME' | 'CONNECTOR_REQUEST_FAILED' | 'INVALID_CONNECTOR_RESPONSE' | 'UNKNOWN_TARGET' | 'LINK_STILL_VALID' | 'REISSUE_REFUSED' | 'UNKNOWN_OPERATION' | 'INVALID_ANSWER' | 'NEEDS_NOUS_AUTH' | 'CONNECTOR_NOT_FOUND' | 'TOOLS_UNAVAILABLE' | 'CONNECTORS_UNAVAILABLE' | 'CATALOG_UNAVAILABLE' | 'ACCOUNTS_UNAVAILABLE' | 'CONNECTION_NOT_FOUND' | 'POLICY_UNAVAILABLE' | 'POLICY_CONFLICT' | 'FORBIDDEN_SCOPE' | 'ORG_REQUIRED' | 'ORG_ACCESS_DENIED' | 'INVALID_POLICY' | 'ALIAS_TAKEN'
 
 // ── Client→server methods ──
@@ -7041,7 +7062,7 @@ export interface CanonicalRpcMethods {
   'session.export': { params: SessionExportParams; result: SessionExportResult }
   /** Frozen launch policy projection of one local session. */
   'session.info': { params: CanonicalSessionInfoParams; result: CanonicalSessionInfo }
-  'session.interrupt': { params: CanonicalControlParams; result: CanonicalSessionHandle }
+  'session.interrupt': { params: CanonicalInterruptParams; result: CanonicalSessionHandle }
   'session.list': { params: CanonicalListParams; result: CanonicalListResult }
   /** Revision-fenced, retry-idempotent session edit (rename, archive, sidebar, branch, delete, rewind, reset, model, reasoning, workspace, edit_policy, compress, import). */
   'session.mutate': { params: SessionMutateParams; result: SessionMutateResult }
@@ -7052,6 +7073,7 @@ export interface CanonicalRpcMethods {
   /** The session.usage dict on demand: what main's classic CLI read off its agent. */
   'session.stats': { params: SessionStatsParams; result: SessionStats }
   'session.steer': { params: CanonicalCorrectionParams; result: CanonicalCorrectionResult }
+  'session.voice.record': { params: CanonicalVoiceRecordParams; result: CanonicalVoiceRecordResult }
   /** Ink ``!cmd`` / ``{!cmd}`` on the shared owner: one safe command for a local session, in its frozen launch cwd (``gateway/session_shell.py``). */
   'shell.exec': { params: CanonicalShellExecParams; result: ShellExecResult }
   /** Adopt a registered execution after verifying the live producer claim. */
@@ -7111,6 +7133,7 @@ export const CANONICAL_RPC_METHODS = [
   'session.resume',
   'session.stats',
   'session.steer',
+  'session.voice.record',
   'shell.exec',
   'worker.adopt',
   'worker.persist',
@@ -7220,6 +7243,8 @@ export interface BackendGatewayEventMap {
   'message.reaction': MessageReactionPayload
   /** A turn began streaming; an automation turn carries its async-result card. */
   'message.start': MessageStartPayload
+  /** Acknowledged speech prefix in this chat turn, never generated-only text. */
+  'message.voice_played': VoicePlayedPayload
   /** The MoA aggregator started. */
   'moa.aggregating': MoaAggregatingPayload
   /** MoA phase transition (currently only ``aggregator``). */
@@ -7356,6 +7381,7 @@ export const GATEWAY_EVENT_TYPES = [
   'message.interim',
   'message.reaction',
   'message.start',
+  'message.voice_played',
   'moa.aggregating',
   'moa.phase',
   'moa.progress',

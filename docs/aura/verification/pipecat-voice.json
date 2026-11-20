@@ -1,0 +1,194 @@
+{
+  "source_commit": "e0980da8c7cb36666b5b1f0b3d85bd46db285573",
+  "verified_base": "12c8f57e9fa444f1d9d78de301a6b40e7f1c953e",
+  "pull_request": "https://github.com/Melvinjayson/reveta-hermes/pull/11",
+  "repository_checks": {
+    "command": "python scripts/check --base 12c8f57e9fa444f1d9d78de301a6b40e7f1c953e",
+    "passed": 14,
+    "log_sha256": "8d191bbef7218efb4f1cbd33ed4a8d3bd72719ec020638d8a42698d779b8beed",
+    "log": "pipecat-voice-check.txt"
+  },
+  "aura_gate": {
+    "command": "python scripts/reveta/aura_check.py",
+    "passed": 14,
+    "failed": [],
+    "raw": "pipecat-voice-aura-gate.json"
+  },
+  "speech_contract_tests": {
+    "command": "HERMES_PYTHON=<isolated voice test interpreter> scripts/run_tests.sh tests/hermes_cli/test_aura_voice_pipeline.py",
+    "passed": 2,
+    "log_sha256": "8023ae61c14dc66e1caa86a78caf2af95d6e322b251baab190c8b075a84f1667"
+  },
+  "storage_regressions": {
+    "passed": 7,
+    "compression_tests_failed_before_fix": 2,
+    "checks": [
+      "played-only initial flush",
+      "ack before flush including managed projection",
+      "receipt replay and principal binding",
+      "next claim freezes prefix",
+      "terminal result redaction",
+      "compression carries played prefix and rejects forks",
+      "claim after compression freezes prior prefix"
+    ]
+  },
+  "additional_compatibility_sweep": {
+    "passed": 17,
+    "failed": 2,
+    "failures": [
+      "tests/gateway/test_managed_worker_turn_flags.py::test_one_shot_managed_turns_never_park_an_approval",
+      "tests/gateway/test_managed_worker_turn_flags.py::test_managed_turn_follows_the_sessions_current_yolo"
+    ],
+    "baseline_reproduction": {
+      "commit": "12c8f57e9fa444f1d9d78de301a6b40e7f1c953e",
+      "same_failures": 2,
+      "command": "scripts/run_tests.sh tests/gateway/test_managed_worker_turn_flags.py",
+      "log_sha256": "6e1bc8a29c41446c8518736bc4c07afa673b507e7c337fd003b38e481c48202c"
+    },
+    "branch_log_sha256": "d33cfaea7261d5adabd4fda80d37ee2c180181f36aba2ffe7337b1721b3988ab"
+  },
+  "real_speech_graph": {
+    "pipecat": "1.15.0",
+    "real": [
+      "Silero VAD",
+      "PocketSphinx bundled English",
+      "FFmpeg Flite slt"
+    ],
+    "fake": [
+      "synthetic speech source",
+      "Hermes reply"
+    ],
+    "provider_calls": 0,
+    "reply_to_first_pcm_ms": 164.7,
+    "speech_process_tree_peak_rss_mib": 249.04,
+    "partial_count": 28,
+    "final": {
+      "type": "final",
+      "turn_id": "7e3f1a90260040bca6e9bf4fddccf2c8",
+      "text": "change a request and tell me the time"
+    },
+    "played": {
+      "type": "played",
+      "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "message_index": 0,
+      "text": "Change the request and tell me the time.",
+      "interrupted": false
+    },
+    "interrupted": {
+      "type": "played",
+      "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "message_index": 0,
+      "text": "Change the request and tell me the time.",
+      "interrupted": true
+    },
+    "limit": "Local speech process tree only; total deployed host and real phone acceptance remain separate."
+  },
+  "real_websocket_factory": {
+    "transport": "real FastAPI WebSocket + isolated Pipecat worker",
+    "fake": [
+      "auth acceptance (real rejection gates separately tested)",
+      "Hermes reply text"
+    ],
+    "raw_audio_stored": false,
+    "reconnect_audio_replayed": false,
+    "frames": [
+      {
+        "type": "ready",
+        "sample_rate": 16000,
+        "seq": 1,
+        "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+        "conversation_id": "same-chat"
+      },
+      {
+        "type": "audio",
+        "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packet_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:1",
+        "text": "Heard first.",
+        "message_index": 0,
+        "sample_rate": 16000,
+        "seq": 2,
+        "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+        "conversation_id": "same-chat"
+      },
+      {
+        "type": "audio",
+        "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packet_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:2",
+        "text": "Never play this second sentence.",
+        "message_index": 0,
+        "sample_rate": 16000,
+        "seq": 3,
+        "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+        "conversation_id": "same-chat"
+      },
+      {
+        "type": "played",
+        "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "message_index": 0,
+        "text": "Heard first.",
+        "interrupted": false,
+        "seq": 4,
+        "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+        "conversation_id": "same-chat"
+      },
+      {
+        "type": "played",
+        "turn_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "message_index": 0,
+        "text": "Heard first.",
+        "interrupted": true,
+        "seq": 5,
+        "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+        "conversation_id": "same-chat"
+      }
+    ],
+    "reconnect_ready": {
+      "type": "ready",
+      "sample_rate": 16000,
+      "seq": 6,
+      "epoch": "c77f6e50332c47c3aa8e92337352b75c",
+      "conversation_id": "same-chat"
+    }
+  },
+  "browser_after_gates": {
+    "command": "python scripts/reveta/aura_browser.py --product-only",
+    "viewport": [
+      390,
+      844
+    ],
+    "real": [
+      "Webapp",
+      "signed-in chat gateway",
+      "chat admission, tool adapters, history",
+      "AudioWorklet capture and PCM playback scheduling"
+    ],
+    "fake": [
+      "microphone hardware",
+      "STT events",
+      "TTS PCM",
+      "model provider"
+    ],
+    "assertions": [
+      "partials do not submit",
+      "one replayed final makes one user message",
+      "completed packet acknowledgement",
+      "barge-in flush",
+      "changed request in same thread",
+      "truncated reply survives reload",
+      "new reply persists after acknowledgement"
+    ],
+    "screenshot": "../screenshots/pipecat-voice/same-thread-interruption-mobile.png",
+    "log_sha256": "ad7b562ad23e3e14933ab6945a369682e60c85889f90e7a9c989121f61e5d694"
+  },
+  "real_model_or_paid_speech_calls": 0,
+  "raw_audio_written_by_app": false,
+  "not_claimed": [
+    "Melvins physical phone test",
+    "deployed acceptance",
+    "Docker image build",
+    "512 MiB total active Render load test",
+    "entire repository and Electron E2E suites",
+    "GitHub CI completion"
+  ],
+  "handoff_date_utc": "2026-11-15"
+}

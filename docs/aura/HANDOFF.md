@@ -1,20 +1,158 @@
-# Pipecat voice preflight — 13 November 2026 — NOT SHIPPED
+# Pipecat continuous voice — 15 November 2026 — draft, not deployed
 
-Branch `aura/pipecat-voice` starts at product branch commit
-`defc60b288778a5b039d6004c0c93ee9c31985d4`. This increment does **not**
-implement the requested continuous Pipecat voice layer. Keep the existing
-**Browser voice · turn-based** label. Do not deploy or describe this draft as
-hands-free voice acceptance. No merge, Render setting, paid provider, new key,
-or production audio capture was performed.
+Branch `aura/pipecat-voice`, draft PR [#11](https://github.com/Melvinjayson/reveta-hermes/pull/11) (preflight PR #8 was merged externally), targets
+`aura/working-product-20261111`. Rebased onto `12c8f57e9fa444f1d9d78de301a6b40e7f1c953e`;
+workspace, chat layout and fork-runner changes remain owned by their existing work.
+Merging and the deployment decision remain Melvin's. No Render setting, secret,
+paid speech provider, production audio capture or deployment was changed.
 
-Rebased onto `b48a78c70a016f6a4f78b5052eda50783400160b`, retaining the other
-chat's startup-workspace and CI-runner changes and both handoff additions.
+## Runtime and brain
 
-### Official initializer follow-up
+`/api/audio/pipecat` uses the existing chat WebSocket credential/ticket and Origin
+gates over WSS. The browser keeps one microphone open during listening, thinking
+and speaking. The speech-only subprocess graph is:
 
-Used [pipecat-ai/pipecat](https://github.com/pipecat-ai/pipecat), inspected
-upstream checkout `1bc2e37b15566cd34bb6941a335ce09c3bbbab8c`, and ran the
-**pinned 1.15.0 CLI** successfully in an isolated directory outside the checkout:
+`WebSocketInput → PocketSphinx STT → Pipecat user turn handling + Silero VAD → HermesBridge → Flite TTS → WebSocketOutput → PlayedTextRecorder`.
+
+Silero sends start/stop signals upstream to STT, with 150 ms start / 350 ms stop
+windows. Pipecat interruptions are enabled; the stop strategy uses definitive
+local STT finals and no downloaded turn model. English PocketSphinx's bundled
+model and FFmpeg's local Flite `slt` voice cost $0 and need no keys/downloads.
+`pipecat-ai[silero]==1.15.0` and `pocketsphinx==5.1.1` have their own frozen PM
+manifest/lock under `hermes_cli/aura_voice_runtime`. Isolation avoids the existing
+KittenTTS / soundfile version conflict without relaxing core requirements.
+**v2 (PR #16):** the default Docker image does *not* bake this environment or
+FFmpeg (Render free has 512 MiB; the speech tree peaked at 249 MiB RSS). Full
+duplex is opt-in: `aura.voice.full_duplex: true` in `config.yaml` plus a locally
+built `.voice-runtime` (commands below). Otherwise the composer shows the live
+`AuraVoice` unchanged. On Render, `scripts/reveta/aura_config.py --write`
+rewrites the `aura` block at boot, so the setting cannot be on there today.
+No UDP, LiveKit, extra service or Render configuration is used.
+
+`HermesBridge` emits final transcripts to the signed-in composer's existing
+`onSubmit`, not another agent endpoint. The same `prompt.submit` admission owns
+authentication, conversation, selected model, spend/free-only refusal, tools,
+manual approvals and step history. It receives **neither `voice_turn: true` nor
+`surface: voice-live`**: those existing options select a different auxiliary route.
+There is no second LLM. Streamed chat text is sent back to the same speech graph;
+Pipecat's sentence aggregator releases immutable turn/index packets to TTS.
+
+## Contract
+
+- `conversation_id` is the existing text chat's runtime session ID. A fresh empty
+  composer adopts its ordinary newly accepted chat ID; the pre-admission speech
+  process has only a provisional transport label, never a second conversation.
+- Each STT final gets a UUID-hex `turn_id`, used unchanged as `submission_id` and
+  `voice_recording_id`. Partials are live display only. Pipecat final dedup,
+  browser consumption and the existing durable admission ledger prevent a
+  replayed final from adding another message or re-running work.
+- Speech events carry an `epoch` and monotonically increasing `seq`. Reconnect
+  retains the same random client identity and last sequence. Authenticated,
+  principal/profile/client-scoped replay retains the last 128 final/played frames
+  for five minutes from the last dial (up to eight clients). PCM is never replayed or retained.
+  The browser also deduplicates packet IDs and finals. After process restart or
+  replay expiry, history/admission recovery is the existing chat protocol; lost
+  unsubmitted speech is not reconstructed from audio.
+- Output packets identify `turn_id`, assistant `message_index`, `packet_id`, text,
+  and 16 kHz mono s16le PCM. Only `AudioBufferSourceNode.onended` acknowledges a
+  fully played packet. The recorder advances the contiguous acknowledged prefix.
+  An interrupted partial sentence is conservatively omitted, never estimated.
+- `session.voice.record` authorizes the same principal and conversation binding
+  as admission. It writes only heard prefixes into voice-tagged assistant rows in
+  the existing SessionDB. Initial flushes store an empty prefix rather than
+  generated/unplayed text, including managed-worker writes. Tool calls/results
+  are preserved. Terminal receipt storage drops an unheard full-response copy.
+  The next admitted turn freezes the previous prefix before reading model history.
+  Compression copies are re-projected in the same transaction, using the existing
+  owned-lineage and compression-edge rules; a branch cannot submit the original
+  conversation's receipts. Switching conversations stops the old owner, never the
+  newly opened chat or profile.
+- On speech start, browser playback stops and its queue flushes immediately.
+  `session.interrupt {preserve_running_tools:true}` cancels generation, skips
+  unstarted tools and withdraws old approvals. Started sequential/concurrent tools
+  are still awaited and their real result remains one step card. Voice does not
+  invoke ordinary Stop's tool cancellation or the managed-worker kill budget.
+  Unsupported interrupt implementations refuse rather than falling back to a
+  destructive stop. The changed request waits for the previous turn to settle.
+  Approval answers remain taps; speech cannot approve an old request.
+- `message.voice_played` truncates the live reply and marks it interrupted while
+  retaining late tool events. Ordinary Stop behavior remains separate. One mic
+  toggle exposes Listening / Thinking / Speaking / Interrupted. Console metrics
+  `[aura-voice] speech-end-first-audio` and `barge-in-stop` contain turn IDs and
+  milliseconds, never audio. These client-clock metrics start when the
+  `speech_end` / `speech_start` control arrives; they exclude uplink and VAD
+  detection delay and do not measure physical speaker latency.
+
+No raw audio is written to disk by the app. Decoder/preroll, socket PCM and queued
+playback are in RAM. Flite uses a short-lived **text** file because its `textfile`
+input must be seekable; audio returns through stdout. Do not log PCM or tickets.
+
+## Reproduction, environment and capacity
+
+No new environment variables or secrets are required. Existing chat sign-in and
+model configuration remain required. For a local development checkout, build
+speech dependencies using the repository PM (not pip):
+
+```sh
+python -m pm.build_env --source hermes_cli/aura_voice_runtime \
+  --out .voice-runtime --no-install-project
+python scripts/reveta/aura_pipecat_probe.py --python .voice-runtime/bin/python
+```
+
+This requires FFmpeg built with the `flite` filter (Debian's FFmpeg used here).
+Missing runtime, denied microphone, failed speech process, or an occupied decoder
+falls back to the explicitly labelled **Browser voice · turn-based** control.
+There is at most one active worker for this route per instance. Utterances are
+capped at 30 seconds; played-prefix receipts are bounded at 64,000 characters.
+The separately merged `/api/audio/voice-call` provider route and model settings
+are retained, but the active composer selects this PR's free speech route. Its
+legacy provider environment variables are not required or read here. Mixed legacy
+and new clients were not capacity-tested.
+
+Local real graph evidence: synthesis of “Change the request and tell me the
+time.” returned first PCM in **164.7 ms**. Feeding that synthetic PCM through real
+Silero/PocketSphinx produced 28 partials and the final **“change a request and tell
+me the time”**. The speech process tree, including FFmpeg synthesis, peaked at
+**249.04 MiB RSS**. A separate Webapp + agent import baseline was **140.07 MiB**.
+These are not a simultaneous active-host/container peak or proof of 512 MiB
+capacity with browser tools, managed workers or concurrent work. English accuracy,
+robotic voice quality, acoustic echo cancellation, iOS playback, cold start and
+Render memory headroom remain live limits. No claim is made that the 512 MiB
+production host has passed a load test. No paid fallback is selected.
+
+## Evidence and remaining acceptance
+
+Evidence distinguishes fake speech/Hermes tests from the real local speech graph.
+The phone-sized browser test uses a synthetic microphone and explicitly fake
+STT/TTS events against the real app, authenticated gateway and fake model. It is
+not Melvin's phone or a deployed microphone test. Verified source: `e0980da8c7cb36666b5b1f0b3d85bd46db285573`. Required local repository checks: **14 passed**;
+Aura gate: **14 passed**, including **238 UI tests**, **417 Python tests
+(one skip)**, 14 public-Origin contracts and the browser acceptance suite. The
+phone product flow was then run again after gates, at 390×844: the microphone
+remained on, partials stayed out of history, a duplicated final made one user
+message, a fully played packet was acknowledged, barge-in flushed the remaining
+playback, and the changed request answered in the same thread. Reload retained
+only the acknowledged old prefix and the acknowledged new reply. This is fake
+speech/model evidence, not a real phone or model call.
+
+Two separate speech-contract tests passed under the isolated speech interpreter.
+The real WebSocket factory also started the actual Pipecat child, acknowledged
+only the first of two synthesized sentences, froze that prefix on interruption,
+and reconnected at sequence 6 in the same epoch without replaying PCM. That
+factory smoke used fake accepted auth; real credential/Origin rejection and
+cancelled-cleanup cases are covered separately.
+
+An additional compatibility sweep passed 17 tests; two pre-existing managed-worker
+flag tests failed identically on the untouched `12c8f57e9f` base at their
+`target.exists()` assertions. They are recorded as failures, not hidden or counted
+as passes. The full repository/Electron E2E suites, Docker image build and GitHub
+CI completion are not claimed.
+
+See [machine-readable evidence](verification/pipecat-voice.json),
+[raw Aura gate](verification/pipecat-voice-aura-gate.json), and
+[phone screenshot](screenshots/pipecat-voice/same-thread-interruption-mobile.png).
+
+The official initializer was run outside the app in isolated scratch storage:
 
 ```sh
 pipecat init . --no-context-hub
@@ -23,157 +161,20 @@ pipecat init . --transport websocket --mode cascade \
   --eval --no-deploy-to-cloud --no-context-hub
 ```
 
-The first invocation used the coding-agent option and generated its guides. The
-second generated a WebSocket/local-speech reference scaffold and starter evals.
-The reference manifest was then pinned to Pipecat 1.15.0. The scaffolder does not
-offer a Hermes LLM value: `ollama_llm` is an **unexecuted template placeholder**,
-not Aura's brain. This scaffold was neither run nor copied into production Aura.
-No Ollama/OpenAI/provider request, Cloud deployment, credential creation or
-Context Hub registration/index build occurred. Aura's existing `AGENTS.md` was
-not replaced. The real `HermesBridge` integration still needs implementation.
+The scaffold was not run or copied over Aura. `ollama_llm` was an unexecuted
+initializer placeholder; no Ollama/model call occurred. Moonshine/Piper model
+hosts returned executor proxy HTTP 403, so the implemented pair uses bundled
+PocketSphinx + local Flite instead. Historical preflight JSON remains under
+`docs/aura/verification/pipecat-preflight*`; it is not current runtime evidence.
 
-Installed the official `moonshine` and `piper` extras in a separate PM environment
-and attempted to load Moonshine **tiny** and Piper **en_US-lessac-low**, with model
-caches under scratch storage. Both downloads were refused by the executor proxy
-with **HTTP 403** (`download.moonshine.ai` and Hugging Face respectively).
-Silero plus their service imports peaked at **125.234 MiB**; neither speech model
-loaded, so this is not a loaded-pair memory measurement or voice acceptance.
+**Melvin's phone test after an approved merge/deploy is still pending:** interrupt
+a long spoken answer to change the request. Aura should stop within ~1 second,
+answer the changed request in the same thread, retain only the heard reply marked
+interrupted, and show no duplicate tools or unapproved actions. Verify reconnect,
+Bluetooth/speaker echo behavior and real Render memory too. Do not mark this
+acceptance passed from synthetic evidence.
 
-Implemented fallback repair: each recognition run consumes a final result index
-once. Interim results only paint the live transcript. Duplicate final callbacks
-cannot submit twice, while equal words at a new result index or in a later run
-remain valid requests. Stopped/replaced microphones cannot submit queued results
-into a later recording. The production caller remains the existing text-chat
-`onSubmit`; no voice conversation, inference endpoint, or policy bypass is added.
-This is in-memory browser-event deduplication, **not** durable turn/reconnect
-idempotency. History hydration cannot restart a stopped spoken reply merely by
-replacing its live message id; a new user turn can still speak the same answer.
-Five component regressions cover this behavior; the base fails duplicate/stale-final cases.
-
-`scripts/reveta/aura_voice_probe.py` is a runnable **resource probe**, not a
-production adapter. Its pin is `pipecat-ai[silero]==1.15.0`. On Python 3.14.9 it
-loads real ONNX Silero and processes 100 synthetic silent PCM frames without
-opening a microphone or storing audio. It deliberately exits **2**, with
-`complete_voice_stack_verified: false`, because it cannot establish the whole
-stack's fitness. No STT or TTS model is loaded, and no provider call is performed.
-
-Observed preflight limits:
-
-- Pipecat 1.15.0 / Silero peaked at **109.492 MiB RSS** in the final probe; the
-  synthetic frames took **0.065 s**. A separate Hermes `run_agent` + `web_server` import peaked at
-  **138.871 MiB**. These are separate-process import floors, not simultaneous
-  peak memory or proof of safe capacity under Render's 512 MiB limit. No STT/TTS
-  model, active agent, browser tool, concurrency or container overhead was measured.
-- Adding Pipecat 1.15.0 directly to a copy of the core manifest fails resolution:
-  Pipecat requires `soundfile>=0.13.1,<0.14.dev0`; Hermes's optional KittenTTS extra
-  pins `soundfile==0.14.0`. The core manifest/lock were left intact. No override
-  relaxing a dependency requirement was introduced. An isolated PM environment
-  successfully installed Pipecat 1.15.0 and Vosk 0.3.45 on Python 3.14.9.
-- Pipecat 0.0.104 / Silero was also tried in isolation. Its ONNX dependency lacks
-  a Python 3.14 wheel; it loads on 3.12, which is not Hermes's supported runtime.
-  Pipecat 1.16.0 installs on 3.14 but was published inside the core's three-day
-  dependency age cutoff, so 1.15.0 is used for the recorded probe.
-- Attempts to retrieve the free Vosk small English model from its upstream host
-  and Hugging Face returned HTTP 403 in this executor. No loaded STT/TTS pair was
-  measured. **It is not established that no free server-side pair can fit.**
-- Existing `session.interrupt` reaches `request_hard_interrupt`, and
-  `InterruptControlMixin.interrupt` signals tool workers. It cannot be reused
-  as the requested tool-preserving voice cancellation path without further work.
-  No cancellation behavior was changed by this increment.
-
-## Required voice contract — pending implementation
-
-The following is the target contract, **not a claim about the fallback or probe**:
-
-1. One authenticated, owner-scoped WSS voice transport binds the same durable
-   `conversation_id` as text. Each spoken request has a stable `turn_id`, retained
-   across reconnect/retry. The server deduplicates finals by that pair; partials
-   never enter durable user history. Each server event has a monotonically
-   increasing sequence number; replay resumes after the acknowledged sequence,
-   with snapshot resync when retention expires. Duplicate/out-of-order events
-   must not repeat messages, playback, tools or approval responses.
-2. Pinned Pipecat pipeline: transport input + Silero VAD → free STT → turn handling
-   with interruptions enabled → custom `HermesBridge` → free TTS → transport
-   output → played-text recorder. `HermesBridge` must call the existing signed-in
-   chat/agent admission path, retaining model routing, free/spend refusal, tools,
-   approvals and step events. No second LLM or separate voice history is allowed.
-   Sentence deltas feed TTS and the same chat turn together.
-3. On barge-in, stop/flush playback immediately, cancel only that turn's generation,
-   and persist the acknowledged played prefix marked interrupted. Prefer playback
-   acknowledgements; any estimate must be identified. A started tool is neither
-   cancelled nor re-executed; its eventual result remains a step card. Changed
-   request text invalidates pending old approvals. Approval decisions remain taps.
-4. One mic toggle exposes listening/thinking/speaking/interrupted. Log
-   speech-end→first-audio and barge-in→playback-stop durations, without raw audio
-   storage. Measure the complete stack and concurrency within 512 MiB; WSS only,
-   no inbound UDP, LiveKit, paid STT/TTS, new credentials or Render changes.
-
-Still unimplemented/unverified: `HermesBridge`, continuous transport and mobile
-control, sentence streaming, played-prefix persistence, tool-preserving
-cancellation, voice-specific approval invalidation, durable deduplication/replay,
-voice latency metrics, and all six requested fake-STT/TTS/Hermes safety contracts.
-The fallback's ordinary submit path retains the existing gates, but this does not
-prove those six continuous-voice contracts.
-
-No new production environment variables are required by this increment. For
-isolated probes use existing `HERMES_HOME` and `HERMES_RUNTIME_DIR` pointed at
-scratch directories; use PM `build_environment` / `ensure_environment`, never
-install these probes into the production Hermes environment. The browser harness
-uses existing `AURA_SCREENSHOT_DIR` for synthetic screenshots. Live microphone,
-provider, deployed service and physical-phone acceptance remain **NOT RUN**.
-
-Melvin's test after a separately reviewed merge/deploy remains pending: interrupt
-a long answer with a changed request; require playback stop in about one second,
-the new answer in the same thread, only the played prefix saved, one result for
-each started tool, and no duplicate or unapproved action. Never infer this result
-from the synthetic browser or component tests.
-
-### Verification of this preflight/fallback increment only
-
-Code under test: `22dba9c95fb09caaa8a99dbd737b8bc038e8c984`, based on
-`b48a78c70a016f6a4f78b5052eda50783400160b`. The gate JSON reports a dirty tree
-because this handoff was being updated; the only tracked edit during that run
-was documentation. Subsequent evidence commits do not alter runtime code.
-
-| Actual command | Exit | Evidence |
-|---|---:|---|
-| `python scripts/check --base b48a78c70a016f6a4f78b5052eda50783400160b` | 0 | All 14 repository checks passed |
-| `python scripts/reveta/aura_check.py` (the `just aura-check` recipe body) | 0 | All 14 checks passed: build, typecheck, lint, 230 UI tests, 398 Python tests (1 skipped), 14 Origin tests, fake HTTP provider and browser checks |
-| Focused `vitest run --project ui src/app/aura/browser-voice.test.tsx --maxWorkers=2` | 0 | Five component regressions passed; two of the initial three regressions failed against the original base |
-| Pinned interpreter running `scripts/reveta/aura_voice_probe.py` | 2 | Intentional incomplete-stack result; actual Silero processing, no STT/TTS model loaded |
-| Official `pipecat init` guide and scaffold commands above | 0 | Generated reference files only; no bot or eval LLM was run |
-| Separate full `vitest run --project ui --maxWorkers=3` sweep | Interrupted | No complete suite result; **not a pass** |
-| Post-gate `python scripts/reveta/aura_browser.py --product-only` | 0 | 390 × 844 fake-device/fake-speech flow passed after the gates |
-
-Recorded artifacts: [gate JSON](verification/pipecat-preflight-aura-gate.json),
-[preflight and evidence boundaries](verification/pipecat-preflight.json), and
-[synthetic mobile screenshot](screenshots/pipecat-preflight/fallback-voice-mobile.png).
-
-The browser checks use a real authenticated local Webapp at **390 × 844**, a
-Chromium synthetic microphone (`getUserMedia` returns one audio track), fake
-SpeechRecognition/speechSynthesis, and FakeLLMServer. The generated synthetic
-audio is **not fed through Pipecat STT**. Assertions cover listening, live partial
-text, a final in the same chat, thinking, speaking, duplicate-final rejection,
-manual Interrupt returning to listening, permission denial, and reload. They do
-not measure real speech-end/first-audio or speech-triggered barge-in latency.
-The labelled turn-based limitation remains visible.
-
-Reproduce the resource probe without changing the core environment:
-
-```sh
-HERMES_HOME="$PWD/work/probe-home" HERMES_RUNTIME_DIR="$PWD/work/probe-tools" python - <<'PY'
-from pathlib import Path
-import subprocess
-from pm.operations import ensure_environment
-python = ensure_environment("aura-voice-probe", ["pipecat-ai[silero]==1.15.0"],
-                            root=Path("work/probe-env").resolve(), explicit=True)
-subprocess.run([str(python), "scripts/reveta/aura_voice_probe.py"], check=False)
-PY
-```
-
-The probe's exit 2 is not a passing capacity gate. The official service-load
-attempt additionally used `MOONSHINE_VOICE_CACHE` and Piper's `download_dir`
-under scratch storage. These are local probe settings, not new Render variables.
+---
 
 # Startup workspace and fork runners — 13 November 2026
 

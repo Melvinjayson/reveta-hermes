@@ -8,7 +8,8 @@ import {
   AuraJobsSection,
   AuraMemorySection,
   AuraPreviewSection,
-  AuraSkillsSection
+  AuraSkillsSection,
+  AuraVoiceModeSetting
 } from './settings-sections'
 
 export const SETTINGS_SECTIONS = ['Appearance', 'Model', 'Memory', 'Skills', 'Scheduled jobs', 'Connectors', 'Voice', 'Preview', 'Account'] as const
@@ -112,6 +113,7 @@ export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignO
                   stop Aura speaking, or end it at any time. Your words and Aura’s replies are saved in the chat as text.
                 </dd>
               </dl>
+              <AuraVoiceModeSetting />
             </section>
           )}
           {section === 'Account' && (

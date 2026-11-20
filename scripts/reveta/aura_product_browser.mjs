@@ -1,5 +1,6 @@
 /* global window */
 import { readFileSync } from 'node:fs'
+import { installVoiceFixture } from './aura_pipecat_browser.mjs'
 
 async function openPanel(page, tab) {
   if (!(await page.locator('.aura-panel-tabs').isVisible().catch(() => false))) {
@@ -33,6 +34,7 @@ export async function productFlow(page, expect, output) {
       state
     }
   })
+  const fixture = await installVoiceFixture(page)
   await page.reload()
   const editor = page.locator('[contenteditable="true"]:visible').first()
   await editor.fill('Research HTTP client requests and give me a one-page brief')
@@ -119,4 +121,5 @@ export async function productFlow(page, expect, output) {
   await expect(page.getByRole('button', { name: 'Download brief.md', exact: true })).toBeVisible()
   await closePanel(page)
   console.log('PASS: mobile research plan → three real sources → Hermes file adapter → cited download → reload/reopen; fake speech UI listening/transcript/thinking/speaking/barge-in/denial, same chat context.')
+
 }

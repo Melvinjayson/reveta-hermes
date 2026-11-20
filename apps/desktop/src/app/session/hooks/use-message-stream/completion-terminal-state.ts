@@ -38,6 +38,11 @@ export function terminalCompletionState(
   state: ClientSessionState,
   { text, occurredAt, persistedTurn, failure, status, failureReason }: TerminalCompletionArgs
 ): ClientSessionState | null {
+  if (state.voiceInterrupted) {
+    return { ...state, awaitingResponse: false, busy: false, needsInput: false, pendingBranchGroup: null,
+      streamId: null, turnStartedAt: null, turnLive: false,
+      messages: state.messages.map(message => ({ ...message, pending: false })) }
+  }
   if (state.interrupted) {
     return {
       ...state,

@@ -220,6 +220,7 @@ class CanonicalSubmitParams(CanonicalSessionParams):
     voice_context: str | None = None
     interrupted: bool = False
     voice_turn: bool = False
+    voice_recording_id: str | None = None
     # Desktop composer presentation, committed per admission (``display_v1``): a hidden widget
     # intent persists ``display_kind=hidden`` (never a user bubble); a large paste's preview is
     # titler input only, never model input.
@@ -266,6 +267,22 @@ class CanonicalReplaceQueuedParams(CanonicalSessionParams):
 
 class CanonicalControlParams(CanonicalSessionParams):
     execution_generation: int
+
+
+class CanonicalInterruptParams(CanonicalControlParams):
+    preserve_running_tools: bool = False
+
+
+class CanonicalVoiceRecordParams(CanonicalSessionParams):
+    turn_id: str
+    message_index: int
+    text: str
+    interrupted: bool = False
+
+
+class CanonicalVoiceRecordResult(Result):
+    text: str
+    interrupted: bool
 
 
 class CanonicalCorrectionParams(CanonicalControlParams):
@@ -327,7 +344,8 @@ for _name, _params, _result in (
     ('session.create', CanonicalCreateParams, CanonicalSnapshot),
     ('session.resume', CanonicalResumeParams, CanonicalSnapshot),
     ('session.list', CanonicalListParams, CanonicalListResult),
-    ('session.interrupt', CanonicalControlParams, CanonicalSessionHandle),
+    ('session.interrupt', CanonicalInterruptParams, CanonicalSessionHandle),
+    ('session.voice.record', CanonicalVoiceRecordParams, CanonicalVoiceRecordResult),
     ('session.steer', CanonicalCorrectionParams, CanonicalCorrectionResult),
     ('session.redirect', CanonicalCorrectionParams, CanonicalCorrectionResult),
     ('session.events.since', CanonicalEventsParams, CanonicalEventsResult),

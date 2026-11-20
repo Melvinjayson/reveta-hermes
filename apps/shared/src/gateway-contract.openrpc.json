@@ -8421,37 +8421,6 @@
         "title": "CanonicalConfigSetParams",
         "type": "object"
       },
-      "CanonicalControlParams": {
-        "additionalProperties": false,
-        "properties": {
-          "profile": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Profile"
-          },
-          "session_id": {
-            "title": "Session Id",
-            "type": "string"
-          },
-          "execution_generation": {
-            "title": "Execution Generation",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "session_id",
-          "execution_generation"
-        ],
-        "title": "CanonicalControlParams",
-        "type": "object"
-      },
       "CanonicalCorrectionAck": {
         "additionalProperties": false,
         "properties": {
@@ -9099,6 +9068,42 @@
           "grant"
         ],
         "title": "CanonicalGroupsPeerRevokeParams",
+        "type": "object"
+      },
+      "CanonicalInterruptParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "execution_generation": {
+            "title": "Execution Generation",
+            "type": "integer"
+          },
+          "preserve_running_tools": {
+            "default": false,
+            "title": "Preserve Running Tools",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "execution_generation"
+        ],
+        "title": "CanonicalInterruptParams",
         "type": "object"
       },
       "CanonicalListParams": {
@@ -11487,6 +11492,18 @@
             "title": "Voice Turn",
             "type": "boolean"
           },
+          "voice_recording_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Voice Recording Id"
+          },
           "display_kind": {
             "anyOf": [
               {
@@ -11617,6 +11634,71 @@
           }
         },
         "title": "CanonicalTurnAuthor",
+        "type": "object"
+      },
+      "CanonicalVoiceRecordParams": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Profile"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "message_index": {
+            "title": "Message Index",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "interrupted": {
+            "default": false,
+            "title": "Interrupted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "session_id",
+          "turn_id",
+          "message_index",
+          "text"
+        ],
+        "title": "CanonicalVoiceRecordParams",
+        "type": "object"
+      },
+      "CanonicalVoiceRecordResult": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "interrupted": {
+            "title": "Interrupted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "interrupted"
+        ],
+        "title": "CanonicalVoiceRecordResult",
         "type": "object"
       },
       "CanonicalVoiceStopped": {
@@ -38556,6 +38638,11 @@
             ],
             "default": null,
             "title": "Expected Hosted Task Id"
+          },
+          "preserve_running_tools": {
+            "default": false,
+            "title": "Preserve Running Tools",
+            "type": "boolean"
           }
         },
         "required": [
@@ -47618,6 +47705,35 @@
         "title": "VoicePartialPayload",
         "type": "object"
       },
+      "VoicePlayedPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "turn_id": {
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "message_index": {
+            "title": "Message Index",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "interrupted": {
+            "title": "Interrupted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "turn_id",
+          "message_index",
+          "text",
+          "interrupted"
+        ],
+        "title": "VoicePlayedPayload",
+        "type": "object"
+      },
       "VoiceRecordAction": {
         "enum": [
           "start",
@@ -49641,7 +49757,7 @@
         {
           "name": "params",
           "schema": {
-            "$ref": "#/components/schemas/CanonicalControlParams"
+            "$ref": "#/components/schemas/CanonicalInterruptParams"
           }
         }
       ],
@@ -49775,6 +49891,24 @@
         "name": "result",
         "schema": {
           "$ref": "#/components/schemas/CanonicalCorrectionResult"
+        }
+      }
+    },
+    {
+      "name": "session.voice.record",
+      "summary": "",
+      "params": [
+        {
+          "name": "params",
+          "schema": {
+            "$ref": "#/components/schemas/CanonicalVoiceRecordParams"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/CanonicalVoiceRecordResult"
         }
       }
     },
@@ -50414,6 +50548,18 @@
           "name": "payload",
           "schema": {
             "$ref": "#/components/schemas/MessageStartPayload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "message.voice_played",
+      "summary": "Acknowledged speech prefix in this chat turn, never generated-only text.",
+      "params": [
+        {
+          "name": "payload",
+          "schema": {
+            "$ref": "#/components/schemas/VoicePlayedPayload"
           }
         }
       ]

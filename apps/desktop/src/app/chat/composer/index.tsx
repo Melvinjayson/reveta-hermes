@@ -3,7 +3,7 @@ import { useStore } from '@nanostores/react'
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { AuraLocalTalk } from '@/app/aura/local-talk'
-import { AuraVoice } from '@/app/aura/voice-call'
+import { AuraVoiceMode } from '@/app/aura/voice-mode'
 import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
 import { useHudComposerDrag } from '@/app/hud/composer-drag'
@@ -1497,7 +1497,7 @@ export function ChatBar({
                   />
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
-                  {isBrowserHostedDesktop() && <AuraVoice busy={busy} disabled={disabled} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
+                  {isBrowserHostedDesktop() && <AuraVoiceMode busy={busy} disabled={disabled} gateway={gateway} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
                   {isBrowserHostedDesktop() && <AuraLocalTalk busy={busy} disabled={disabled} onSubmit={onSubmit} />}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}

@@ -228,6 +228,9 @@ def claim_session_input(db, *, epoch: int, session_id: str, _guard=None, head=_A
             return False
         if row is None:
             return None
+        from hermes_state_voice import claim_voice_turn
+        voice = json.loads(row['payload_json']).get('surface_v1') or {}
+        claim_voice_turn(conn, session_id, voice.get('voice_recording_id'))
         generation = session['runtime_generation'] + 1
         conn.execute('UPDATE sessions SET runtime_generation=? WHERE id=?', (generation, session_id))
         changed = conn.execute("UPDATE session_admissions SET status='started',owner_epoch=?,generation=? WHERE admission_id=? AND status='queued'", (epoch, generation, row['admission_id']))
@@ -263,7 +266,9 @@ def settle_session_input(db, *, epoch: int, admission_id: str, generation: int, 
             _terminal_write(conn, row)
         if result is not None:
             from hermes_state_terminal import RESULT_PREFIX
-            encoded = _json(encode_result(compact_result(result, user_message=json.loads(row['payload_json']).get('text'))))
+            from hermes_state_voice import compact_voice_result
+            stored = compact_voice_result(conn, row['payload_json'], result)
+            encoded = _json(encode_result(compact_result(stored, user_message=json.loads(row['payload_json']).get('text'))))
             conn.execute('INSERT INTO state_meta(key,value) VALUES(?,?) '
                          'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
                          (RESULT_PREFIX + admission_id, encoded))

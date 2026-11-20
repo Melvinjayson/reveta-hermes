@@ -39,7 +39,7 @@ SPEAK_STREAM_SOCKET = "speak-stream"
 TRANSCRIBE_STREAM_SOCKET = "transcribe-stream"
 #: Aura's continuous Pipecat voice call (tools/aura_voice_call.py).
 VOICE_CALL_SOCKET = "voice-call"
-AUDIO_SOCKETS = frozenset({SPEAK_STREAM_SOCKET, TRANSCRIBE_STREAM_SOCKET, VOICE_CALL_SOCKET})
+AUDIO_SOCKETS = frozenset({SPEAK_STREAM_SOCKET, TRANSCRIBE_STREAM_SOCKET, VOICE_CALL_SOCKET, "pipecat"})
 #: Sockets that open only with a ticket minted for them, never with a standing credential.
 OWN_TICKET_SOCKETS = frozenset({HOST_TERMINAL_SOCKET})
 #: What a signed-out tab's sockets are closed with: the same code a refused credential gets.
