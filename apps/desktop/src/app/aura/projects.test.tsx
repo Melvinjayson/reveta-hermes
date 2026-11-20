@@ -68,3 +68,31 @@ it('lists project chats, removes one, and deletes only after a confirm that keep
   await waitFor(() => expect(api).toHaveBeenCalledWith({ path: '/api/aura/projects/p_1', method: 'DELETE' }))
   await waitFor(() => expect(onClose).toHaveBeenCalled())
 })
+
+it('keeps the project dialog open and prevents a duplicate new chat while binding is pending', async () => {
+  let finish!: (ok: boolean) => void
+  const onNewChat = vi.fn(() => new Promise<boolean>(resolve => { finish = resolve }))
+  const onClose = vi.fn()
+  render(
+    <AuraProjectDialog
+      onClose={onClose}
+      onNewChat={onNewChat}
+      onOpenChat={vi.fn()}
+      projectId="p_1"
+      sessions={[session('a')]}
+      theme="light"
+      titleOf={s => s.id}
+    />
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: 'New chat in this project' }))
+  const pending = screen.getByRole('button', { name: 'Preparing chat…' }) as HTMLButtonElement
+  expect(pending.disabled).toBe(true)
+  fireEvent.click(pending)
+  expect(onNewChat).toHaveBeenCalledTimes(1)
+
+  finish(false)
+  await waitFor(() => expect(screen.getByRole('button', { name: 'New chat in this project' })).toBeTruthy())
+  expect(onClose).not.toHaveBeenCalled()
+  expect(screen.getByRole('dialog').hasAttribute('open')).toBe(true)
+})

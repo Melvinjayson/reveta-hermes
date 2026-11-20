@@ -3,6 +3,7 @@ import './aura.css'
 import './shell.css'
 import './home.css'
 import './thread.css'
+import './look.css'
 import './panel.css'
 
 import { useStore } from '@nanostores/react'
@@ -27,12 +28,14 @@ import { AuraConversationCards } from './conversation-cards'
 import { AuraConversationRow } from './conversation-row'
 import { AuraDictation } from './dictation'
 import { groupHistory } from './history'
+import { AuraModelChip } from './model-chip'
 import { $auraPanel, closeAuraPanel, openAuraPanel } from './panel-store'
 import { AuraProjectDialog } from './project-dialog'
 import { $auraProjects, type AuraProject, loadAuraProjects, startAuraProjectChat } from './projects'
 import { AuraContinueLater, AuraReadiness } from './readiness'
 import { AuraSearchDialog, isSearchShortcut } from './search-dialog'
 import { AuraSettingsDialog } from './settings-dialog'
+import { $auraSettingsRequest } from './settings-request'
 import { AuraSidePanel } from './side-panel'
 import { auraSignOut } from './sign-out'
 import { AuraToolsDialog } from './tools-menu'
@@ -106,9 +109,10 @@ function AuraNav({ activeId, projects, sessions, onProject, onClose, onCollapse,
           ))}
           {projects && !projects.length && <p className="aura-empty-note">Group related chats into a project.</p>}
         </section>
+        {history.length > 0 && <h3 className="aura-section-label aura-recent-label">Recent</h3>}
         {history.map(section => (
           <section aria-label={section.group} key={section.group}>
-            <h3 className="aura-section-label">{section.group}</h3>
+            <h4 className="aura-section-label aura-history-group">{section.group}</h4>
             {section.entries.map(({ session, title }) => (
               <AuraConversationRow
                 current={session.id === activeId}
@@ -140,6 +144,7 @@ export function AuraShell({ actions, children }: AuraShellProps) {
   const [drawer, setDrawer] = useState(false)
   const [searching, setSearching] = useState(false)
   const [settings, setSettings] = useState(false)
+  const settingsRequest = useStore($auraSettingsRequest)
   const [resumed, setResumed] = useState(false)
   const [error, setError] = useState('')
   const [project, setProject] = useState<null | string>(null)
@@ -341,15 +346,22 @@ export function AuraShell({ actions, children }: AuraShellProps) {
         theme={resolvedMode}
         titleOf={sessionTitle}
       />
+      <Contribute area={COMPOSER_AREAS.leading} id="aura:model">
+        <AuraModelChip />
+      </Contribute>
       <Contribute area={COMPOSER_AREAS.actions} id="aura:dictation">
         <AuraDictation />
       </Contribute>
       <AuraToolsDialog theme={resolvedMode} />
       <AuraProjectDialog
         onClose={() => setProject(null)}
-        onNewChat={id => {
+        onNewChat={async id => {
+          // Do not open an unscoped chat if project context could not be saved.
+          if (!(await startAuraProjectChat(id))) {return false}
           setProject(null)
-          void startAuraProjectChat(id).then(newChat)
+          newChat()
+
+          return true
         }}
         onOpenChat={session => {
           setProject(null)
@@ -362,13 +374,16 @@ export function AuraShell({ actions, children }: AuraShellProps) {
       />
       <AuraSettingsDialog
         mode={mode as 'light' | 'dark' | 'system'}
-        onClose={() => setSettings(false)}
+        onClose={() => {
+          setSettings(false)
+          $auraSettingsRequest.set(null)
+        }}
         onMode={setMode}
         onSignOut={() => {
           setError('')
           void auraSignOut().catch(() => setError('Sign out could not finish. Please try again.'))
         }}
-        open={settings}
+        open={settings || settingsRequest !== null}
         signOutError={error}
         theme={resolvedMode}
       />

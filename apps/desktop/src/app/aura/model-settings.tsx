@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react'
 
+import { AuraRoutingSettings, type AuraRoutingStatus } from './routing-settings'
+
 interface ModelOption {
   provider: string
   label: string
@@ -15,6 +17,7 @@ export interface AuraProviderStatus {
   keys: Record<string, boolean>
   gemini_key: boolean
   options: ModelOption[]
+  routing?: AuraRoutingStatus
 }
 
 const providerApi = <T,>(method: 'GET' | 'PUT', body?: unknown) =>
@@ -100,7 +103,9 @@ export function AuraModelSettings({ onSaved }: { onSaved?: () => void }) {
       <p aria-live="polite">
         {status?.paid_route
           ? `Replying with ${status.paid_route.model}. $${status.spent_today_usd.toFixed(2)} of $${status.paid_route.per_day_usd.toFixed(2)} used today.`
-          : 'Replying with Google Gemini’s free tier. It has a low per-minute limit.'}
+          : status?.routing?.test_route.model && status.active_model.model === status.routing.test_route.model
+            ? `Replying with the experimental test model ${status.active_model.model}.`
+            : 'Replying with Google Gemini’s free tier. It has a low per-minute limit.'}
       </p>
       <label>
         Provider
@@ -155,6 +160,12 @@ export function AuraModelSettings({ onSaved }: { onSaved?: () => void }) {
           Switch back to free Gemini
         </button>
       )}
+      <AuraRoutingSettings
+        activeModel={status?.active_model.model}
+        onUseTest={() => void save({ provider: 'openrouter_test' }, 'Aura now replies with the experimental test model.')}
+        routing={status?.routing}
+        saving={saving}
+      />
       {message && <p role="status">{message}</p>}
       <p>Your key is stored on your Aura server and never shown again. Aura stops replying when a limit is reached.</p>
     </form>

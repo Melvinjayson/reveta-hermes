@@ -48,7 +48,7 @@ async function closePanel(page) {
 try {
   await page.goto(launch.url)
   await expect(page.locator('.aura-empty')).toBeVisible({ timeout: 60000 })
-  await expect(page.getByRole('heading', { name: 'What are you working on?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hi, I’m Aura.' })).toBeVisible()
   if (launch.retiredModel) {
     const editor = page.locator('[contenteditable="true"]:visible').first()
     await editor.fill('Synthetic retired-model check')
@@ -123,7 +123,7 @@ try {
     }
     await expect(page.getByText('Simple mode', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Advanced mode', { exact: true })).toHaveCount(0)
-    await expect(page.locator('.aura-suggestions button')).toHaveCount(4)
+    await expect(page.locator('.aura-suggestions button')).toHaveCount(3)
     await expect(page.getByRole('button', { name: 'Start voice chat', exact: true })).toBeVisible()
     for (const mode of ['light', 'dark']) {
       const settings = await setTheme(page, mode)

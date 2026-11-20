@@ -710,6 +710,8 @@ include = [
   "pm.*",
   "tools",
   "tools.*",
+  "reveta_ecosystem",
+  "reveta_ecosystem.*",
 ]
 
 [tool.setuptools.package-data]
