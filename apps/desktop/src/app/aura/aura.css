@@ -523,3 +523,125 @@
   }
 }
 @keyframes aura-voice-breathe { 50% { transform: scale(1.035); } }
+
+
+/* Original Aura kinetic sphere, inspired by translucent voice-orb motion design.
+ * The UI consumes existing state, never microphone data. Animations transform/
+ * fade compositor layers only; no extra GPU canvas, shader or network asset. */
+.aura-voice .aura-kinetic-orb {
+  animation: none;
+  --orb-cadence: 7s;
+  --orb-strength: 1;
+  position: relative;
+  width: min(58vw, 264px);
+  aspect-ratio: 1;
+  height: auto;
+  flex-shrink: 0;
+  margin-block: auto;
+  overflow: visible;
+  isolation: isolate;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  transform: translateZ(0);
+}
+.aura-kinetic-orb .aura-orb-glow {
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgb(96 72 240 / 0.28), rgb(14 191 180 / 0.08) 45%, transparent 72%);
+  opacity: .65;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+.aura-kinetic-orb .aura-orb-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgb(216 206 255 / 0.38);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 28% 18%, rgb(255 255 255 / 0.86), transparent 22%),
+    radial-gradient(ellipse at 66% 77%, rgb(0 218 207 / 0.70), transparent 40%),
+    radial-gradient(ellipse at 28% 75%, rgb(70 53 222 / 0.92), transparent 48%),
+    radial-gradient(ellipse at 72% 27%, rgb(150 112 255 / 0.92), transparent 51%),
+    radial-gradient(ellipse at 47% 42%, #131833 15%, #4a35ad 82%);
+  box-shadow: inset -12px -17px 25px rgb(10 8 34 / 0.45),
+    inset 9px 12px 24px rgb(255 255 255 / 0.28),
+    0 13px 42px rgb(70 55 165 / 0.22),
+    0 0 0 2px rgb(130 112 251 / 0.06);
+}
+.aura-kinetic-orb .aura-orb-shell::after {
+  content: '';
+  position: absolute;
+  inset: 2.5%;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.26);
+  box-shadow: inset -9px -16px 14px rgb(12 15 43 / 0.18);
+  pointer-events: none;
+}
+.aura-kinetic-orb .aura-orb-current {
+  position: absolute;
+  width: 128%;
+  height: 60%;
+  left: -14%;
+  top: 20%;
+  border-radius: 48% 52% 45% 55%;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.aura-kinetic-orb .aura-orb-current-one {
+  background: radial-gradient(ellipse at 40% 50%, rgb(43 242 220 / 0.75), rgb(98 70 248 / 0.55) 45%, transparent 73%);
+  transform: rotate(-22deg) translateY(10%);
+  animation: aura-orb-drift-one var(--orb-cadence) ease-in-out infinite alternate;
+}
+.aura-kinetic-orb .aura-orb-current-two {
+  top: 27%;
+  background: radial-gradient(ellipse at 57% 40%, rgb(231 170 255 / 0.70), rgb(24 153 240 / 0.48) 45%, transparent 76%);
+  transform: rotate(35deg) translateY(-8%);
+  animation: aura-orb-drift-two calc(var(--orb-cadence) * 1.35) ease-in-out infinite alternate-reverse;
+}
+.aura-kinetic-orb .aura-orb-specular {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 31% 17%, rgb(255 255 255 / 0.85), transparent 12%);
+  pointer-events: none;
+}
+.aura-kinetic-orb .aura-orb-emblem {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 31%;
+  height: 31%;
+  margin: auto;
+  opacity: .82;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 8px rgb(0 0 0 / .18));
+}
+.aura-kinetic-orb[data-motion='listening'] { --orb-cadence: 4s; }
+.aura-kinetic-orb[data-motion='speaking'] { --orb-cadence: 2.5s; }
+.aura-kinetic-orb[data-motion='speaking'] .aura-orb-glow { opacity: 1; }
+.aura-kinetic-orb[data-motion='thinking'] { --orb-cadence: 10s; }
+.aura-kinetic-orb[data-motion='reconnecting'],
+.aura-kinetic-orb[data-motion='muted'] { --orb-cadence: 14s; }
+.aura-kinetic-orb[data-motion='reconnecting'] .aura-orb-glow,
+.aura-kinetic-orb[data-motion='muted'] .aura-orb-glow { opacity: .16; }
+.aura-kinetic-orb[data-motion='reconnecting'] .aura-orb-shell,
+.aura-kinetic-orb[data-motion='muted'] .aura-orb-shell { filter: saturate(.55); }
+@keyframes aura-orb-drift-one {
+  to { transform: rotate(48deg) translateY(-14%) scale(1.12); }
+}
+@keyframes aura-orb-drift-two {
+  to { transform: rotate(-33deg) translateY(18%) scale(1.11); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-voice .aura-kinetic-orb,
+  .aura-kinetic-orb .aura-orb-current { animation: none !important; }
+  .aura-kinetic-orb .aura-orb-glow { transition: none; }
+}
+@media (max-width: 360px) {
+  .aura-voice .aura-kinetic-orb { width: min(54vw, 208px); }
+}
