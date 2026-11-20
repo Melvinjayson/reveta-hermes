@@ -218,7 +218,16 @@ def guard(config: dict, provider: Any, endpoint: Any, request: dict,
     for tier, entry in cfg["tiers"].items():
         if model == entry.get("model"):
             return _paid_request(cfg, tier, entry, provider, endpoint, request, chat, authorize)
+    if _openrouter_destination(provider, endpoint):
+        # An OpenRouter key in the environment would otherwise let any model through with
+        # aura.free_only off: only configured tiers (budgeted) and the test route may use it.
+        raise RouteRefused("model_not_permitted")
     return None
+
+
+def _openrouter_destination(provider: Any, endpoint: Any) -> bool:
+    host = urlsplit(str(endpoint or "")).hostname or ""
+    return str(provider or "").lower() == "openrouter" or host == "openrouter.ai" or host.endswith(".openrouter.ai")
 
 
 def _paid_request(cfg: dict, tier: str, entry: dict, provider: Any, endpoint: Any, request: dict,

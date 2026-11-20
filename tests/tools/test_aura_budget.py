@@ -299,3 +299,15 @@ def test_reported_cost_reads_openrouter_usage_shapes():
     assert paid.reported_cost(SimpleNamespace(cost=0.002)) == 0.002
     assert paid.reported_cost(SimpleNamespace(model_extra={"cost": "0.003"})) == 0.003
     assert paid.reported_cost({"cost": -1}) is None and paid.reported_cost(None) is None
+
+
+@pytest.mark.parametrize("provider,endpoint,model", [
+    ("openrouter", OR, "anthropic/claude-opus-5"),
+    ("openrouter", OR, "openrouter/auto"),
+    ("custom", "https://openrouter.ai/api/v1", "deepseek/deepseek-v4.1-pro"),
+])
+def test_no_other_openrouter_model_slips_past_the_budget(home, provider, endpoint, model):
+    _on(100.0)  # even with a large budget and the free-only rule off
+    with pytest.raises(FreeOnlyRefused, match="Model not permitted"):
+        require_model(provider, endpoint, {"model": model, "messages": []})
+    assert budget.get_budget_status()["history"] == []
