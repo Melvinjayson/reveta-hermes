@@ -193,3 +193,92 @@ html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop
 .aura-app[data-aura-theme='dark'] .aura-chat [data-role='assistant'] {
   background: transparent;
 }
+
+/*
+ * Mobile density pass, prompted by a real Android screenshot:
+ * voice and on-device options must sit on ONE compact row; the input gets
+ * the width of the phone, with actions below it instead of three stacked
+ * grid rows. Scope to Aura only; the shared composer serves other skins.
+ */
+.aura-app .aura-composer-modes {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+.aura-app .aura-composer-modes > :is(.aura-voice, .aura-local) {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+@media (max-width: 639px) {
+  .aura-app .aura-chat [data-slot='composer-dock'] {
+    --composer-row-gap: 6px;
+    --composer-control-gap: 6px;
+    padding-inline: 12px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .aura-app .aura-chat [data-slot='composer-surface'] {
+    border-radius: 22px;
+  }
+  .aura-app .aura-chat [data-slot='composer-fade'] {
+    padding: 8px 10px 10px;
+    row-gap: 4px;
+  }
+  .aura-app .aura-composer-modes {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .aura-app .aura-composer-modes .aura-voice {
+    flex: 0 0 auto;
+  }
+  .aura-app .aura-composer-modes .aura-voice-toggle,
+  .aura-app .aura-composer-modes .aura-local-toggle {
+    min-height: 40px;
+    height: 40px;
+    border-radius: 999px;
+    padding-inline: 11px;
+    background: var(--aura-subtle);
+    font-size: 13px;
+  }
+  .aura-app .aura-composer-modes .aura-voice-label {
+    font-size: 13px;
+  }
+  .aura-app .aura-composer-modes .aura-local-toggle {
+    min-width: 40px;
+    width: 40px;
+    padding-inline: 0;
+  }
+  .aura-app .aura-composer-modes .aura-local-toggle span {
+    display: none;
+  }
+  .aura-app .aura-chat [data-aura-composer-grid] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "input input" "menu controls";
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+  }
+  .aura-app .aura-chat [data-aura-composer-menu] {
+    align-self: center;
+    transform: none;
+  }
+  .aura-app .aura-chat [data-aura-composer-actions] {
+    min-width: 0;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  /* Voice chat already handles live conversation; remove the duplicate
+     dictation mic from this cramped mobile row without removing desktop
+     dictation or changing its implementation. */
+  .aura-app .aura-chat [data-aura-composer-actions] .aura-dictation {
+    display: none;
+  }
+  .aura-app .aura-chat [data-slot='composer-bounds'] {
+    min-height: 0;
+  }
+}
