@@ -587,6 +587,15 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
 
   return (
     <div aria-label="Voice chat" className="aura-voice" data-aura-voice={active ? label : 'off'} role="group">
+      {active && (
+        <div className="aura-voice-stage">
+          <img alt="" className="aura-voice-brand" src="brand/aura-mark.svg" />
+          <span className="aura-voice-kicker">Aura · Live conversation</span>
+          <h2>{label === 'Hearing you' ? 'I’m listening' : label === 'Thinking' ? 'One moment…' : label === 'Speaking' ? 'Aura is speaking' : label === 'Reconnecting' ? 'Reconnecting…' : label === 'Muted' ? 'Microphone muted' : 'Go ahead, I’m listening'}</h2>
+          <div aria-hidden="true" className="aura-voice-orb"><img alt="" src="brand/aura-mark.svg" /></div>
+          <p className="aura-voice-caption">Talk naturally. You can interrupt at any time.</p>
+        </div>
+      )}
       <button
         aria-describedby="aura-voice-hint"
         aria-label={active ? 'End voice chat' : 'Start voice chat'}
