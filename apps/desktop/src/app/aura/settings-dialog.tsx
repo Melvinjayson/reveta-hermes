@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { X } from '@/lib/icons'
 
+import { AuraBudgetSettings } from './budget-settings'
 import { AuraModelSettings } from './model-settings'
 import {
   AuraConnectorsSection,
@@ -91,6 +92,7 @@ export function AuraSettingsDialog({ open, mode, theme, onMode, onClose, onSignO
             <section aria-labelledby="aura-settings-model" className="aura-settings">
               <h3 id="aura-settings-model">Model</h3>
               <AuraModelSettings />
+              <AuraBudgetSettings />
             </section>
           )}
           {section === 'Memory' && <AuraMemorySection />}
