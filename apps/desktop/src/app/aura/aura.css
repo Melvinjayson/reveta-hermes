@@ -453,3 +453,73 @@
 .aura-context-sources > summary { padding: 8px 0; }
 .aura-steps pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; max-height: 260px; overflow-y: auto; }
 .aura-steps a { overflow-wrap: anywhere; }
+
+/* Aura Zero mobile voice focus. The existing socket, recognition, approvals and
+   transcription state are unchanged; only active-call presentation is promoted. */
+.aura-voice[data-aura-voice]:not([data-aura-voice='off']) {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 16px max(26px, env(safe-area-inset-bottom));
+  background: var(--aura-page);
+  color: var(--aura-ink);
+  isolation: isolate;
+}
+.aura-voice-stage {
+  position: absolute;
+  inset: max(18px, env(safe-area-inset-top)) 16px 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+.aura-voice-brand { width: 36px; height: 42px; object-fit: contain; margin-bottom: auto; }
+.aura-voice-kicker { color: var(--aura-muted); font-size: 13px; font-weight: 500; }
+.aura-voice-stage h2 { margin: 0; font-size: clamp(20px, 5vw, 26px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.3; }
+.aura-voice-orb {
+  display: grid; place-items: center;
+  width: min(56vw, 240px); aspect-ratio: 1;
+  margin: auto 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.88), rgb(155 138 238 / 0.12) 45%, var(--aura-voice-wash) 72%, transparent 74%);
+  border: 1px solid color-mix(in srgb, var(--aura-voice-live) 35%, var(--aura-line));
+  box-shadow: 0 0 64px var(--aura-voice-wash), inset 0 0 30px var(--aura-voice-wash);
+}
+.aura-voice-orb img { width: 36%; height: 36%; object-fit: contain; }
+.aura-voice-caption { max-width: 280px; margin: 0; color: var(--aura-muted); font-size: 14px; line-height: 1.5; }
+.aura-voice:not([data-aura-voice='off']) .aura-voice-toggle {
+  z-index: 1; min-height: 52px; padding: 0 20px;
+  border-color: var(--aura-line); background: var(--aura-subtle);
+}
+.aura-voice:not([data-aura-voice='off']) .aura-voice-icon {
+  z-index: 1; min-height: 52px; min-width: 52px; background: var(--aura-surface);
+}
+.aura-voice:not([data-aura-voice='off']) :is(.aura-voice-heard, .aura-voice-error) {
+  position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 96px;
+  max-width: 560px; margin-inline: auto; text-align: center;
+  background: var(--aura-surface); padding: 8px 12px; border-radius: 12px;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.aura-voice:not([data-aura-voice='off']) .aura-voice-error { bottom: 130px; }
+@media (min-width: 640px) {
+  .aura-voice[data-aura-voice]:not([data-aura-voice='off']) {
+    inset: 6vh max(8vw, 100px);
+    border: 1px solid var(--aura-line);
+    border-radius: 24px; box-shadow: var(--aura-shadow);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .aura-voice[data-aura-voice='Listening'] .aura-voice-orb,
+  .aura-voice[data-aura-voice='Hearing you'] .aura-voice-orb {
+    animation: aura-voice-breathe 3s ease-in-out infinite;
+  }
+}
+@keyframes aura-voice-breathe { 50% { transform: scale(1.035); } }
