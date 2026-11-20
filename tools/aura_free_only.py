@@ -214,9 +214,27 @@ def _paid_route_request(config, provider, endpoint, request, chat):
     return {**request}
 
 
+def _routed_request(config, provider, endpoint, request):
+    """tools.aura_model_routing's verdict; it runs first so free_only: false cannot skip it."""
+    from tools.aura_model_routing import RouteRefused, guard
+
+    if not isinstance(request, dict):
+        return None
+    try:
+        return guard({"aura": config}, provider, endpoint, request)
+    except RouteRefused as exc:
+        raise FreeOnlyRefused(exc.user_message) from exc
+
+
 def require_model(provider, endpoint, request, *, api_mode="chat_completions", chat=None):
     """Check the final SDK payload; return a copy with provider fallbacks disabled."""
     config = settings()
+    routed = _routed_request(config, provider, endpoint, request)
+    if routed is not None:
+        # The free test route: pinned to zero price; with the rule on it must also be allowlisted.
+        request = routed
+        if config.get("free_only", True) is False:
+            return routed
     if isinstance(request, dict) and api_mode in {"chat_completions", "codex_responses", "anthropic_messages"}:
         paid = _paid_route_request(config, provider, endpoint, request, chat)
         if paid is not None:
