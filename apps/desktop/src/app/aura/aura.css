@@ -523,3 +523,12 @@
   }
 }
 @keyframes aura-voice-breathe { 50% { transform: scale(1.035); } }
+.aura-routing { display: grid; gap: 8px; margin-top: 12px; }
+.aura-routing h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.aura-routing ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.aura-routing li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--aura-line); border-radius: 12px; min-width: 0; }
+.aura-routing li[data-state='disabled'] { color: var(--aura-muted); }
+.aura-routing-name { font-size: 14px; color: var(--aura-ink); overflow-wrap: anywhere; }
+.aura-routing-name code { font-size: 12px; overflow-wrap: anywhere; }
+.aura-routing-state { font-size: 13px; }
+.aura-routing-tag { display: inline-block; padding: 0 6px; border: 1px solid var(--aura-warn); border-radius: 999px; color: var(--aura-warn); font-size: 11px; }

@@ -18,6 +18,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 DEFAULT_FREE_GEMINI_MODEL = "gemini-3.8-flash"
 
+# Model routing (tools/aura_model_routing.py). Exact OpenRouter IDs and capabilities checked against
+# the OpenRouter catalog on 20 Nov 2026 (tests/fixtures/aura/openrouter_candidates.json). The paid
+# tiers are configuration only: routing stays off and every paid tier is refused until Aura's budget
+# authorizer exists. Capabilities list only what every listed endpoint offers.
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+ROUTING_TIERS = {
+    "default": {"model": "deepseek/deepseek-v4.1-flash-1017", "paid": True, "capabilities": ["text", "image", "tools"]},
+    "fallback": {"model": "z-ai/glm-5.3-flash", "paid": True, "capabilities": ["text", "image", "tools"]},
+    "reasoning": {"model": "moonshotai/kimi-k3.1-pro", "paid": True, "capabilities": ["text", "image", "tools"]},
+}
+TEST_ROUTE_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+
 # Identity slot #1 (HERMES_HOME/SOUL.md). Without it the stock "You are Hermes Agent, built by Nous Research"
 # soul wins and Aura introduces itself as Hermes. Aura Zero is built on Hermes Agent (MIT); see docs/aura/ATTRIBUTION.md.
 AURA_SOUL = """You are Aura, the voice-first operator in Reveta's Aura Zero.
@@ -113,6 +125,22 @@ def mcp_settings(env: dict[str, str]) -> dict:
     }
 
 
+def test_route_enabled(env: dict[str, str]) -> bool:
+    """The free experimental route: only with ``AURA_TEST_MODEL_ROUTE=1``, an OpenRouter key, and an
+    address other than the production one. NVIDIA's free endpoint is a trial service with a 50 (or
+    1,000) requests/day platform cap; it is for synthetic development prompts, not customer work."""
+    return (env.get("AURA_TEST_MODEL_ROUTE", "").strip() == "1"
+            and bool(env.get("OPENROUTER_API_KEY", "").strip())
+            and public_url(env) != DEFAULT_PUBLIC_URL)
+
+
+def model_routing(env: dict[str, str]) -> dict:
+    return {"enabled": False,
+            "tiers": {tier: dict(entry) for tier, entry in ROUTING_TIERS.items()},
+            "test_route": {"enabled": test_route_enabled(env), "model": TEST_ROUTE_MODEL,
+                           "capabilities": ["text", "tools"], "production_allowed": False}}
+
+
 def aura_settings(env: dict[str, str]) -> dict:
     mcp = mcp_settings(env)
     # Exact native ID/endpoint: website/docs/guides/google-gemini.md.
@@ -144,8 +172,11 @@ def aura_settings(env: dict[str, str]) -> dict:
             # Owner decision 15 Nov 2026: the free-only rule is off. Paid-route caps in Aura
             # Settings and the single-use approval gate stay (tools/aura_free_only.py).
             "free_only": False,
-            "free_models": free_models,
+            "free_models": free_models + ([{"provider": "openrouter", "model": TEST_ROUTE_MODEL,
+                                            "base_url": OPENROUTER_BASE_URL, "confirmed_free": True,
+                                            "cost_usd": 0}] if test_route_enabled(env) else []),
             "free_tools": [],
+            "model_routing": model_routing(env),
             **AURA_OWNER_DEFAULTS,
             "anthropic": {
                 "model": env.get("AURA_ANTHROPIC_MODEL", "claude-sonnet-4-5"),
