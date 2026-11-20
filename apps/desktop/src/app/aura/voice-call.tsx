@@ -255,6 +255,14 @@ function AuraVoiceCall({ busy, disabled, onSubmit, sessionId, settings }: Props 
       return
     }
 
+    // Release queued playback before closing the context so stale speech cannot outlive the call.
+    for (const node of current.playing) {
+      node.onended = null
+      node.stop()
+    }
+    current.playing.clear()
+    current.playAt = 0
+    current.ws.onmessage = null
     current.ws.onclose = null
     current.ws.close()
     current.processor.disconnect()
