@@ -2,8 +2,7 @@ import { ComposerPrimitive } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
 import { type ClipboardEvent, type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { AuraLocalTalk } from '@/app/aura/local-talk'
-import { AuraVoiceMode } from '@/app/aura/voice-mode'
+import { AuraComposerModes } from '@/app/aura/composer-modes'
 import { useTourMarker } from '@/app/chat/tour-marker'
 import type { GatewayRequester } from '@/app/contrib/types'
 import { useHudComposerDrag } from '@/app/hud/composer-drag'
@@ -1497,12 +1496,11 @@ export function ChatBar({
                   />
                   <VoiceActivity state={voiceActivityState} />
                   <VoicePlaybackActivity />
-                  {isBrowserHostedDesktop() && <AuraVoiceMode busy={busy} disabled={disabled} gateway={gateway} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
-                  {isBrowserHostedDesktop() && <AuraLocalTalk busy={busy} disabled={disabled} onSubmit={onSubmit} />}
+                  {isBrowserHostedDesktop() && <AuraComposerModes busy={busy} disabled={disabled} gateway={gateway} onInterrupt={onCancel} onSubmit={onSubmit} sessionId={sessionId} />}
                   {queueEdit && editingQueuedPrompt && <QueuedEditBanner onExit={exitQueuedEdit} />}
                   {attachments.length > 0 && <AttachmentList attachments={attachments} onRemove={onRemoveAttachment} />}
-                  <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))}>
-                    <div className="flex translate-y-[3px] items-start gap-(--composer-control-gap) self-start [grid-area:menu]">
+                  <div className={cn('grid w-full', controlRowGridClass(singleColumn, stacked))} data-aura-composer-grid>
+                    <div className="flex translate-y-[3px] items-start gap-(--composer-control-gap) self-start [grid-area:menu]" data-aura-composer-menu>
                       {contextMenu}
                       <ContribSlot area={COMPOSER_AREAS.leading} />
                     </div>
@@ -1512,7 +1510,7 @@ export function ChatBar({
                       `ml-auto`: in the stacked layout the auto margin absorbs the
                       row's free space and pins a contributed action to the row
                       start, detached from the cluster (#116332). */}
-                    <div className="flex min-w-0 items-center justify-end gap-(--composer-control-gap) [grid-area:controls]">
+                    <div className="flex min-w-0 items-center justify-end gap-(--composer-control-gap) [grid-area:controls]" data-aura-composer-actions>
                       <ContribSlot area={COMPOSER_AREAS.actions} />
                       {controls}
                     </div>
