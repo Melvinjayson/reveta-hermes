@@ -7,8 +7,10 @@ Date: 2026-11-20. Target environment: Render Free, Aura Zero.
 
 - The Render service tracks `aura/working-product-20261111` and currently runs
   `f8fda1d3b52cc9161748542ed7d6f6e757a32fe5`.
-- PR #39 (`52448c3e`) is a draft unified candidate; it has **failed** JS/TS
-  and platform-specific CI jobs, notwithstanding successful Docker and Nix jobs.
+- PR #39 is a draft unified candidate, currently at `2fbedd66`. Its current
+  CI run is queued, and its Nix flake check is **failed**. Earlier commit
+  `52448c3e` had failed JS/TS and OS-specific jobs. Neither revision has a
+  complete green CI record.
 - Hermes sessions, full-text search, drafts and related state use SQLite through
   `hermes_state.py`, `SessionDB`, FTS5, and sidecar/WAL semantics.
 - `tools/aura_budget.py` in PR #39 stores the configurable USD spending budget
@@ -16,7 +18,9 @@ Date: 2026-11-20. Target environment: Render Free, Aura Zero.
   Moving a budget setting without its ledger would allow the old spend history
   to disappear after a Render restart.
 - The connected Reveta Neon account has `aura-backend` in Frankfurt,
-  PostgreSQL 17, with an **archived** default branch and no application tables.
+  PostgreSQL 17, with a previously **archived** default branch and no application tables.
+  A read-only SQL probe on 20 November confirmed database name `aura`,
+  PostgreSQL 17 (`server_version_num=170012`), and zero public tables.
   The separate `aura-one-preview` project has existing authentication and
   preview data: DO NOT use or mutate it for this migration.
 - Neither Neon project was modified during this inspection.
@@ -78,11 +82,11 @@ It does not create or migrate tables.
 | Gate | Status | Reason |
 | --- | --- | --- |
 | Neon account and candidate target | PASS (metadata) | `aura-backend` exists |
-| Read-only Neon connection | UNVERIFIED | Credentialed preflight not executed |
+| Read-only Neon SQL verification | PASS | Neon connected query returned database `aura`, PostgreSQL 17, 0 public tables |\n| Repository CLI script end-to-end | UNVERIFIED | Direct asyncpg preflight not executed |
 | Existing data preserved | PASS (no mutation) | No database writes performed |
 | PostgreSQL budget authority | BLOCKED | SQLite implementation still active |
 | Conversation persistence | BLOCKED | SQLite SessionDB implementation still active |
-| Main unified CI | FAIL | JS/TS and OS-specific jobs failed |
+| Main unified CI | BLOCKED | Latest main CI queued and Nix failed; prior JS/TS and OS tests failed |
 | Production deployment | NOT STARTED | No safe persistence cutover |
 
 **Do not enable paid models on Render Free until a durable budget authority
