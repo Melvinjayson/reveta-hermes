@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { requestComposerInsert } from '@/app/chat/composer/focus'
 
@@ -49,6 +49,10 @@ export function AuraBrowserHandoff() {
   const [draft, setDraft] = useState('')
   const [dismissed, setDismissed] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const actionInFlight = useRef(false)
+  const activeSession = useRef(sessionId)
+  activeSession.current = sessionId
 
   useEffect(() => {
     let active = true
@@ -69,9 +73,13 @@ export function AuraBrowserHandoff() {
 
     try {
       const data = await call<{ handoff: BrowserHandoff | null }>(`${BASE}?session_id=${encodeURIComponent(sessionId)}`)
-      setHandoff(data?.handoff ?? null)
+      if (activeSession.current === sessionId) {
+        setHandoff(data?.handoff ?? null)
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      if (activeSession.current === sessionId) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
     }
   }, [sessionId])
 
@@ -91,14 +99,32 @@ export function AuraBrowserHandoff() {
     return () => window.clearInterval(timer)
   }, [enabled, handoff, reload])
 
-  const act = (path: string, body: unknown) =>
-    call(path, 'POST', body)
-      .then(() => {
-        setError('')
+  // One mutation at a time: retries and approval clicks must not dispatch twice while pending.
+  const act = async (path: string, body: unknown): Promise<boolean> => {
+    if (actionInFlight.current) return false
+    actionInFlight.current = true
+    setBusy(true)
+    const originatingSession = sessionId
 
-        return reload()
-      })
-      .catch(err => setError(err instanceof Error ? err.message : String(err)))
+    try {
+      await call(path, 'POST', body)
+      if (activeSession.current === originatingSession) {
+        setError('')
+        await reload()
+      }
+
+      return true
+    } catch (err) {
+      if (activeSession.current === originatingSession) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
+
+      return false
+    } finally {
+      actionInFlight.current = false
+      setBusy(false)
+    }
+  }
 
   if (!enabled || !sessionId) {
     return null
@@ -119,15 +145,15 @@ export function AuraBrowserHandoff() {
               <p>
                 Step {step.step + 1} on {step.host || 'the page'} would {step.action} “{step.label || 'an element'}”.
               </p>
-              <button onClick={() => void act(`${BASE}/approve`, { approval_id: step.approval_id, approve: true })} type="button">
+              <button disabled={busy} onClick={() => void act(`${BASE}/approve`, { approval_id: step.approval_id, approve: true })} type="button">
                 Approve
               </button>
-              <button onClick={() => void act(`${BASE}/approve`, { approval_id: step.approval_id, approve: false })} type="button">
+              <button disabled={busy} onClick={() => void act(`${BASE}/approve`, { approval_id: step.approval_id, approve: false })} type="button">
                 Deny
               </button>
             </div>
           ))}
-          <button className="aura-button aura-button-secondary" onClick={() => void act(`${BASE}/cancel`, { id: handoff.id })} type="button">
+          <button className="aura-button aura-button-secondary" disabled={busy} onClick={() => void act(`${BASE}/cancel`, { id: handoff.id })} type="button">
             Stop
           </button>
         </>
@@ -152,7 +178,9 @@ export function AuraBrowserHandoff() {
             const instruction = draft.trim()
 
             if (instruction.length >= 3) {
-              void act(BASE, { session_id: sessionId, instruction }).then(() => setDraft(''))
+              void act(BASE, { session_id: sessionId, instruction }).then(ok => {
+                if (ok) setDraft('')
+              })
             }
           }}
         >
@@ -165,8 +193,8 @@ export function AuraBrowserHandoff() {
             rows={2}
             value={draft}
           />
-          <button disabled={draft.trim().length < 3} type="submit">
-            Send to browser
+          <button disabled={busy || draft.trim().length < 3} type="submit">
+            {busy ? 'Sending to browser…' : 'Send to browser'}
           </button>
         </form>
       )}
