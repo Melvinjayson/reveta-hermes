@@ -203,9 +203,14 @@ html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop
 .aura-app .aura-composer-modes {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   min-width: 0;
+}
+/* An open On-device panel or a voice alert takes the whole row, never a squeezed column. */
+.aura-app .aura-composer-modes > .aura-local:has(.aura-local-panel),
+.aura-app .aura-composer-modes > .aura-voice:has(.aura-voice-error, .aura-voice-heard) {
+  flex: 1 1 100%;
 }
 .aura-app .aura-composer-modes > :is(.aura-voice, .aura-local) {
   min-width: 0;
@@ -228,7 +233,7 @@ html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop
   .aura-app .aura-composer-modes {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
     min-height: 40px;
   }
@@ -280,5 +285,31 @@ html[data-hermes-desktop-host='browser'] .aura-chat .aui-message-actions-desktop
   }
   .aura-app .aura-chat [data-slot='composer-bounds'] {
     min-height: 0;
+  }
+}
+
+/*
+ * Phone, idle: the mode row rides in the empty space right of "+" instead of
+ * taking its own row, so the collapsed composer is two rows (text, actions).
+ * During a live call, an open On-device panel or a voice error the row returns
+ * to its own line so call controls, transcripts and alerts keep full width.
+ */
+@media (max-width: 639px) {
+  .aura-app .aura-chat [data-slot='composer-fade']:has(> .aura-composer-modes) {
+    position: relative;
+  }
+  .aura-app .aura-chat [data-slot='composer-fade'] > .aura-composer-modes {
+    position: absolute;
+    bottom: 10px;
+    left: 56px;
+    z-index: 1;
+    max-width: calc(100% - 120px);
+  }
+  .aura-app .aura-chat [data-slot='composer-fade']:has(.aura-voice:not([data-aura-voice='off']), .aura-voice-error, .aura-local-panel) > .aura-composer-modes {
+    position: static;
+    max-width: none;
+  }
+  .aura-app .aura-chat [data-aura-composer-grid] {
+    min-height: 40px;
   }
 }
