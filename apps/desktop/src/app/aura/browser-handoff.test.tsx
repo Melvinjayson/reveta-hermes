@@ -58,10 +58,12 @@ it('approves or denies a consequential browser step here, in the chat', async ()
   await waitFor(() =>
     expect(api).toHaveBeenCalledWith({ path: '/api/aura/companion/handoff/approve', method: 'POST', body: { approval_id: 'a1', approve: true } })
   )
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Deny' }) as HTMLButtonElement).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Deny' }))
   await waitFor(() =>
     expect(api).toHaveBeenCalledWith({ path: '/api/aura/companion/handoff/approve', method: 'POST', body: { approval_id: 'a1', approve: false } })
   )
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Stop' }) as HTMLButtonElement).disabled).toBe(false))
   fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
   await waitFor(() => expect(api).toHaveBeenCalledWith({ path: '/api/aura/companion/handoff/cancel', method: 'POST', body: { id: 'h1' } }))
 })
