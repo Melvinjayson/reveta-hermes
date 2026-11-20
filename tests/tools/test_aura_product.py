@@ -133,8 +133,13 @@ def test_anthropic_is_disabled_until_caps_and_card_approve_and_accounts_usage(ho
         cards.append(card)
         approval.resolve_gateway_approval('aura-product-chat', 'once', request_id=card['request_id'])
     approval.register_gateway_notify('aura-product-chat', approve)
+    # The Aura budget gates this tool too: refused (no card, no call) until paid models are on.
+    assert 'switched off' in dispatch('aura_complex', args)['error'] and calls == [] and cards == []
+    from tools.aura_budget import get_budget_status, update_budget_limit
+    update_budget_limit(limit_usd=3, paid_enabled=True, actor='test')
     result = dispatch('aura_complex', args)
     assert len(calls) == len(cards) == 1 and 'Estimated maximum $' in cards[0]['description']
+    assert get_budget_status()['history'][0]['status'] == 'reconciled'
     assert float(result['cost_usd']) > 0 and result['input_tokens'] == 8
     with aura_spend.ledger() as db:
         assert db.execute("SELECT COUNT(*) FROM spend WHERE status='completed' AND actual > 0").fetchone()[0] == 1

@@ -106,7 +106,8 @@ No new telemetry was added; prompts are not stored.
 
 ## Blockers (stop conditions met)
 
-1. **No budget authorizer.** The €3 workstream is not in this repository: no branch, no open PR. The existing
+1. **Resolved in `aura/configurable-model-budget`** (`docs/aura/model-budget.md`): the budget now exists and the
+   guard reserves through it. Original finding: **No budget authorizer.** The €3 workstream is not in this repository: no branch, no open PR. The existing
    `tools/aura_provider.py` paid route (OpenAI and Anthropic only) checks caps *before* a call and records *after*
    ("one call can overshoot a cap by its own cost"). It has no reserve-then-reconcile step for multi-step agent
    runs and no OpenRouter provider. It cannot authorize these tiers safely; that is a **release blocker** for paid

@@ -103,10 +103,9 @@ def test_unknown_selections_and_malformed_tier_ids_are_refused():
 
 @pytest.mark.parametrize("tier", ["default", "fallback", "reasoning"])
 @pytest.mark.parametrize("free_only", [False, True])
-def test_paid_tiers_are_never_sent_without_the_budget_contract(home, tier, free_only):
+def test_paid_tiers_are_never_sent_while_paid_models_are_off(home, tier, free_only):
     home(_config(enabled=True, free_only=free_only))
-    assert routing.budget_authorizer() is None
-    with pytest.raises(FreeOnlyRefused, match="budget authorization"):
+    with pytest.raises(FreeOnlyRefused, match="Paid models are switched off"):
         require_model("openrouter", OR, {"model": TIERS[tier]["model"]})
 
 
@@ -128,7 +127,7 @@ def test_paid_routes_cannot_bypass_authorization():
 def test_routing_switched_off_refuses_even_with_an_authorizer():
     with pytest.raises(RouteRefused) as off:
         routing.choose(_config(enabled=False), authorize=_allow())
-    assert off.value.kind == "budget_unavailable"
+    assert off.value.kind == "routing_off"
 
 
 # Routing
@@ -214,11 +213,15 @@ def test_missing_capability_and_cancellation_stop_routing():
 # Agent-loop compatibility
 
 
-def test_every_request_to_a_paid_tier_is_checked_on_its_own():
+def test_every_request_to_a_paid_tier_is_checked_on_its_own(home):
+    from tools import aura_budget
+
+    aura_budget.update_budget_limit(paid_enabled=True, actor="melvin")
     log = []
     for _ in range(3):  # a turn, a retry and a recovery cycle each send their own request
         routing.guard(_config(), "openrouter", OR, {"model": TIERS["default"]["model"]}, authorize=_allow(log))
     assert log == [TIERS["default"]["model"]] * 3
+    assert len(aura_budget.get_budget_status()["history"]) == 3
 
 
 def test_a_refused_request_never_builds_a_client_or_reaches_the_transport(home):
@@ -228,7 +231,7 @@ def test_a_refused_request_never_builds_a_client_or_reaches_the_transport(home):
     hits = []
     agent = SimpleNamespace(provider="openrouter", model=TIERS["default"]["model"], base_url=OR,
                             api_mode="chat_completions")
-    with pytest.raises(FreeOnlyRefused, match="budget authorization"):
+    with pytest.raises(FreeOnlyRefused, match="Paid models are switched off"):
         _dispatch_nonstreaming_api_request(agent, {"model": TIERS["default"]["model"]},
                                            make_client=lambda *a: hits.append("client"))
     assert hits == []

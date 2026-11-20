@@ -7,9 +7,10 @@ routing decision costs no inference request.
 Configuration lives in ``config.yaml`` under ``aura.model_routing`` and is written at boot by
 ``scripts/reveta/aura_config.py``:
 
-* ``tiers.default`` / ``tiers.fallback`` / ``tiers.reasoning``: paid OpenRouter models.
-  **They stay refused** until an authoritative budget authorizer exists (``budget_authorizer``
-  returns None today): a model ID in configuration never makes a paid route usable.
+* ``tiers.default`` / ``tiers.fallback`` / ``tiers.reasoning``: paid OpenRouter models. They run
+  only when ``model_routing.enabled`` is true **and** ``tools.aura_budget`` reserves the request's
+  bounded cost (``tools.aura_paid_requests``). A model ID in configuration never makes a paid route
+  usable by itself; the generated configuration keeps routing off until it is verified live.
 * ``test_route``: one free OpenRouter model, off unless the deployment sets
   ``AURA_TEST_MODEL_ROUTE=1`` (never on the production address). It is never a default, never a
   fallback target, and its requests are pinned to zero price with provider fallbacks off.
@@ -39,7 +40,8 @@ MAX_FALLBACKS = 1
 FALLBACK_ELIGIBLE = frozenset({"overloaded", "server_error", "timeout"})
 
 REASONS = {
-    "budget_unavailable": "Paid models stay off until Aura's budget authorization is in place.",
+    "routing_off": "Paid routing isn't switched on for this deployment.",
+    "budget_unavailable": "Aura couldn't check its budget, so it didn't send this paid request.",
     "budget_reached": "Budget reached. Aura did not send this request.",
     "model_not_permitted": "Model not permitted. Aura only uses the models set up for it.",
     "model_unavailable": "Model unavailable. No permitted model can take this request right now.",
@@ -98,14 +100,14 @@ def _route(tier: str, entry: dict, fallback_of: Optional[str] = None) -> Route:
                  capabilities=frozenset(c for c in caps if isinstance(c, str)), fallback_of=fallback_of)
 
 
-def budget_authorizer() -> Optional[Authorizer]:
-    """The authoritative paid-inference budget gate, or None while it does not exist.
+def budget_authorizer() -> Authorizer:
+    """Whether the budget could pay for *route* now (planning only; each request still reserves)."""
+    def can_pay(route: Route) -> bool:
+        from tools.aura_budget import get_budget_status
 
-    The €3 experimental budget is a separate workstream; until it exposes a reserve-then-
-    reconcile authorizer, this returns None and every paid tier is refused. Do not add a local
-    counter here: the budget has exactly one authority.
-    """
-    return None
+        status = get_budget_status(history=0)
+        return status["paid_enabled"] and status["remaining_usd"] > 0
+    return can_pay
 
 
 def _authorized(route: Route, authorize: Optional[Authorizer]) -> Route:
@@ -141,7 +143,7 @@ def choose(config: dict, *, selection: str = "auto", needs: Iterable[str] = (), 
     if selection not in ("auto", "reasoning"):
         raise RouteRefused("model_not_permitted")
     if not cfg["enabled"]:
-        raise RouteRefused("budget_unavailable")
+        raise RouteRefused("routing_off")
     tier = "reasoning" if selection == "reasoning" else "default"
     del voice  # documented above: voice never changes the tier by itself
     entry = cfg["tiers"].get(tier)
@@ -192,7 +194,7 @@ def _same_openrouter(provider: Any, endpoint: Any) -> bool:
 
 
 def guard(config: dict, provider: Any, endpoint: Any, request: dict,
-          authorize: Optional[Authorizer] = None) -> Optional[dict]:
+          authorize: Optional[Authorizer] = None, chat: Optional[str] = None) -> Optional[dict]:
     """Check one outgoing provider request against the routing configuration.
 
     Returns None when the request names no routed model (the free-only gate and the owner's
@@ -215,24 +217,72 @@ def guard(config: dict, provider: Any, endpoint: Any, request: dict,
         return {**request, "model": route.model, "extra_body": body}
     for tier, entry in cfg["tiers"].items():
         if model == entry.get("model"):
-            _authorized(_route(tier, entry), authorize if authorize is not None else budget_authorizer())
-            return None
+            return _paid_request(cfg, tier, entry, provider, endpoint, request, chat, authorize)
     return None
 
 
+def _paid_request(cfg: dict, tier: str, entry: dict, provider: Any, endpoint: Any, request: dict,
+                  chat: Optional[str], authorize: Optional[Authorizer]) -> dict:
+    """A routed paid request: routing must be on, the route exact, then the budget reserves it."""
+    from tools.aura_budget import BudgetRefused
+    from tools.aura_paid_requests import reserve
+
+    route = _route(tier, entry)
+    if not cfg["enabled"]:
+        raise RouteRefused("routing_off")
+    if not _same_openrouter(provider, endpoint):
+        raise RouteRefused("model_not_permitted")
+    body = request.get("extra_body") or {}
+    if not isinstance(body, dict) or any(key in body for key in ("model", "models", "route")):
+        raise RouteRefused("model_not_permitted")
+    if authorize is not None and authorize(route) is not True:
+        raise RouteRefused("budget_reached")
+    ceiling = entry.get("price_ceiling") or {}
+    prompt, completion = ceiling.get("prompt_per_million"), ceiling.get("completion_per_million")
+    cap = entry.get("max_output_tokens")
+    if not all(type(v) in (int, float) and v > 0 for v in (prompt, completion)) or type(cap) is not int or cap <= 0:
+        raise RouteRefused("model_unavailable")
+    try:
+        return reserve(request, session_id=chat or "", model=route.model, tier=tier, prompt_per_million=prompt,
+                       completion_per_million=completion, max_output_tokens=cap, openrouter=True)
+    except BudgetRefused as exc:
+        raise PaidRequestRefused(exc.user_message) from exc
+
+
+class PaidRequestRefused(PermissionError):
+    """The budget refused a routed request; ``user_message`` is the budget's own reason."""
+
+    def __init__(self, user_message: str):
+        self.user_message = user_message
+        super().__init__(user_message)
+
+
 def status(config: dict) -> dict:
-    """What Settings shows: configured tiers and whether each can run. No secrets."""
+    """What Settings shows: configured tiers and whether each can run now. No secrets."""
     cfg = settings(config)
-    authorize = budget_authorizer()
+    from tools.aura_budget import BudgetRefused, get_budget_status
+
+    try:
+        budget = get_budget_status(history=0)
+    except BudgetRefused:  # the store is unusable: show every paid tier as unavailable
+        budget = None
     tiers = []
     for tier in TIERS:
         entry = cfg["tiers"].get(tier)
         if entry is None:
             continue
-        state = "available" if cfg["enabled"] and authorize is not None else "disabled"
+        if not cfg["enabled"]:
+            state, reason = "disabled", REASONS["routing_off"]
+        elif budget is None:
+            state, reason = "disabled", "Aura couldn't check its budget."
+        elif not budget["paid_enabled"]:
+            state, reason = "disabled", "Paid models are switched off in Settings → Model."
+        elif budget["state"] == "reached":
+            state, reason = "disabled", "Budget reached."
+        else:
+            state, reason = "available", None
         tiers.append({"tier": tier, "label": TIER_LABELS[tier], "model": entry.get("model"),
-                      "paid": entry.get("paid") is not False, "state": state,
-                      "reason": None if state == "available" else REASONS["budget_unavailable"]})
+                      "paid": entry.get("paid") is not False, "state": state, "reason": reason})
     test = cfg["test_route"]
     return {"enabled": cfg["enabled"], "tiers": tiers,
             "test_route": {"label": TIER_LABELS["test"], "model": test.get("model"),

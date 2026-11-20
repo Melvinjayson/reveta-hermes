@@ -23,7 +23,7 @@ interface Props {
 /** Configured routing tiers and the experimental test route, with what can actually run.
  *  A disabled tier is a plain row, never a control: it cannot be chosen until it can execute. */
 export function AuraRoutingSettings({ activeModel, routing, saving, onUseTest }: Props) {
-  if (!routing) {
+  if (!routing || (routing.tiers.length === 0 && !routing.test_route.model)) {
     return null
   }
 

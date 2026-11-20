@@ -35,3 +35,11 @@ it('offers the experimental test model only when the deployment switched it on',
   expect(screen.queryByRole('button')).toBeNull()
   expect(screen.getByText(/^In use\./)).toBeTruthy()
 })
+
+it('renders nothing when the deployment configures no routing', () => {
+  const empty: AuraRoutingStatus = { enabled: false, tiers: [],
+    test_route: { label: 'Test', model: null, state: 'disabled', experimental: true } }
+
+  const { container } = render(<AuraRoutingSettings onUseTest={vi.fn()} routing={empty} saving={false} />)
+  expect(container.innerHTML).toBe('')
+})

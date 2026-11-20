@@ -532,3 +532,27 @@
 .aura-routing-name code { font-size: 12px; overflow-wrap: anywhere; }
 .aura-routing-state { font-size: 13px; }
 .aura-routing-tag { display: inline-block; padding: 0 6px; border: 1px solid var(--aura-warn); border-radius: 999px; color: var(--aura-warn); font-size: 11px; }
+.aura-budget { display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--aura-line); min-width: 0; }
+.aura-budget h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.aura-budget h4 { margin: 4px 0; font-size: 13px; font-weight: 600; }
+.aura-budget-note { margin: 0; color: var(--aura-muted); font-size: 13px; }
+.aura-budget-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.aura-budget-figures p { display: grid; gap: 2px; margin: 0; padding: 10px; border: 1px solid var(--aura-line); border-radius: 12px; }
+.aura-budget-figures span { color: var(--aura-muted); font-size: 12px; }
+.aura-budget-figures strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.aura-budget-meter { height: 8px; overflow: hidden; border-radius: 999px; background: var(--aura-subtle); }
+.aura-budget-meter span { display: block; height: 100%; border-radius: inherit; background: var(--aura-accent); }
+.aura-budget-meter[data-state='approaching'] span { background: var(--aura-warn); }
+.aura-budget-meter[data-state='reached'] span { background: var(--aura-danger); }
+.aura-budget-state { margin: 0; font-size: 13px; }
+.aura-budget-state[data-state='reached'] { color: var(--aura-danger); }
+.aura-budget label { display: grid; gap: 4px; font-size: 13px; }
+.aura-budget input[type='number'] { min-height: 44px; font-size: 16px; }
+.aura-budget .aura-budget-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; font-size: 14px; }
+.aura-budget button,
+.aura-dialog .aura-budget button { justify-self: start; min-height: 44px; padding: 0 16px; border: 1px solid var(--aura-line); border-radius: 10px; background: var(--aura-surface); color: var(--aura-ink); }
+.aura-budget button:disabled { opacity: 0.5; }
+.aura-budget-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.aura-budget-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 13px; min-width: 0; }
+.aura-budget-list code { overflow-wrap: anywhere; font-size: 12px; }
+@media (max-width: 319px) { .aura-budget-figures { grid-template-columns: minmax(0, 1fr); } }

@@ -23,10 +23,15 @@ DEFAULT_FREE_GEMINI_MODEL = "gemini-3.8-flash"
 # tiers are configuration only: routing stays off and every paid tier is refused until Aura's budget
 # authorizer exists. Capabilities list only what every listed endpoint offers.
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+# price_ceiling is sent as OpenRouter's provider.max_price (USD per million tokens) and bounds each
+# reservation; it is chosen so most listed endpoints qualify, and is not a billing price.
 ROUTING_TIERS = {
-    "default": {"model": "deepseek/deepseek-v4.1-flash-1017", "paid": True, "capabilities": ["text", "image", "tools"]},
-    "fallback": {"model": "z-ai/glm-5.3-flash", "paid": True, "capabilities": ["text", "image", "tools"]},
-    "reasoning": {"model": "moonshotai/kimi-k3.1-pro", "paid": True, "capabilities": ["text", "image", "tools"]},
+    "default": {"model": "deepseek/deepseek-v4.1-flash-1017", "paid": True, "capabilities": ["text", "image", "tools"],
+                "price_ceiling": {"prompt_per_million": 0.3, "completion_per_million": 1.2}, "max_output_tokens": 4096},
+    "fallback": {"model": "z-ai/glm-5.3-flash", "paid": True, "capabilities": ["text", "image", "tools"],
+                 "price_ceiling": {"prompt_per_million": 0.15, "completion_per_million": 0.5}, "max_output_tokens": 4096},
+    "reasoning": {"model": "moonshotai/kimi-k3.1-pro", "paid": True, "capabilities": ["text", "image", "tools"],
+                  "price_ceiling": {"prompt_per_million": 2.0, "completion_per_million": 10.0}, "max_output_tokens": 8192},
 }
 TEST_ROUTE_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 

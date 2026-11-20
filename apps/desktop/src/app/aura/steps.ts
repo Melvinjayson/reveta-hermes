@@ -102,12 +102,15 @@ const COST_REFUSAL = "This would cost money, so I didn't run it."
 
 // tools/aura_model_routing.py REASONS: the only other refusal sentences a Refused row may show.
 const ROUTING_REFUSALS = new Set([
-  "Paid models stay off until Aura's budget authorization is in place.",
-  'Budget reached. Aura did not send this request.',
+    'Budget reached. Aura did not send this request.',
   'Model not permitted. Aura only uses the models set up for it.',
   'Model unavailable. No permitted model can take this request right now.',
   'Requested capability unavailable on the permitted models.',
-  'The experimental test model is switched off on this deployment.'
+  'The experimental test model is switched off on this deployment.',
+  "Paid routing isn't switched on for this deployment.",
+  "Aura couldn't check its budget, so it didn't send this paid request.",
+  'Paid models are switched off in Settings → Model.',
+  "Aura couldn't bound this request's cost, so it didn't send it."
 ])
 
 /** The backend's own routing reason when it is one of the known sentences; never other text. */

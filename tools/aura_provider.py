@@ -111,14 +111,16 @@ def charge(chat: str, provider: str, model: str, usd: float) -> None:
                    (uuid.uuid4().hex, chat or "", _today(), provider, model, float(usd)))
 
 
-def record(agent, usage) -> None:
-    """Add one main-model call's cost to the ledger when it ran on the paid route."""
+def record(agent, usage) -> Optional[float]:
+    """Add one main-model call's cost to the ledger when it ran on the paid route; return it."""
     paid = route()
     if not matches(paid, agent.provider, agent.base_url, agent.model):
-        return
+        return None
     tokens = {name: int(getattr(usage, name, 0) or 0) for name in
               ("input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens")}
-    charge(agent.session_id or "", paid["provider"], paid["model"], usd_for(paid, **tokens))
+    usd = usd_for(paid, **tokens)
+    charge(agent.session_id or "", paid["provider"], paid["model"], usd)
+    return usd
 
 
 def usd_for(paid: dict, input_tokens: int = 0, output_tokens: int = 0, cache_read_tokens: int = 0,
