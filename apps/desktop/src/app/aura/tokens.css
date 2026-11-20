@@ -19,7 +19,7 @@ html[data-hermes-desktop-host='browser'] {
   --aura-line: #e4e4e8;
   --aura-ink: #18181b;
   --aura-muted: #5f5f68;
-  --aura-accent: #1f6fb5;
+  --aura-accent: #5546e8;
   --aura-on-accent: #ffffff;
   --aura-accent-soft: color-mix(in srgb, var(--aura-accent) 10%, transparent);
   --aura-danger: #b42318;
@@ -66,14 +66,14 @@ html[data-hermes-desktop-host='browser'] {
 .aura-dialog[data-aura-theme='dark'],
 .aura-sheet[data-aura-theme='dark'],
 html[data-hermes-desktop-host='browser'][data-hermes-mode='dark'] {
-  --aura-page: #131315;
-  --aura-sidebar: #0e0e10;
-  --aura-surface: #1b1b1e;
-  --aura-subtle: #232327;
-  --aura-line: #2e2e33;
+  --aura-page: #0b0f1f;
+  --aura-sidebar: #090c17;
+  --aura-surface: #15192a;
+  --aura-subtle: #20253a;
+  --aura-line: #31364d;
   --aura-ink: #ececef;
   --aura-muted: #a1a1aa;
-  --aura-accent: #7cc4f0;
+  --aura-accent: #a98cff;
   --aura-on-accent: #0b1b2b;
   --aura-danger: #f97066;
   --aura-ok: #47cd89;
@@ -128,3 +128,6 @@ html[data-hermes-desktop-host='browser'],
     --aura-medium: 0ms;
   }
 }
+
+/* Approved Aura identity: violet/indigo for brand, mint only for live voice state. */
+.aura-app, .aura-sheet, .aura-dialog { --aura-voice-live: #16bfa6; --aura-voice-wash: rgb(22 191 166 / 0.13); }
