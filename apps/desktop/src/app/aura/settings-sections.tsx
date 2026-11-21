@@ -67,8 +67,16 @@ function CapabilityNote({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
-const HOSTING_NOTE =
-  'On the current free hosting plan, a restart or redeploy can erase this. Keeping it needs persistent storage (a hosting decision).'
+/** Warns that a restart can erase this only when the server says its storage is not durable. */
+function StorageNote() {
+  const { data } = useResource<{ storage_durable: boolean }>('/api/aura/onboarding')
+
+  return data && !data.storage_durable ? (
+    <p className="aura-muted">
+      This server doesn’t keep data across restarts yet, so a restart or redeploy can erase this.
+    </p>
+  ) : null
+}
 
 function Confirm({ label, prompt, onConfirm }: { label: string; prompt: string; onConfirm: () => Promise<unknown> }) {
   const [asking, setAsking] = useState(false)
@@ -144,7 +152,7 @@ export function AuraMemorySection() {
             )}
           </div>
         ))}
-      <p className="aura-muted">{HOSTING_NOTE}</p>
+      <StorageNote />
     </section>
   )
 }
@@ -289,7 +297,7 @@ export function AuraJobsSection() {
           )
         })}
       </ul>
-      <p className="aura-muted">{HOSTING_NOTE}</p>
+      <StorageNote />
     </section>
   )
 }

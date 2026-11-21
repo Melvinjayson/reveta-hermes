@@ -233,6 +233,10 @@
     right: 62px;
     flex-direction: row-reverse;
   }
+  /* With nothing typed Send is hidden, so the mic takes its slot instead of leaving a hole. */
+  .aura-app .aura-chat [data-slot='composer-fade']:has([data-composer-idle='true']) > .aura-composer-modes {
+    right: 10px;
+  }
   .aura-app .aura-composer-modes .aura-voice[data-aura-voice='off'] .aura-voice-toggle {
     width: 40px;
     min-width: 40px;

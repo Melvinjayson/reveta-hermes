@@ -81,3 +81,18 @@ it('switches full-duplex voice through the voice mode route and says when the se
   await waitFor(() => expect((toggle as HTMLInputElement).checked).toBe(true))
   expect(screen.getByRole('status').textContent).toContain('keeps the browser voice')
 })
+
+it('warns that a restart can erase memory only when the server storage is not durable', async () => {
+  for (const durable of [false, true]) {
+    api.mockImplementation(async ({ path }: { path: string }) =>
+      path === '/api/aura/onboarding'
+        ? { completed: true, storage_durable: durable }
+        : { memory: { text: '' }, user: { text: '' } }
+    )
+    const { unmount } = render(<AuraMemorySection />)
+    await screen.findAllByText('Nothing saved yet.')
+    await waitFor(() => expect(api).toHaveBeenCalledWith({ path: '/api/aura/onboarding', method: 'GET' }))
+    await waitFor(() => expect(Boolean(screen.queryByText(/can erase this/))).toBe(!durable))
+    unmount()
+  }
+})

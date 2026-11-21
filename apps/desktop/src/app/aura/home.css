@@ -139,22 +139,14 @@
     line-height: 1.22;
     max-width: 320px;
   }
+  /* Three starters wrap and stay centred; a sideways scroller clipped the last one mid-word. */
   .aura-app .aura-suggestions {
-    width: min(100%, 340px);
-    max-width: 100%;
+    width: 100%;
     min-width: 0;
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 8px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
     margin-top: 4px;
-    padding-bottom: 4px;
-  }
-  .aura-app .aura-suggestions::-webkit-scrollbar {
-    display: none;
   }
   .aura-app .aura-suggestions button {
     flex: 0 0 auto;
