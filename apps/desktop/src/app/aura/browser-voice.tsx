@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react'
-import { Mic, MicOff, Square } from 'lucide-react'
+import { Mic, PhoneOff, Square } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useComposerScope } from '@/app/chat/composer/scope'
@@ -226,7 +226,7 @@ export function AuraBrowserVoice({ busy, disabled, onSubmit, onInterrupt, sessio
         onClick={active ? stop : start}
         type="button"
       >
-        {active ? <MicOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
+        {active ? <PhoneOff aria-hidden="true" size={18} /> : <Mic aria-hidden="true" size={18} />}
         <span aria-hidden="true" className="aura-voice-dot" />
         <span className="aura-voice-label">{active ? label : 'Voice chat'}</span>
       </button>

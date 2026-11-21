@@ -95,6 +95,8 @@ export function ComposerControls({
   }
 
   const showVoicePrimary = !hostHas('webappCopy') && !busy && !hasComposerPayload
+  // Aura's webapp shows its own voice control in the send slot while nothing is typed.
+  const sendHidden = hostHas('webappCopy') && !busy && !hasComposerPayload
   // Steer is just send: a payload keeps the Send affordance mid-turn (it answers
   // a waiting card). Stop only when the composer is empty and a turn is running.
   const showStop = busy && !hasComposerPayload
@@ -187,10 +189,11 @@ export function ComposerControls({
           <Button
             aria-label={showStop ? c.stop : sendLabel}
             className={PRIMARY_ICON_BTN}
+            data-composer-idle={sendHidden}
             disabled={disabled || !canSubmit}
             onClick={() => recordAction(showStop ? 'composer.cancel' : 'composer.send', 'click')}
             onMouseDown={keepEditorFocus}
-            style={hostHas('webappCopy') && !busy && !hasComposerPayload ? { visibility: 'hidden' } : undefined}
+            style={sendHidden ? { display: 'none' } : undefined}
             type="submit"
           >
             {showStop ? (

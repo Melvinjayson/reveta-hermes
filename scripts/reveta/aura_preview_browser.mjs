@@ -22,6 +22,12 @@ const records = () => {
 
 const browser = await chromium.launch({ executablePath: process.env.AURA_CHROMIUM || '/usr/bin/chromium', headless: true,
   args: ['--no-sandbox'] })
+// The first-run welcome is covered by aura_browser.mjs; screens past it skip it.
+async function skipWelcome(page) {
+  const skip = page.locator('dialog.aura-onboarding').getByRole('button', { name: 'Skip', exact: true })
+  await skip.click({ timeout: 15000 }).catch(() => undefined)
+}
+
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' })
 try {
   // 1. Anonymous callers are refused; the owner signs in with the password form.
@@ -32,6 +38,7 @@ try {
   await page.locator('input[name=password]').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page.getByRole('heading', { name: 'Hi, I’m Aura.' })).toBeVisible({ timeout: 60000 })
+  await skipWelcome(page)
   ok('owner signs in behind the gate')
 
   // 2. Settings -> Preview: everything starts off; the owner switches all three on.

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import { en } from '@/i18n/en'
 import { installBrowserDesktopBridge } from '@/lib/browser-desktop-bridge'
-import { $notifications } from '@/store/notifications'
+import { $notifications, clearNotifications } from '@/store/notifications'
 import { deferred } from '@/test/deferred'
 import { clearWebappSession, seedWebappSession } from '@/test/webapp-session'
 
@@ -83,6 +83,10 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  // Cancel toast auto-dismiss timers too: a timer left pending fires after the file's jsdom is
+  // torn down ("window is not defined"). Emptying the atom alone leaves them armed.
+  clearNotifications()
+  $notifications.set([])
   Reflect.deleteProperty(window, '__HERMES_AUTH_REQUIRED__')
   Reflect.deleteProperty(window, 'hermesDesktop')
   window.document.documentElement.removeAttribute('data-hermes-desktop-host')
@@ -693,7 +697,7 @@ describe('GatewaySettings', () => {
       )
       expect($notifications.get().some((n: { message?: string }) => n.message === 'SSH connection failed.')).toBe(false)
     } finally {
-      $notifications.set([])
+      clearNotifications()
     }
   })
 
@@ -727,7 +731,7 @@ describe('GatewaySettings', () => {
       )
       expect($notifications.get().some((n: { message?: string }) => n.message === 'SSH connection failed.')).toBe(false)
     } finally {
-      $notifications.set([])
+      clearNotifications()
     }
   })
 

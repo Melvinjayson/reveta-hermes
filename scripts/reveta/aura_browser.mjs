@@ -47,6 +47,11 @@ async function closePanel(page) {
 
 try {
   await page.goto(launch.url)
+  // A fresh profile shows the first-run welcome once; skipping it is stored server-side.
+  const welcome = page.getByRole('dialog', { name: 'Meet Aura' })
+  await expect(welcome).toBeVisible({ timeout: 60000 })
+  await welcome.getByRole('button', { name: 'Skip', exact: true }).click()
+  await expect(welcome).toBeHidden()
   await expect(page.locator('.aura-empty')).toBeVisible({ timeout: 60000 })
   await expect(page.getByRole('heading', { name: 'Hi, I’m Aura.' })).toBeVisible()
   if (launch.retiredModel) {
